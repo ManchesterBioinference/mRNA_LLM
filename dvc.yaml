@@ -1,0 +1,341 @@
+stages:
+  #setupEnv:
+  #  cmd: conda create --name rmt python=3.10 pytorch=2.5.0 torchvision=0.20.0 torchaudio=2.5.0 pytorch-cuda=12.4 -c pytorch -c nvidia ipython dvclive=3.48.0 dvc=3.55.2 && \
+  #    conda activate rmt && \
+  #    git clone https://github.com/yangyn533/3UTRBERT.git && \
+  #    cd 3UTRBERT && \
+  #    python3 -m pip install --editable . && \
+  #    python3 -m pip install -r requirements.txt && \
+  #    cd .. && \
+  #    conda deactivate && \
+  #    git clone -n --depth=1 --filter=tree:0 https://github.com/booydar/recurrent-memory-transformer.git && \
+  #    cd recurrent-memory-transformer && \
+  #    git sparse-checkout set --no-cone lm_experiments_tools modeling_rmt requirements.txt requirements-lm-tools.txt setup.py && \
+  #    git checkout && \
+  #    conda activate rmt && \
+  #    pip install -e .
+  #  deps:
+  #    - envs/3UTRBERT.yaml
+  #  outs:
+  #    - envs/3UTRBERT.yaml
+  #  params:
+  #    - setupEnv
+
+  downloadSpeciesData:
+    cmd: python scripts/downloadSpeciesData.py ${downloadSpeciesData.output_dir}
+    deps:
+    - scripts/downloadSpeciesData.py
+    outs:
+    - ${downloadSpeciesData.output_dir}
+    params:
+    - downloadSpeciesData
+
+  isolate3UTRs:
+    cmd: python scripts/isolate3UTRs.py --params params.yaml --data_dir ${downloadSpeciesData.output_dir}
+    deps:
+    - scripts/isolate3UTRs.py
+    - ${downloadSpeciesData.output_dir}
+    outs:
+    - ${isolate3UTRs.output_dir}
+    params:
+    - isolate3UTRs
+
+  preprocessFlyUTRs:
+    cmd: python scripts/preprocessFlyUTRs.py --params params.yaml --data_dir ${isolate3UTRs.output_dir}
+    deps:
+    - scripts/preprocessFlyUTRs.py
+    - ${isolate3UTRs.output_dir}
+    outs:
+    - ${preprocessFlyUTRs.output_dir} #output/data/flyUTRs
+    params:
+    - preprocessFlyUTRs
+
+  trainToFlyUTRs:
+    cmd: python scripts/trainToFlyUTRs.py --params params.yaml --data_dir ${preprocessFlyUTRs.output_dir}
+    deps:
+    - scripts/trainToFlyUTRs.py
+    - ${preprocessFlyUTRs.output_dir}
+    - data/4-new-12w-0/pytorch_model.bin
+    outs:
+    - ${trainToFlyUTRs.output_dir}/pytorch_model.bin
+    - ${trainToFlyUTRs.output_dir}/checkpoints
+    - ${trainToFlyUTRs.output_dir}/best_checkpoint
+    params:
+    - trainToFlyUTRs
+
+  mergeUTRsAndDecayRates:
+    cmd: python scripts/mergeUTRsAndDecayRates.py --params params.yaml --fasta ${preprocessFlyUTRs.output_dir}
+    deps:
+    - scripts/mergeUTRsAndDecayRates.py
+    - ${mergeUTRsAndDecayRates.decay_rates} #data/results_zygotic_tr_extended_filtered.csv
+    - ${preprocessFlyUTRs.output_dir}
+    outs:
+    - ${mergeUTRsAndDecayRates.output_file} #output/data/utrDecayRates.fasta
+    params:
+    - mergeUTRsAndDecayRates
+
+  getDecayResiduals:
+    cmd: python scripts/getDecayResiduals.py --params params.yaml --decay_file ${mergeUTRsAndDecayRates.decay_rates}
+      --utr_fasta ${mergeUTRsAndDecayRates.output_file} --CDS_fasta ${isolate3UTRs.output_dir}/Drosophila_melanogaster-cds.fa
+    deps:
+    - scripts/getDecayResiduals.py
+    - ${isolate3UTRs.output_dir}/Drosophila_melanogaster-cds.fa
+    - ${mergeUTRsAndDecayRates.output_file} #output/data/utrDecayRates.fasta
+    outs:
+    - ${getDecayResiduals.residuals}
+    - ${getDecayResiduals.extraFeatures}
+    params:
+    - getDecayResiduals
+
+  preprocessData:
+    cmd: python scripts/preprocess.py --params params.yaml --data_dir ${mergeUTRsAndDecayRates.output_file}
+      --ncbi_geneID_map ${preprocessFlyUTRs.ncbi_geneID_map} --geneID_flybase_map
+      ${preprocessFlyUTRs.geneID_flybase_map}                                                                                                                                                                                   #${getDecayResiduals.residuals} #
+    deps:
+    - scripts/preprocess.py
+    - ${mergeUTRsAndDecayRates.output_file} #${getDecayResiduals.residuals} #
+    outs:
+    - ${preprocessData.output_dir}
+    params:
+    - preprocessData
+    - preprocessFlyUTRs
+
+  fineTuneModel:
+    cmd: python scripts/train.py --params params.yaml --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
+      --max_seq_length 512 --data_dir ${preprocessData.output_dir} --extraFeatures
+      ${getDecayResiduals.extraFeatures}
+    deps:
+    - scripts/train.py
+    - scripts/GenaLMWithExtraFeatures.py
+    - ${preprocessData.output_dir}
+    - ${trainToFlyUTRs.output_dir}/best_checkpoint
+    - ${getDecayResiduals.extraFeatures}
+    outs:
+    - ${fineTuneModel.output_dir}:
+        persist: true
+    # - ${preprocessData.output_dir}_cache
+    params:
+    - fineTuneModel
+    - modelParams
+
+  predict:
+    cmd: python scripts/predict.py --params params.yaml --model_name_or_path ${fineTuneModel.output_dir}/best_spearmanr/
+      --data_dir ${preprocessData.output_dir}
+    deps:
+    - scripts/predict.py
+    - ${preprocessData.output_dir}
+    - ${fineTuneModel.output_dir}/best_spearmanr
+    outs:
+    - ${predict.output_dir}
+    params:
+    - predict
+    - modelParams
+
+  importanceAnalysis:
+    cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
+      ${fineTuneModel.output_dir}/best_spearmanr/ --save_path ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
+      --extraFeatures ${getDecayResiduals.extraFeatures}
+      --sequence_file ${preprocessData.output_dir}/train.fasta #test.fasta
+    deps:
+    - scripts/importanceAnalysis.py
+    - ${fineTuneModel.output_dir}
+    outs:
+    - ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
+    params:
+    - importanceAnalysis
+
+  visualizeImportance:
+    cmd: python scripts/visualizeImportance.py --params params.yaml --kmer ${preprocessData.kmer}
+      --SHAP ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file} --scoresOnly
+      ${importanceAnalysis.output_dir}/${visualizeImportance.scoresOnly} --save_path ${importanceAnalysis.output_dir}/${visualizeImportance.save_path}
+      --save_tokenized_path ${importanceAnalysis.output_dir}/${visualizeImportance.save_tokenized_path}
+    deps:
+    - scripts/visualizeImportance.py
+    - ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
+    outs:
+    # - ${importanceAnalysis.output_dir}/${visualizeImportance.scoresOnly}
+    - ${importanceAnalysis.output_dir}/${visualizeImportance.save_path}
+    params:
+    - visualizeImportance
+
+  findMotifs:
+    cmd: python scripts/find_motifs.py --SHAP ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file} --save_file_dir ${findMotifs.output_dir}
+    deps:
+    - scripts/find_motifs.py
+    - ${importanceAnalysis.output_dir}/${visualizeImportance.save_path}
+    outs:
+    - ${findMotifs.output_dir}/positive/${findMotifs.motif_file}
+    - ${findMotifs.output_dir}/positive/${findMotifs.control_file}
+    - ${findMotifs.output_dir}/negative/${findMotifs.motif_file}
+    - ${findMotifs.output_dir}/negative/${findMotifs.control_file}
+    params:
+    - findMotifs
+
+  runAME:
+    foreach:
+     - positive
+     - negative
+    do:
+      cmd: singularity exec
+        -B $(readlink ${findMotifs.output_dir}/${item}/${findMotifs.control_file}):/tmp/${findMotifs.control_file}
+        -B $(readlink ${findMotifs.output_dir}/${item}/${findMotifs.motif_file}):/tmp/${findMotifs.motif_file}
+        docker://memesuite/memesuite:5.5.7 ame
+        --oc ${findMotifs.output_dir}/${item}/${runAME.output_dir} 
+        --control /tmp/${findMotifs.control_file} 
+        --evalue-report-threshold 100 --method fisher 
+        --rna /tmp/${findMotifs.motif_file}  
+        /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+      outs:
+      - ${findMotifs.output_dir}/${item}/${runAME.output_dir}
+      deps:
+      - ${findMotifs.output_dir}/${item}/${findMotifs.control_file}
+      - ${findMotifs.output_dir}/${item}/${findMotifs.motif_file}
+      params:
+      - runAME
+    
+  # correctAME_pvalues:
+  #   foreach:
+  #     - positive
+  #     - negative
+  #   do:
+  #     cmd: python scripts/correctAME_pvalues.py --params params.yaml 
+  #       --ame_input ${findMotifs.output_dir}/${item}/${runAME.output_dir}/ame.tsv 
+  #       --motif_seqs ${findMotifs.output_dir}/${item}/${findMotifs.motif_file} 
+  #       --control_seqs ${findMotifs.output_dir}/${item}/${findMotifs.control_file} 
+  #       --ame_corrected ${findMotifs.output_dir}/${item}/${correctAME_pvalues.output_file}
+
+  #     deps:
+  #     - scripts/correctAME_pvalues.py
+  #     - ${findMotifs.output_dir}/${item}/${runAME.output_dir}/ame.tsv
+  #     outs:
+  #     - ${findMotifs.output_dir}/${item}/${correctAME_pvalues.output_file}
+  #     params:
+  #     - correctAME_pvalues
+
+  prepRandomizeSeqsAndExtraFeatures:
+    foreach:
+      - originalSeqs
+      - sameSeq
+      - same5UTR
+      - same3UTR
+    do:
+      cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml --sequence_file ${preprocessData.output_dir}/test.fasta
+        --process ${item} --output_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
+      deps:
+      - scripts/prepRandomizeSeqsAndExtraFeatures.py
+      - ${preprocessData.output_dir}/test.fasta
+      outs:
+      - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
+      params:
+      - prepRandomizeSeqsAndExtraFeatures
+
+  randomizeSeqsAndExtraFeatures:
+    foreach:
+      - originalSeqs
+      - sameSeq
+      - same5UTR
+      - same3UTR
+    do:
+      cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta --save_path ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv --extraFeatures ${getDecayResiduals.extraFeatures}
+      deps:
+      - scripts/sanityCheck_predictions.py
+      - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
+      outs:
+      - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv
+      params:
+      - prepRandomizeSeqsAndExtraFeatures
+
+  splitHighLowDecay:
+    foreach:
+      - input: ${mergeUTRsAndDecayRates.output_file}
+        label: all
+      - input: ${preprocessData.output_dir}/test.fasta
+        label: test
+    do:
+      cmd: python scripts/splitHighLowDecay.py --params params.yaml --input ${item.input} --high ${item.label}_${splitHighLowDecay.high} --low ${item.label}_${splitHighLowDecay.low} #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
+      deps:
+      - scripts/splitHighLowDecay.py
+      - ${item.input} #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
+      outs:
+      - ${splitHighLowDecay.output}/${item.label}_${splitHighLowDecay.high}
+      - ${splitHighLowDecay.output}/${item.label}_${splitHighLowDecay.low}
+      params:
+      - splitHighLowDecay
+
+  runAME_highLowDecay:
+    foreach:
+      - interest: high
+        label: all
+        control: ${splitHighLowDecay.output}/all_${splitHighLowDecay.low}
+        rna: ${splitHighLowDecay.output}/all_${splitHighLowDecay.high}
+      - interest: low
+        label: all
+        control: ${splitHighLowDecay.output}/all_${splitHighLowDecay.high}
+        rna: ${splitHighLowDecay.output}/all_${splitHighLowDecay.low}
+      - interest: high
+        label: test
+        control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
+        rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
+      - interest: low
+        label: test
+        control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
+        rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
+    do:
+      cmd: 
+        mkdir -p ${splitHighLowDecay.output}/${item.interest}/${runAME_highLowDecay.output_dir} && 
+        singularity exec 
+        -B $(readlink ${item.control}):/tmp/control.fasta
+        -B $(readlink ${item.rna}):/tmp/rna.fasta
+        docker://memesuite/memesuite ame 
+        --oc ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir} 
+        --control /tmp/control.fasta 
+        --evalue-report-threshold 100 --method fisher 
+        --rna /tmp/rna.fasta  
+        /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+      outs:
+      - ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir}
+      deps:
+      - ${splitHighLowDecay.output}/${item.label}_${splitHighLowDecay.low}
+      - ${splitHighLowDecay.output}/${item.label}_${splitHighLowDecay.high}
+      params:
+      - runAME_highLowDecay
+
+#   trainSVM:
+#     cmd: mkdir -p ${trainSVM.outprefix} && lsgkm/src/gkmtrain ${preprocessData.output_dir}/train_dev_pos.fasta
+#       ${preprocessData.output_dir}/train_dev_neg.fasta ${trainSVM.outprefix}
+#     deps:
+#     - ${preprocessData.output_dir}
+#     - ${predict.output_dir}/test_results.txt
+#     outs:
+#     - ${trainSVM.outprefix}.model.txt
+#     params:
+#     - trainSVM
+# 
+#   SVMpredict:
+#     cmd: ../Dmel_RBP/lsgkm/src/gkmpredict ${preprocessData.output_dir}/test.fasta
+#       ${trainSVM.outprefix}.model.txt ${trainSVM.outprefix}_${SVMpredict.output_file}
+#     deps:
+#     - ${trainSVM.outprefix}.model.txt
+#     outs:
+#     - ${trainSVM.outprefix}_predictions.tsv
+#     params:
+#     - SVMpredict
+# 
+#   SVMmetrics:
+#     cmd: python scripts/calculateMetrics.py ${trainSVM.outprefix}_predictions.tsv
+#       ${trainSVM.outprefix}_predictions_metrics.txt
+#     deps:
+#     - ${trainSVM.outprefix}_predictions.tsv
+#     outs:
+#     - ${trainSVM.outprefix}_predictions_metrics.txt
+
+plots:
+- dvclive/decayPrediction/plots/images
+- dvclive/flyUTRs/plots/metrics:
+    x: step
+- dvclive/decay/plots/metrics:
+    x: step
+- dvclive/decay/plots/images
+metrics:
+- dvclive/flyUTRs/metrics.json
+- dvclive/decay/metrics.json

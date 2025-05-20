@@ -1,0 +1,19 @@
+#!/bin/bash --login
+
+#$ -cwd
+#$ -l l40s=2
+
+#####################################################
+### run command
+#####################################################
+#singularity exec -B $(readlink motif_seqs.fasta):/tmp/motif_seqs.fasta -B $(readlink control_seqs.fasta):/tmp/control_seqs.fasta docker://memesuite/memesuite ame --oc ame_output --control /tmp/control_seqs.fasta --evalue-report-threshold 100 --method fisher --rna /tmp/motif_seqs.fasta /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+#  --hit-lo-fraction 0.1 --scoring max 
+conda activate inseq
+#~/.local/share/mamba/bin/dvc repro runAME_highLowDecay #dvc exp run
+#~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures #dvc exp run
+~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures #dvc exp run
+# ~/.local/share/mamba/bin/git add -u
+# ~/.local/share/mamba/bin/git add dvclive/
+# ~/.local/share/mamba/bin/git add data/
+# ~/.local/share/mamba/bin/git add output/data/
+# ~/.local/share/mamba/bin/git commit -m "visualizeImportance of best model e05e6df, lr4e-5, 35 epochs, 0.07 wupPerc"

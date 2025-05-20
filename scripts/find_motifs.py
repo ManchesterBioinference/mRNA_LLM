@@ -1,0 +1,784 @@
+import os
+import pandas as pd
+import numpy as np
+import argparse
+import pickle
+import yaml
+
+
+def kmer2seq(kmers):
+    """
+    Convert kmers to original sequence
+    
+    Arguments:
+    kmers -- str, kmers separated by space.
+    
+    Returns:
+    seq -- str, original sequence.
+
+    """
+    kmers_list = kmers.split(" ")
+    print(kmers_list)
+    bases = [kmer[0] for kmer in kmers_list[0:-1]]
+    bases.append(kmers_list[-1])
+    print(bases)
+    seq = "".join(bases)
+    print(len(seq))
+    print(seq)
+    print(len(kmers_list))
+    assert len(seq) == len(kmers_list) + len(kmers_list[0]) - 1
+    return seq
+
+def seq2kmer(seq, k):
+    """
+    Convert original sequence to kmers
+    
+    Arguments:
+    seq -- str, original sequence.
+    k -- int, kmer of length k specified.
+    
+    Returns:
+    kmers -- str, kmers separated by space
+
+    """
+    kmer = [seq[x:x+k] for x in range(len(seq)+1-k)]
+    kmers = " ".join(kmer)
+    return kmers
+
+def get_minimal_supersets(sequence_list):
+    """
+    Filters a list of sequences, returning only those that are not
+    subsequences of any other sequence in the input list.
+    If sequence A is a subsequence of B (and A != B), A is removed.
+    """
+    if not sequence_list:
+        return []
+
+    # Get unique sequences and sort by length descending (longer sequences first)
+    # This helps in the subsequence check logic.
+    unique_sequences = sorted(list(set(sequence_list)), key=len, reverse=True)
+    
+    minimal_supersets = []
+    for i, current_seq in enumerate(unique_sequences):
+        is_subsequence_of_another = False
+        for j, other_seq in enumerate(unique_sequences):
+            if i == j:
+                continue
+            # Check if current_seq is a subsequence of other_seq
+            if current_seq in other_seq and len(current_seq) < len(other_seq):
+                is_subsequence_of_another = True
+                break
+
+        if not is_subsequence_of_another:
+            minimal_supersets.append(current_seq)
+            
+    return minimal_supersets
+
+
+def _update_sequences_in_dict(target_dict, current_processing_key, new_sequences_raw):
+    """
+    Updates the target_dict with new sequences, ensuring no duplicates or
+    subsequences are added, and removing existing subsequences if a new
+    supersequence is added.
+    """
+    if not new_sequences_raw:
+        return
+
+    # 1. Filter new_sequences_raw to get minimal supersets among them
+    filtered_new_sequences = get_minimal_supersets(list(set(new_sequences_raw)))
+
+    sequences_to_potentially_add = []
+
+    for new_seq in filtered_new_sequences:
+        is_sub_or_dup_of_existing = False
+        # 2a. Check if new_seq is a duplicate or subsequence of any sequence already in target_dict
+        for existing_sequences_list in target_dict.values():
+            for existing_seq in existing_sequences_list:
+                if new_seq == existing_seq or (new_seq in existing_seq and len(new_seq) < len(existing_seq)):
+                    is_sub_or_dup_of_existing = True
+                    break
+            if is_sub_or_dup_of_existing:
+                break
+        
+        if is_sub_or_dup_of_existing:
+            continue # Discard new_seq
+
+        # 2b. If new_seq is not discarded, identify and remove existing sequences in target_dict
+        # that are subsequences of new_seq.
+        
+        # Iterate over a copy of items for safe modification
+        for key, existing_list in list(target_dict.items()): 
+            indices_to_remove_from_this_list = []
+            for idx, existing_seq in enumerate(existing_list):
+                if existing_seq in new_seq and len(existing_seq) < len(new_seq):
+                    indices_to_remove_from_this_list.append(idx)
+            
+            # Remove in reverse order to maintain correct indices
+            for idx in sorted(indices_to_remove_from_this_list, reverse=True):
+                del target_dict[key][idx]
+            
+            if not target_dict[key]: # If list becomes empty
+                del target_dict[key]
+
+        sequences_to_potentially_add.append(new_seq)
+
+    # 3. Consolidate sequences for the current_processing_key
+    if sequences_to_potentially_add:
+        current_key_existing_sequences = target_dict.get(current_processing_key, [])
+        combined_sequences_for_key = current_key_existing_sequences + sequences_to_potentially_add
+        
+        # Final filter for the specific key's list
+        final_sequences_for_key = get_minimal_supersets(list(set(combined_sequences_for_key)))
+        
+        if final_sequences_for_key:
+            target_dict[current_processing_key] = final_sequences_for_key
+        elif current_processing_key in target_dict: # If list became empty after all operations
+            del target_dict[current_processing_key]
+
+
+def contiguous_regions(imp, condition, len_thres=6, max_len=15):
+    """
+    Modified from and credit to: https://stackoverflow.com/a/4495197/3751373
+    Finds contiguous True regions of the boolean array "condition". Returns
+    a 2D array where the first column is the start index of the region and the
+    second column is the end index.
+
+    Arguments:
+    condition -- custom conditions to filter/select high attention 
+            (list of boolean arrays)
+    
+    Keyword arguments:
+    len_thres -- int, specified minimum length threshold for contiguous region 
+        (default 5)
+    max_len -- int, specified maximum length threshold for contiguous region 
+        (default 15)
+
+    Returns:
+    idx -- Index of contiguous regions in sequence
+
+    """
+    
+    # Find the indicies of changes in "condition"
+    d = np.diff(condition) 
+ 
+    idx, = d.nonzero() 
+
+
+    idx += 1
+
+    if condition[0]:
+        # If the start of condition is True prepend a 0
+        idx = np.r_[0, idx] 
+
+    if condition[-1]:
+        # If the end of condition is True, append the length of the array
+        idx = np.r_[idx, condition.size] # Edit
+
+    # Reshape the result into two columns
+    idx.shape = (-1,2)
+
+    new_idx = []
+    def _split_region_if_needed(imp, start, end, len_thres, max_len, new_idx):
+        """
+        Recursively checks if a region is within length limits (len_thres, max_len).
+        If too long, splits it based on the minimum score and recurses on sub-regions.
+        Appends valid regions to new_idx.
+        """
+        if start >= end: # Base case: empty or invalid region
+            return
+
+        # Calculate the actual sequence length of the region using token lengths
+        region_len = sum(imp.lengths[start:end])
+
+        if region_len < len_thres:
+            # Base case: Region is too short, discard.
+            return
+        elif max_len is None or end-start == 1 or region_len <= max_len:
+            # Base case: Region is within the valid length range, accept it.
+            new_idx.append([start, end])
+            return
+        else:
+            # Recursive case: Region is too long, split it.
+            scores = imp.scores.flatten()[start:end]
+
+            # Find the index of the minimum score relative to the start of the slice
+            if np.all(scores == scores[0]):
+                # If all scores are the same, split near the middle token count
+                min_score_relative_idx = (end - start) // 2
+            else:
+                # Find all indices with the minimum score relative to the start of the slice
+                min_score = np.min(scores)
+                min_indices_relative = np.where(scores == min_score)[0]
+
+                # If there's only one minimum, use it directly
+                if len(min_indices_relative) == 1:
+                    min_score_relative_idx = min_indices_relative[0]
+                else:
+                    # Calculate the center index of the scores slice
+                    center_index_relative = (len(scores) - 1) / 2.0
+                    # Calculate distances from the center for each minimum index
+                    distances = np.abs(min_indices_relative - center_index_relative)
+                    # Find the index within min_indices_relative that corresponds to the minimum distance
+                    closest_idx_in_min_indices = np.argmin(distances)
+                    # Get the actual relative index of the minimum score closest to the center
+                    min_score_relative_idx = min_indices_relative[closest_idx_in_min_indices]
+
+            split_idx = start + min_score_relative_idx
+
+            # Ensure the split point guarantees progress to avoid infinite recursion
+            # If the minimum score is at the very beginning (index 0 relative to start),
+            # the split point would be 'start'. We must advance it to split effectively.
+            if split_idx == start:
+                split_idx = start + 1 # Split after the first token
+
+            # Recursively process the left and right sub-regions
+            # Note: The split ensures that neither sub-region is identical to the original [start, end)
+            # if split_idx was advanced from start.
+            _split_region_if_needed(imp, start, split_idx, len_thres, max_len, new_idx)
+            _split_region_if_needed(imp, split_idx, end, len_thres, max_len, new_idx)
+
+
+    # In contiguous_regions function, replace the original loop with this:
+    for start, end in idx:
+        _split_region_if_needed(imp, start, end, len_thres, max_len, new_idx)
+
+    
+    seq_idx = [(int(sum(imp.lengths[:tokenCoord[0]])), int(sum(imp.lengths[:tokenCoord[1]]))) for tokenCoord in new_idx]
+    return np.array(seq_idx)
+
+def find_high_attention(imp, min_len=5, positive = True, **kwargs):
+    """
+    With an array of attention scores as input, finds contiguous high attention 
+    sub-regions indices having length greater than min_len.
+    
+    Arguments:
+    score -- numpy array of attention scores for a sequence
+
+    Keyword arguments:
+    min_len -- int, specified minimum length threshold for contiguous region 
+        (default 5)
+    **kwargs -- other input arguments:
+        cond -- custom conditions to filter/select high attention 
+            (list of boolean arrays)
+    
+    Returns:
+    motif_regions -- indices of high attention regions in sequence
+
+    """
+
+    if positive:
+        score = [x if x > 0 else 0 for x in imp.scores.flatten().tolist()] # only positive attention scores
+    else:
+        score = [abs(x) if x < 0 else 0 for x in imp.scores.flatten().tolist()] # only negative attention scores
+    score = np.asarray(score)
+
+    if sum(score) == 0:
+        return [], [], [], []
+    tmpMean = np.mean([x for x in score if x > 0])
+    tmpStd = np.std([x for x in score if x > 0])
+    cond1 = (score > tmpMean+tmpStd) #(score > np.mean([x for x in score if x > 0]))
+    cond2 = (score > 2*np.min([x for x in score if x > 0])) # threshold for high attention
+
+
+    cond = [cond1, cond2]
+    
+    cond = list(map(all, zip(*cond)))
+    
+    if 'cond' in kwargs: 
+        cond = kwargs['cond']
+        if any(isinstance(x, list) for x in cond): 
+            cond = list(map(all, zip(*cond)))
+    
+    cond = np.asarray(cond)
+
+    # find important contiguous region with high attention
+    motif_regions = contiguous_regions(imp,cond,min_len,max_len=None)
+
+    # isolate regions of interest and control for motif enrichment analysis
+    #TODO - confirm that these thresholds work well
+    interestIdx = contiguous_regions(imp,score > 0,10,max_len=None)
+    controlIdx = contiguous_regions(imp,score == 0,10,max_len=None)
+
+    interestRegions = []
+    for x in interestIdx:
+        seq = ''.join(imp.tokens)[x[0]:x[1]]
+        if '[SEP]' in seq:
+            seq = seq.split('[SEP]')
+            for s in seq:
+                if len(s) > 0:
+                    interestRegions.append(s)
+        else:
+            interestRegions.append(seq)
+
+    controlRegions = []
+    for x in controlIdx:
+        seq = ''.join(imp.tokens)[x[0]:x[1]]
+        if '[SEP]' in seq:
+            seq = seq.split('[SEP]')
+            for s in seq:
+                if len(s) > 0:
+                    controlRegions.append(s)
+        else:
+            controlRegions.append(seq)
+    motif_seqs = []
+    for x in motif_regions:
+        seq = ''.join(imp.tokens)[x[0]:x[1]]
+        if '[SEP]' in seq:
+            seq = seq.split('[SEP]')
+            for s in seq:
+                if len(s) > 0:
+                    motif_seqs.append(s)
+        else:
+            motif_seqs.append(seq)
+
+    return motif_regions, controlRegions, interestRegions, motif_seqs
+
+def count_motif_instances(seqs, motifs, allow_multi_match=False):
+    
+    import ahocorasick 
+    from operator import itemgetter
+    
+    motif_count = {}
+    
+    A = ahocorasick.Automaton()
+    for idx, key in enumerate(motifs):
+        A.add_word(key, (idx, key))
+        motif_count[key] = set()
+    A.make_automaton()
+    
+    for i, seq in enumerate(seqs):
+        matches = sorted(map(itemgetter(1), A.iter(seq)))
+        matched_seqs = []
+        for match in matches:
+            match_seq = match[1]
+            assert match_seq in motifs
+            if allow_multi_match:
+                motif_count[match_seq].add(i) # add seq index
+            else: # for a particular seq, count only once if multiple matches were found
+                if match_seq not in matched_seqs:
+                    motif_count[match_seq].add(i)
+                    matched_seqs.append(match_seq)
+    
+    return motif_count
+
+def motifs_hypergeom_test(pos_seqs, neg_seqs, motifs, p_adjust = 'fdr_bh', alpha = 0.05, verbose=False, 
+                          allow_multi_match=False, **kwargs):
+    
+    from scipy.stats import hypergeom
+    import statsmodels.stats.multitest as multi
+    
+    
+    pvals = []
+    N = len(pos_seqs) + len(neg_seqs)
+    K = len(pos_seqs)
+    motif_count_all = count_motif_instances(pos_seqs+neg_seqs, motifs, allow_multi_match=allow_multi_match)
+    motif_count_pos = count_motif_instances(pos_seqs, motifs, allow_multi_match=allow_multi_match)
+    
+    for motif in motifs:
+        n = motif_count_all[motif]
+        x = motif_count_pos[motif]
+
+        pval = hypergeom.sf(x-1, N, K, n)
+        if verbose:
+            if pval < 1e-5:
+                print("motif {}: N={}; K={}; n={}; x={}; p={}".format(motif, N, K, n, x, pval))
+
+        pvals.append(pval)
+    
+    # adjust p-value
+    if p_adjust is not None:
+        pvals = list(multi.multipletests(pvals,alpha=alpha,method=p_adjust)[1])
+    return pvals
+
+def filter_motifs(pos_seqs, neg_seqs, motifs, cutoff=0.05, return_idx=False, **kwargs):
+    
+    pvals = motifs_hypergeom_test(pos_seqs, neg_seqs, motifs, **kwargs) 
+    #print(pvals)
+    if return_idx:
+        return [i for i, pval in enumerate(pvals) if pval < cutoff]
+    else:
+        return [motifs[i] for i, pval in enumerate(pvals) if pval < cutoff]
+
+def merge_motifs(motif_seqs, min_len=5, align_all_ties=True, **kwargs):
+    
+    from Bio import Align
+    
+
+    aligner = Align.PairwiseAligner()
+    aligner.internal_gap_score = -10000.0 # prohibit internal gaps
+    
+    merged_motif_seqs = {}
+    motifGroups = {}
+
+    for motif in sorted(motif_seqs, key=len): 
+
+
+        if not merged_motif_seqs: # if empty
+            merged_motif_seqs[motif] = motif_seqs[motif] # add first one
+            motifGroups[motif] = [motif] # add to group
+        else:
+
+            alignments = []
+            key_motifs = []
+            for key_motif in merged_motif_seqs.keys(): # key motif
+                if motif != key_motif: 
+                    alignment=aligner.align(motif, key_motif)[0] 
+                    
+                    
+                    # condition to declare successful alignment
+                    cond = max((min_len -1), 0.5 * min(len(motif), len(key_motif))) 
+                    
+                    if 'cond' in kwargs:
+                        cond = kwargs['cond'] # override
+                        
+                    if alignment.score >= cond:
+                        alignments.append(alignment)
+                        key_motifs.append(key_motif)
+                        if key_motif not in motifGroups:
+                            motifGroups[key_motif] = []
+
+            if alignments: # if aligned, find out alignment with maximum score and proceed
+                best_score = max(alignments, key=lambda alignment: alignment.score)
+                best_idx = [i for i, score in enumerate(alignments) if score == best_score]
+ 
+                if align_all_ties: # bool, whether to keep all best alignments when ties encountered (default True)
+                    for i in best_idx:
+                        alignment = alignments[i]
+                        key_motif = key_motifs[i] 
+
+                        # calculate offset to be added/subtracted from atten_region_pos
+                        left_offset = alignment.aligned[0][0][0] - alignment.aligned[1][0][0] # always query - key
+            
+                        if (alignment.aligned[0][0][1] <= len(motif)) & \
+                            (alignment.aligned[1][0][1] == len(key_motif)): # inside
+                            right_offset = len(motif) - alignment.aligned[0][0][1]
+                        elif (alignment.aligned[0][0][1] == len(motif)) & \
+                            (alignment.aligned[1][0][1] < len(key_motif)): # left shift
+                            right_offset = alignment.aligned[1][0][1] - len(key_motif)
+                        elif (alignment.aligned[0][0][1] < len(motif)) & \
+                            (alignment.aligned[1][0][1] == len(key_motif)): # right shift
+                            right_offset = len(motif) - alignment.aligned[0][0][1]
+                       
+                        merged_motif_seqs[key_motif]['seq_idx'].extend(motif_seqs[motif]['seq_idx'])
+
+                        # calculate new atten_region_pos after adding/subtracting offset 
+                        new_atten_region_pos = [(pos[0]+left_offset, pos[1]-right_offset) \
+                                                for pos in motif_seqs[motif]['atten_region_pos']]
+               
+                        merged_motif_seqs[key_motif]['atten_region_pos'].extend(new_atten_region_pos)
+                        if key_motif not in motifGroups:
+                            motifGroups[key_motif] = []
+                        motifGroups[key_motif].append(motif)
+                   
+                else:
+                    alignment = alignments[best_idx[0]]
+                    key_motif = key_motifs[best_idx[0]]
+
+                    # calculate offset to be added/subtracted from atten_region_pos
+                    left_offset = alignment.aligned[0][0][0] - alignment.aligned[1][0][0] # always query - key
+                    if (alignment.aligned[0][0][1] <= len(motif)) & \
+                        (alignment.aligned[1][0][1] == len(key_motif)): # inside
+                        right_offset = len(motif) - alignment.aligned[0][0][1]
+                    elif (alignment.aligned[0][0][1] == len(motif)) & \
+                        (alignment.aligned[1][0][1] < len(key_motif)): # left shift
+                        right_offset = alignment.aligned[1][0][1] - len(key_motif)
+                    elif (alignment.aligned[0][0][1] < len(motif)) & \
+                        (alignment.aligned[1][0][1] == len(key_motif)): # right shift
+                        right_offset = len(motif) - alignment.aligned[0][0][1]
+                    
+
+                    # add seq_idx back to new merged dict
+                    merged_motif_seqs[key_motif]['seq_idx'].extend(motif_seqs[motif]['seq_idx'])
+
+                    # calculate new atten_region_pos after adding/subtracting offset 
+                    new_atten_region_pos = [(pos[0]+left_offset, pos[1]-right_offset) \
+                                            for pos in motif_seqs[motif]['atten_region_pos']]
+                    merged_motif_seqs[key_motif]['atten_region_pos'].extend(new_atten_region_pos)
+                    if key_motif not in motifGroups:
+                        motifGroups[key_motif] = []
+                    motifGroups[key_motif].append(motif)
+
+            else: # cannot align to anything, add to new dict as independent key
+                merged_motif_seqs[motif] = motif_seqs[motif] # add new one
+                motifGroups[motif] = [motif]
+    
+
+    return merged_motif_seqs, motifGroups
+
+
+#def make_window(motif_seqs, pos_seqs, window_size=24):
+def make_window(motif_seqs, importances, window_size=24):
+  
+    new_motif_seqs = {}
+    
+    # extract fixed-length sequences based on window_size
+    for motif, instances in motif_seqs.items():
+        new_motif_seqs[motif] = {'seq_idx':[], 'atten_region_pos':[], 'seqs': []}
+        for i, coord in enumerate(instances['atten_region_pos']):
+            if coord[0] >= coord[1]: # empty region
+                continue
+            atten_len = coord[1] - coord[0]
+            #atten_len = sum(importances[instances['seq_idx'][i]].lengths[tokenCoord[0]:tokenCoord[1]])
+            if (window_size - atten_len) % 2 == 0: # even
+                offset = (window_size - atten_len) / 2 
+                #seqCoord = (int(sum(importances[instances['seq_idx'][i]].lengths[:tokenCoord[0]])), int(sum(importances[instances['seq_idx'][i]].lengths[:tokenCoord[1]])))
+                new_coord = (int(coord[0] - offset), int(coord[1] + offset))
+                #if (new_coord[0] >=0) & (new_coord[1] < len(pos_seqs[instances['seq_idx'][i]])): 
+                if (new_coord[0] >=0) & (new_coord[1] < len(''.join(importances[instances['seq_idx'][i]].tokens))): 
+                    # append
+                    new_motif_seqs[motif]['seq_idx'].append(instances['seq_idx'][i]) 
+                    new_motif_seqs[motif]['atten_region_pos'].append((new_coord[0], new_coord[1]))
+                    new_motif_seqs[motif]['seqs'].append(''.join(importances[instances['seq_idx'][i]].tokens)[new_coord[0]:new_coord[1]])
+            else: # odd
+                offset1 = (window_size - atten_len) // 2
+                offset2 = (window_size - atten_len) // 2 + 1
+                #seqCoord = (int(sum(importances[instances['seq_idx'][i]].lengths[:tokenCoord[0]])), int(sum(importances[instances['seq_idx'][i]].lengths[:tokenCoord[1]])))
+                new_coord = (int(coord[0] - offset1), int(coord[1] + offset2))
+                if (new_coord[0] >=0) & (new_coord[1] < len(''.join(importances[instances['seq_idx'][i]].tokens))):
+                    # append
+                    new_motif_seqs[motif]['seq_idx'].append(instances['seq_idx'][i])
+                    new_motif_seqs[motif]['atten_region_pos'].append((new_coord[0], new_coord[1]))
+                    new_motif_seqs[motif]['seqs'].append(''.join(importances[instances['seq_idx'][i]].tokens)[new_coord[0]:new_coord[1]])
+
+    return new_motif_seqs
+
+def _reorder_lengths_median_alternating(lengths_list):
+    """
+    Reorders a list of numbers to have the middle number first,
+    then alternates one lower and one higher, so that the median
+    number is first and the extreme values come last.
+    """
+    if not lengths_list:
+        return []
+
+    # Sort the list to easily find the median and subsequent elements
+    sorted_lengths = sorted(lengths_list)
+    n = len(sorted_lengths)
+    
+    new_order_lengths = []
+    
+    # Determine the starting middle index.
+    # For odd n, (n-1)//2 is the exact middle.
+    # For even n, (n-1)//2 is the lower of the two middle elements, which will be picked first.
+    mid_idx = (n - 1) // 2
+    
+    # Add the first middle element
+    new_order_lengths.append(sorted_lengths[mid_idx])
+    
+    # Initialize pointers for elements to the left and right of the initial middle element
+    l_ptr = mid_idx - 1
+    r_ptr = mid_idx + 1
+    
+    # Loop until all elements from sorted_lengths are added to new_order_lengths,
+    # alternating between picking from the left and right sides of the initial middle.
+    while l_ptr >= 0 or r_ptr < n:
+        # Add element from the left side (lower than current median elements)
+        if l_ptr >= 0:
+            new_order_lengths.append(sorted_lengths[l_ptr])
+            l_ptr -= 1
+        
+        # Add element from the right side (higher than current median elements)
+        if r_ptr < n: 
+            new_order_lengths.append(sorted_lengths[r_ptr])
+            r_ptr += 1
+            
+    return new_order_lengths
+### make full pipeline
+def motif_analysis(importances,
+                   neg_seqs, # Note: This argument seems unused currently, relying on control_seqs derived from importances
+                   pos_atten_scores, # Note: This argument seems unused currently
+                   rbp_using, # Note: This argument seems unused currently
+                   window_size = 24,
+                   min_len = 4,
+                   pval_cutoff = 0.005,
+                   min_n_motif = 3,
+                   align_all_ties = True,
+                   save_file_dir = None,
+                   positive = True,
+                   args = None,
+                   **kwargs
+                  ):
+ 
+    
+    from Bio import motifs
+    from Bio.Seq import Seq
+    from scipy.stats import hypergeom
+    import statsmodels.stats.multitest as multi
+    import random
+    random.seed(42)
+    
+    verbose = False
+    if 'verbose' in kwargs:
+        verbose = kwargs['verbose']
+    
+    allow_multi_match = kwargs.get('allow_multi_match', False) # Get allow_multi_match from kwargs
+    p_adjust = kwargs.get('p_adjust', 'fdr_bh') # Get p_adjust method
+
+    if verbose:
+        print("*** Begin motif analysis ***")
+
+    ## find the motif regions
+    if verbose:
+        print("* Finding high attention motif regions and control/interest sequences")
+    control_seqs = {}
+    interest_seqs = {}
+    motif_seq = {} # This dictionary will store motif sequences per importance score index
+    for i, imp in enumerate(importances):
+        # handle kwargs
+        if 'atten_cond' in kwargs:
+            motif_regions, controlRegions, interestRegions, current_motif_s_list = find_high_attention(imp, min_len=min_len, positive=positive, cond=kwargs['atten_cond'])
+        else:
+            motif_regions, controlRegions, interestRegions, current_motif_s_list = find_high_attention(imp, min_len=min_len, positive=positive)
+        
+        # Collect control and interest sequences (regions) using the new helper function
+        if controlRegions: # Check if the list is not empty
+            _update_sequences_in_dict(control_seqs, i, controlRegions)
+        if interestRegions: # Check if the list is not empty
+            interest_seqs[i] = interestRegions
+        if current_motif_s_list: # Check if the list is not empty
+            _update_sequences_in_dict(motif_seq, i, current_motif_s_list)
+          
+    positive_label = 'positive' if positive else 'negative'
+    output_dir = os.path.join(save_file_dir, positive_label)
+    os.makedirs(output_dir, exist_ok=True)
+    # save control and interest sequences to fasta files
+    count = 0
+    with open(os.path.join(output_dir,args.control_file), 'w') as f:
+        #for k in motif_seq.keys():
+        #    for j, s in enumerate(motif_seq[k]):
+        #        strng = ''.join(interest_seqs[k])
+        #        shuffled_string = [random.choice(strng) for _ in range(len(s))]
+        #        new_string = ''.join(shuffled_string)
+        #        f.write(f">interest_shuffled_{k+1000}_{j}\n{new_string}\n")
+        # for k in control_seqs.keys():
+        #     for j, s in enumerate(control_seqs[k]):
+        #         f.write(f">control_seq_{k}_{j}\n{s}\n")
+        contSeq = ''.join([s for k in control_seqs.keys() for s in control_seqs[k]])
+        # Collect all motif sequences and their lengths
+        motif_lengths = [len(s) for seq_list in motif_seq.values() for s in seq_list if len(s) >= 8]
+
+        if motif_lengths:
+            # Order the list longest to shortest
+            motif_lengths = _reorder_lengths_median_alternating(motif_lengths)
+            
+            num_unique_motif_lengths = len(motif_lengths)
+            current_motif_length_idx = 0 # To cycle through the sorted motif_lengths
+            
+            current_pos_in_contSeq = 0
+            # Loop through contSeq, grabbing chunks with lengths from the circularized motif_lengths list
+            while current_pos_in_contSeq < len(contSeq):
+                # Get the next length from the (circular) list of motif_lengths
+                chunk_len = motif_lengths[current_motif_length_idx]
+            
+                # Check if the remaining contSeq is long enough for a chunk of this_length
+                if current_pos_in_contSeq + chunk_len <= len(contSeq):
+                    chunk = contSeq[current_pos_in_contSeq : current_pos_in_contSeq + chunk_len]
+                    f.write(f">control_chunk_motif_len_pattern_{count}\n{chunk}\n")
+                    current_pos_in_contSeq += chunk_len
+                    count += 1 # Increment the unique counter for FASTA headers
+                # Move to the next length for the next iteration, cycling back to the start if needed
+                    current_motif_length_idx = (current_motif_length_idx + 1) % num_unique_motif_lengths
+            
+                else:
+                    if current_motif_length_idx != num_unique_motif_lengths -1:
+                        # Move to the next length for the next iteration, cycling back to the start if needed
+                        current_motif_length_idx = (current_motif_length_idx + 1) % num_unique_motif_lengths
+            
+                        continue
+                    # Not enough contSeq left to make a chunk of the current chunk_len
+                    break 
+
+    with open(os.path.join(output_dir,args.interest_file), 'w') as f:
+        for k in interest_seqs.keys():
+            for j, s in enumerate(interest_seqs[k]):
+                f.write(f">interest_seq_{k}_{j}\n{s}\n")
+    # save motif sequences to fasta files
+    with open(os.path.join(output_dir,args.motif_file), 'w') as f:
+        for k in motif_seq.keys(): # This uses the updated motif_seq dictionary
+            for j, s in enumerate(motif_seq[k]):
+                if len(s) >= 8: # Only save sequences longer than 8
+                    f.write(f">motif_seq_{k}_{j}\n{s}\n")
+    return
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--params", default='params.yaml', type=str, help="Path to the YAML file containing parameters.",)
+    parser.add_argument( "--rbp", default=None, type=str, help="rbp using",)
+    parser.add_argument( "--data_dir", default=None, type=str, help="The input data dir. Should contain the sequence+label .tsv files (or other data files) for the task.",)
+    parser.add_argument( "--predict_dir", default=None, type=str, help="Path where the attention scores were saved. Should contain both pred_results.npy and atten.npy",)
+    parser.add_argument( "--window_size", default=10, type=int, help="Specified window size to be final motif length",)
+    parser.add_argument( "--min_len", default=5, type=int, help="Specified minimum length threshold for contiguous region",)
+    parser.add_argument( "--pval_cutoff", default=0.05, type=float, help="Cutoff FDR/p-value to declare statistical significance",)
+    parser.add_argument( "--p_adjust", default='fdr_bh', type=str, help="Multiple testing correction method (e.g., fdr_bh, bonferroni, None)",) # Changed default
+    parser.add_argument( "--min_n_motif", default=3, type=int, help="Minimum instance inside motif to be filtered",)
+    parser.add_argument( "--align_all_ties", action='store_true', help="Whether to keep all best alignments when ties encountered",)
+    parser.add_argument( "--save_file_dir", default='.', type=str, help="Path to save outputs",)
+    parser.add_argument( "--motif_file", default='.', type=str, help="Path to save outputs",)
+    parser.add_argument( "--control_file", default='.', type=str, help="Path to save outputs",)
+    parser.add_argument( "--interest_file", default='.', type=str, help="Path to save outputs",)
+    parser.add_argument( "--verbose", action='store_true', help="Verbosity controller",)
+    parser.add_argument("--SHAP", default="output/importance/shap.pkl", type=str, help="The path to the pickled SHAP data for each sample")
+    parser.add_argument("--allow_multi_match", action='store_true', help="Allow multiple matches of a motif within a single sequence during counting for hypergeometric test.")
+
+
+    # TODO: add the conditions
+    args = parser.parse_known_args()[0]
+
+    # Read parameters from YAML file
+    if args.params:
+        with open(args.params, 'r') as file:
+            yaml_params = yaml.safe_load(file)
+            for key, value in yaml_params['findMotifs'].items():
+                parser.set_defaults(**{key: value})
+
+    args = parser.parse_args()
+
+    importance = pickle.load(open(args.SHAP, 'rb'))
+    iWithLen = []
+    for x in importance:
+        x.tokens = [t.replace('T','U') for t in x.tokens] # Ensure U instead of T
+        x.lengths = [len(token) for token in x.tokens]
+        iWithLen.append(x)
+
+    # Removed loading of unused data (atten_scores, pred, dev)
+    # pos_atten_scores = atten_scores[dev_pos.index.values]
+    # neg_atten_scores = atten_scores[dev_neg.index.values]
+    # assert len(dev_pos) == len(pos_atten_scores)
+
+    # run motif analysis for positive and negative scores
+    all_results = {}
+    for pos in [True, False]:
+        if pos:
+            print("\n--- Finding motifs for POSITIVE attention scores ---")
+        else:
+            print("\n--- Finding motifs for NEGATIVE attention scores ---")
+        
+        # Pass allow_multi_match and p_adjust via kwargs
+        merged_motif_seqs = motif_analysis(iWithLen, 
+                                    None, # neg_seqs - unused
+                                    None, # pos_atten_scores - unused
+                                    args.rbp, # rbp_using - unused
+                                    window_size = args.window_size,
+                                    min_len = args.min_len,
+                                    pval_cutoff = args.pval_cutoff,
+                                    min_n_motif = args.min_n_motif,
+                                    align_all_ties = args.align_all_ties,
+                                    save_file_dir = args.save_file_dir,
+                                    verbose = args.verbose,
+                                    positive = pos,
+                                    p_adjust = args.p_adjust, # Pass p_adjust method
+                                    allow_multi_match=args.allow_multi_match,
+                                    args = args # Pass counting option
+                                )
+        # label = 'positive' if pos else 'negative'
+        # all_results[label] = merged_motif_seqs
+        # print(f"--- Completed analysis for {label} scores. Found {len(merged_motif_seqs)} motifs. ---")
+
+    # Optionally, save the combined results dictionary
+    # with open(os.path.join(args.save_file_dir, "all_motif_results.pkl"), "wb") as f:
+    #    pickle.dump(all_results, f)
+
+if __name__ == "__main__":
+    main()
+
+

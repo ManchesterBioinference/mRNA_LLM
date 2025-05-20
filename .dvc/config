@@ -1,0 +1,5 @@
+[cache]
+    dir = /mnt/mr01-home01/m65338lb/scratch/projects/rnaDecay/cache
+    type = symlink
+[core]
+    autostage = true

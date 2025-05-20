@@ -1,0 +1,182 @@
+import argparse
+import yaml
+import random
+from multiprocessing import Pool
+import pandas as pd
+from tqdm import tqdm
+from Bio import SeqIO
+#from ferret import SHAPExplainer
+
+import numpy as np
+import torch
+import pickle
+import copy
+import os
+import pandas as pd
+import joblib
+
+
+from transformers import (
+    AutoTokenizer,
+) 
+
+from GenaLMWithExtraFeatures import GenaLMWithExtraFeatures
+
+def set_seed(args):
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    if args.n_gpu > 0:
+        torch.cuda.manual_seed_all(args.seed)
+
+parser = argparse.ArgumentParser()
+
+#################################################################
+# BASIC
+parser.add_argument("--params", default='params.yaml', type=str, help="Path to the YAML file containing parameters.",)
+parser.add_argument("--data_dir", default=None, type=str, help="The input data dir. Should contain the .tsv files (or other data files) for the task.",)
+parser.add_argument("--should_continue", action="store_true", help="Whether to continue from latest checkpoint in output_dir")
+parser.add_argument("--config_name", default="", type=str, help="Pretrained config name or path if not the same as model_name",)
+parser.add_argument("--model_name_or_path", default='output/ftModel/best_spearmanr', type=str, help="Path to pre-trained model or shortcut name selected in the list",)
+parser.add_argument("--task_name", default='rnaprom', type=str, help="Script only prepared for promoter task" )
+parser.add_argument("--output_file", default=None, type=str, help="The output directory where the model predictions and checkpoints will be written.",)
+parser.add_argument("--tokenizer_name",default="rna3",type=str, help="Pretrained tokenizer name or path if not the same as model_name",)
+
+# OBJECTIVE
+parser.add_argument("--do_train", action="store_true", help="Whether to run training.")
+parser.add_argument("--do_eval", action="store_true", help="Whether to run eval on the dev set.")
+parser.add_argument("--do_predict", action="store_true", help="Whether to do prediction on the given dataset.")
+parser.add_argument("--do_visualize", action="store_true", help="Whether to calculate attention score.")
+
+# VALIDATION DURING TRAINING / EVALUATE 
+parser.add_argument("--evaluate_during_training", action="store_true", help="Run evaluation during training at each logging step.",)
+parser.add_argument("--do_visualize_during_training", action="store_true", help="Steps to generate an image")
+parser.add_argument("--image_steps", type=int, default=0, help="Steps to generate an image")
+
+# MODEL CONFIGS (only use)
+
+# TRAINING DETAILS
+parser.add_argument("--max_seq_length", default=512, type=int, help="The maximum total input sequence length after tokenization. Sequences longer "
+                    "than this will be truncated, sequences shorter will be padded.",)
+parser.add_argument("--per_gpu_train_batch_size", default=8, type=int, help="Batch size per GPU/CPU for training.",)
+parser.add_argument("--per_gpu_eval_batch_size", default=8, type=int, help="Batch size per GPU/CPU for evaluation.",)
+parser.add_argument("--per_gpu_pred_batch_size", default=8, type=int, help="Batch size per GPU/CPU for prediction.",)
+parser.add_argument("--learning_rate", default=5e-5, type=float, help="The initial learning rate for Adam.")
+parser.add_argument("--gradient_accumulation_steps", type=int, default=1, help="Number of updates steps to accumulate before performing a backward/update pass.",)
+parser.add_argument("--weight_decay", default=0.0, type=float, help="Weight decay if we apply some.")
+parser.add_argument("--adam_epsilon", default=1e-8, type=float, help="Epsilon for Adam optimizer.")
+parser.add_argument("--beta1", default=0.9, type=float, help="Beta1 for Adam optimizer.")
+parser.add_argument("--beta2", default=0.999, type=float, help="Beta2 for Adam optimizer.")
+parser.add_argument("--max_grad_norm", default=1.0, type=float, help="Max gradient norm.")
+parser.add_argument("--attention_probs_dropout_prob", default=0.1, type=float, help="Dropout rate of attention.")
+parser.add_argument("--hidden_dropout_prob", default=0.1, type=float, help="Dropout rate of intermidiete layer.")
+parser.add_argument("--num_train_epochs", default=3.0, type=float, help="Total number of training epochs to perform.",)
+parser.add_argument("--max_steps", default=-1, type=int, help="If > 0: set total number of training steps to perform. Override num_train_epochs.",)
+parser.add_argument("--warmup_steps", default=0, type=int, help="Linear warmup over warmup_steps.")
+parser.add_argument("--warmup_percent", default=0, type=float, help="Linear warmup over warmup_percent*total_steps.")
+parser.add_argument("--seed", type=int, default=42, help="random seed for initialization")
+parser.add_argument("--local_rank", type=int, default=-1, help="For distributed training: local_rank")
+parser.add_argument("--n_process", default=2, type=int, help="number of processes used for data process",)
+parser.add_argument("--eval_all_checkpoints", action="store_true", help="Evaluate all checkpoints starting with the same prefix as model_name ending and ending with step number",)
+parser.add_argument("--no_cuda", action="store_true", help="Avoid using CUDA when available")
+parser.add_argument("--logging_steps", type=int, default=500, help="Log every X updates steps.")
+parser.add_argument("--save_steps", type=int, default=500, help="Save checkpoint every X updates steps.")
+parser.add_argument("--save_total_limit", type=int, default=None, help="Limit the total amount of checkpoints, delete the older checkpoints in the output_dir, does not delete by default",)
+parser.add_argument("--overwrite_output_dir", action="store_true", help="Overwrite the content of the output directory",)
+parser.add_argument("--neptune", default=False, help="Neptune")
+parser.add_argument("--neptune_tags", type=list, default=["trial"], help="Neptune tags")
+parser.add_argument("--neptune_description", type=str, default="TRIAL minilm fine-tuning", help="Neptune description")
+parser.add_argument("--neptune_token", type=str, default=None, help="Neptune API token")
+parser.add_argument("--neptune_project", type=str, default=None, help="Neptune project")
+
+
+# OTHER
+parser.add_argument("--cache_dir", default="", type=str, help="Where do you want to store the pre-trained models downloaded from s3",)
+parser.add_argument("--overwrite_cache", action="store_true", help="Overwrite the cached training and evaluation sets",)
+parser.add_argument("--do_lower_case", action="store_true", help="Set this flag if you are using an uncased model.",)
+#################################################################
+
+parser.add_argument("--sequence_file", default="output/data/decay/train.fasta", type=str, help="Path to the TSV file containing sequences")
+parser.add_argument("--save_path", default="deleteme", type=str, help="the directory for output")
+parser.add_argument("--extraFeatures", default=None, type=str, help="Path the the csv file containing the extra features",)
+parser.add_argument("--debug", default=False, type=bool, help="Path the the csv file containing the extra features",)
+
+
+args = parser.parse_known_args()[0]
+
+# Read parameters from YAML file
+if args.params:
+    with open(args.params, 'r') as file:
+        yaml_params = yaml.safe_load(file)
+        for key, value in yaml_params['predict'].items():
+            parser.set_defaults(**{key: value})
+        for key, value in yaml_params['modelParams'].items():
+            parser.set_defaults(**{key: value})
+        for key, value in yaml_params['importanceAnalysis'].items():
+            parser.set_defaults(**{key: value})
+
+args = parser.parse_args()
+#args.sequence_file = 'output/data/sanityCheck/originalSeqs.fasta'
+
+# Set seed
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+if device == 'cuda':
+    args.n_gpu = 1
+else: 
+    args.n_gpu = 0
+set_seed(args)
+
+model = GenaLMWithExtraFeatures.from_pretrained(args.model_name_or_path) #, num_labels=1, id2label={0: "LABEL_0"})
+model.to(device)
+model.eval()
+
+# Load the scaler
+scaler_path = os.path.join(args.model_name_or_path, 'scaler.joblib')
+if os.path.exists(scaler_path):
+    scaler = joblib.load(scaler_path)
+else:
+    scaler = None
+
+t = AutoTokenizer.from_pretrained(args.model_name_or_path)
+
+if args.extraFeatures is not None:
+    extraFeatures = pd.read_csv(args.extraFeatures, index_col=0)
+    extraFeatures.drop(['Decay Rate', 'Residuals'], axis=1, inplace=True)
+    extraFeatures = pd.DataFrame(scaler.transform(extraFeatures), columns=extraFeatures.columns, index=extraFeatures.index)
+else:
+    extraFeatures = None
+
+# Run bench.explain for each sequence
+decay = []
+predDecay = []
+seqCount = []
+count = 0
+for seq in tqdm(SeqIO.parse(args.sequence_file, 'fasta')):
+    count += 1
+    seq.seq = str(seq.seq).replace('U', "T")
+    # Check seq length after tokenization
+    utr5, utr3 = str(seq.seq).split(',')
+    utr5 = t.encode(str(utr5), add_special_tokens=True)
+    utr3 = t.encode(str(utr3), add_special_tokens=True) #, max_length=args.max_seq_length-len(utr5)+1, pad_to_max_length=False, truncation=True)
+    s = utr5 + utr3[1:]
+    if len(s) > args.max_seq_length:
+        print(f"Skipping sequence {seq.id} due to length {len(s)}")
+        continue
+    am = [1] * len(s) + [0] * (args.max_seq_length - len(s))
+    s = s + [t.pad_token_id] * (args.max_seq_length - len(s))
+    # Get extra features
+    if extraFeatures is not None:
+        seq_id = seq.description.split()[1]
+        tmp_extraFeatures = extraFeatures.loc[seq_id].to_numpy()
+    else:
+        tmp_extraFeatures = None
+
+    actualDecayRate = round(float(seq.name),2)
+    predictedDecayRate = round(model(input_ids=torch.tensor([s]).to(device), attention_mask=torch.tensor([am]).to(device), extra_features=torch.tensor([tmp_extraFeatures], dtype=torch.float32).to(device)).logits.item(),2)
+    decay.append(actualDecayRate)
+    predDecay.append(predictedDecayRate)
+    seqCount.append(count)
+
+# write actual and predicted decay rates as two columns in a csv file
+df = pd.DataFrame({'actualDecayRate': decay, 'predictedDecayRate': predDecay, 'sequenceCount': seqCount})
+df.to_csv(args.save_path, index=False)

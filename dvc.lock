@@ -1,0 +1,913 @@
+schema: '2.0'
+stages:
+  chunkData:
+    cmd: python scripts/chunkData.py --params params.yaml
+    deps:
+    - path: data/3UTRs/
+      hash: md5
+      md5: 00248ad7e5c0c1d9b66e329d45d0cacb.dir
+      size: 17954073
+      nfiles: 3
+    - path: scripts/chunkData.py
+      hash: md5
+      md5: ff3df7e2c3bbeb23993b45e019767b72
+      size: 2159
+    params:
+      params.yaml:
+        chunkData:
+          input_dir: data/3UTRs/
+          output_dir: output/data/3utrFlyChunked
+          chunk_size: 510
+    outs:
+    - path: output/data/3utrFlyChunked
+      hash: md5
+      md5: a1943614b2957fd848e911443cc9e281.dir
+      size: 10139130
+      nfiles: 3
+  preprocessFlyUTRs:
+    cmd: python scripts/preprocessFlyUTRs.py --params params.yaml --data_dir data/3UTRs
+    deps:
+    - path: data/3UTRs
+      hash: md5
+      md5: 3e8ac59f542d3f8584bebf3130087f01.dir
+      size: 91250877
+      nfiles: 3
+    - path: scripts/preprocessFlyUTRs.py
+      hash: md5
+      md5: 444320e09c571b55fbcf531ec5e8f713
+      size: 9966
+    params:
+      params.yaml:
+        preprocessFlyUTRs:
+          output_dir: output/data/flyUTRs
+          kmer: 4
+          oma_groups: data/oma-groups.txt.gz
+          oma_ncbi_map: data/oma-ncbi.txt.gz
+          ncbi_geneID_map: data/gene2refseq_Dmel.txt
+          geneID_flybase_map: data/GeneID_to_FlybaseID.txt
+    outs:
+    - path: output/data/flyUTRs
+      hash: md5
+      md5: d799de301c01f205bcdcf0cb8155a820.dir
+      size: 30196403
+      nfiles: 3
+  mergeUTRsAndDecayRates:
+    cmd: python scripts/mergeUTRsAndDecayRates.py --params params.yaml --fasta output/data/flyUTRs
+    deps:
+    - path: data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv
+      hash: md5
+      md5: f457204cec911d26cf261291e0d5eb3d
+      size: 218026
+    - path: output/data/flyUTRs
+      hash: md5
+      md5: d799de301c01f205bcdcf0cb8155a820.dir
+      size: 30196403
+      nfiles: 3
+    - path: scripts/mergeUTRsAndDecayRates.py
+      hash: md5
+      md5: 1b05f9edadd9d669ccc7ab9ffe73a6d5
+      size: 2065
+    params:
+      params.yaml:
+        mergeUTRsAndDecayRates:
+          decay_rates: data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv
+          output_file: output/data/utrDecayRates.fasta
+    outs:
+    - path: output/data/utrDecayRates.fasta
+      hash: md5
+      md5: 598e8e9d16f74d3608117f77311acf8a
+      size: 891903
+  preprocessData:
+    cmd: python scripts/preprocess.py --params params.yaml --data_dir output/data/utrDecayRates.fasta
+      --ncbi_geneID_map data/gene2refseq_Dmel.txt --geneID_flybase_map data/GeneID_to_FlybaseID.txt
+    deps:
+    - path: output/data/utrDecayRates.fasta
+      hash: md5
+      md5: 598e8e9d16f74d3608117f77311acf8a
+      size: 891903
+    - path: scripts/preprocess.py
+      hash: md5
+      md5: d743e017cd26a9041672d7260cc08d51
+      size: 7604
+    params:
+      params.yaml:
+        preprocessData:
+          output_dir: output/data/decay
+          kmer: 4
+        preprocessFlyUTRs:
+          output_dir: output/data/flyUTRs
+          kmer: 4
+          oma_groups: data/oma-groups.txt.gz
+          oma_ncbi_map: data/oma-ncbi.txt.gz
+          ncbi_geneID_map: data/gene2refseq_Dmel.txt
+          geneID_flybase_map: data/GeneID_to_FlybaseID.txt
+    outs:
+    - path: output/data/decay
+      hash: md5
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
+      nfiles: 3
+  trainToFlyUTRs:
+    cmd: python scripts/trainToFlyUTRs.py --params params.yaml --data_dir output/data/flyUTRs
+    deps:
+    - path: data/4-new-12w-0/pytorch_model.bin
+      hash: md5
+      md5: 9a028bb7af2951ca2c0e4df28b4ea1f4
+      size: 347423195
+    - path: output/data/flyUTRs
+      hash: md5
+      md5: d799de301c01f205bcdcf0cb8155a820.dir
+      size: 30196403
+      nfiles: 3
+    - path: scripts/trainToFlyUTRs.py
+      hash: md5
+      md5: a69d221aac0285f3a49ef00c41e4a27c
+      size: 39093
+    params:
+      params.yaml:
+        trainToFlyUTRs:
+          test_run: false
+          do_train: true
+          do_eval: false
+          do_predict: false
+          do_visualize: false
+          output_dir: output/flyTrained
+          kmer: 4
+          model_type: 3utrfly
+          should_continue: false
+          model_name_or_path: data/4-new-12w-0
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          numEpochsBeforeEarlyStopping: 20
+          patience: 10
+          per_gpu_train_batch_size: 48
+          num_train_epochs: 100
+          learning_rate: 5e-06
+          beta1: 0.9
+          beta2: 0.98
+          adam_epsilon: 1e-06
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 1000
+          save_total_limit: 2
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+    outs:
+    - path: output/flyTrained/best_checkpoint
+      hash: md5
+      md5: 310c844e079a23d02f04d3597227df06.dir
+      size: 445221454
+      nfiles: 7
+    - path: output/flyTrained/checkpoints
+      hash: md5
+      md5: 101dbe1321cfaa78fbf306a12bd4b680.dir
+      size: 2661123936
+      nfiles: 18
+    - path: output/flyTrained/pytorch_model.bin
+      hash: md5
+      md5: 0a188a05e2bb1b9188ec3258f1e3142c
+      size: 442812226
+  fineTuneModel:
+    cmd: python scripts/train.py --params params.yaml --model_name_or_path output/flyTrained/best_checkpoint/
+      --max_seq_length 512 --data_dir output/data/decay --extraFeatures output/data/codons/extraFeatures.csv
+    deps:
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: d44302c0b7d6c7c79e272615c6527846
+      size: 859677
+    - path: output/data/decay
+      hash: md5
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
+      nfiles: 3
+    - path: output/flyTrained/best_checkpoint
+      hash: md5
+      md5: 310c844e079a23d02f04d3597227df06.dir
+      size: 445221454
+      nfiles: 7
+    - path: scripts/GenaLMWithExtraFeatures.py
+      hash: md5
+      md5: ee9ef65bbe2c8cad3491c4259571f5b3
+      size: 5310
+    - path: scripts/train.py
+      hash: md5
+      md5: a7eedf2d58c51e2774e48fc5458113f1
+      size: 38343
+    params:
+      params.yaml:
+        fineTuneModel:
+          output_dir: output/ftModel
+          do_train: true
+          do_eval: false
+          do_predict: false
+          do_visualize: false
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 4e-05
+          patience: 20
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 35
+          weight_decay: 0.01
+          warmup_percent: 0.07
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+    outs:
+    - path: output/ftModel
+      hash: md5
+      md5: 37b1873d55dba958dd4819ec203ebe11.dir
+      size: 2216220287
+      nfiles: 24
+  predict:
+    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
+      --data_dir output/data/decay
+    deps:
+    - path: output/data/decay
+      hash: md5
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
+      nfiles: 3
+    - path: output/ftModel/best_spearmanr
+      hash: md5
+      md5: 02aa042cb06870ed97a15a7e3f9226e9.dir
+      size: 443470923
+      nfiles: 7
+    - path: scripts/predict.py
+      hash: md5
+      md5: 460c440e487f96eebda8163d44029644
+      size: 17491
+    params:
+      params.yaml:
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 4e-05
+          patience: 20
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 35
+          weight_decay: 0.01
+          warmup_percent: 0.07
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+        predict:
+          output_dir: output/predict
+          do_train: false
+          do_eval: false
+          do_predict: true
+          do_visualize: false
+    outs:
+    - path: output/predict
+      hash: md5
+      md5: ad1add7b76f54d43451e43659e9c41a5.dir
+      size: 25
+      nfiles: 1
+  getDecayResiduals:
+    cmd: python scripts/getDecayResiduals.py --params params.yaml --decay_file data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv
+      --utr_fasta output/data/utrDecayRates.fasta --CDS_fasta data/3UTRs/Drosophila_melanogaster-cds.fa
+    deps:
+    - path: data/3UTRs/Drosophila_melanogaster-cds.fa
+      hash: md5
+      md5: 99d74cc84b9079be0abfd3a0a29af10d
+      size: 61914081
+    - path: output/data/utrDecayRates.fasta
+      hash: md5
+      md5: 598e8e9d16f74d3608117f77311acf8a
+      size: 891903
+    - path: scripts/getDecayResiduals.py
+      hash: md5
+      md5: 1a77005e4fefb8dd32d941a1986ed3b4
+      size: 10857
+    params:
+      params.yaml:
+        getDecayResiduals:
+          codon_output: output/data/codons/codon_frequencies.pkl
+          residuals: output/data/codons/decayResiduals.fasta
+          extraFeatures: output/data/codons/extraFeatures.csv
+    outs:
+    - path: output/data/codons/decayResiduals.fasta
+      hash: md5
+      md5: bfc29e48ef01d5112d1586aaf49cbd9b
+      size: 904619
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: d44302c0b7d6c7c79e272615c6527846
+      size: 859677
+  downloadSpeciesData:
+    cmd: python scripts/downloadSpeciesData.py data/downloaded
+    deps:
+    - path: scripts/downloadSpeciesData.py
+      hash: md5
+      md5: bc5c83bf18fb7b2fc233af185a02ea9b
+      size: 4557
+    params:
+      params.yaml:
+        downloadSpeciesData:
+          output_dir: data/downloaded
+    outs:
+    - path: data/downloaded
+      hash: md5
+      md5: edd2ffb5bae5b9df825ca55bf7409d09.dir
+      size: 50408678
+      nfiles: 2
+  isolate3UTRs:
+    cmd: python scripts/isolate3UTRs.py --params params.yaml --data_dir data/downloaded
+    deps:
+    - path: data/downloaded
+      hash: md5
+      md5: edd2ffb5bae5b9df825ca55bf7409d09.dir
+      size: 50408678
+      nfiles: 2
+    - path: scripts/isolate3UTRs.py
+      hash: md5
+      md5: 65a80c6b3d3dd231d3a36a3c73e05aa1
+      size: 4420
+    params:
+      params.yaml:
+        isolate3UTRs:
+          output_dir: data/3UTRs
+          transcriptSection: three_prime_utr,CDS,five_prime_utr
+    outs:
+    - path: data/3UTRs
+      hash: md5
+      md5: 3e8ac59f542d3f8584bebf3130087f01.dir
+      size: 91250877
+      nfiles: 3
+  importanceAnalysis:
+    cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
+      output/ftModel/best_spearmanr/ --save_path output/importance/shap.pkl --extraFeatures
+      output/data/codons/extraFeatures.csv --sequence_file output/data/decay/train.fasta
+    deps:
+    - path: output/ftModel
+      hash: md5
+      md5: 37b1873d55dba958dd4819ec203ebe11.dir
+      size: 2216220287
+      nfiles: 24
+    - path: scripts/importanceAnalysis.py
+      hash: md5
+      md5: f7f2f42858d596328ad619df81187810
+      size: 15380
+    params:
+      params.yaml:
+        importanceAnalysis:
+          output_dir: output/importance
+          pickle_file: shap.pkl
+          debug: false
+    outs:
+    - path: output/importance/shap.pkl
+      hash: md5
+      md5: bae052aeaa929771956c9539c2c4504b
+      size: 1381681
+  visualizeImportance:
+    cmd: python scripts/visualizeImportance.py --params params.yaml --kmer 4 --SHAP
+      output/importance/shap.pkl --scoresOnly output/importance/shapScores.npy --save_path
+      output/importance/visualizeImportance.html --save_tokenized_path output/importance/visualizeImportance_tokenized.html
+    deps:
+    - path: output/importance/shap.pkl
+      hash: md5
+      md5: bae052aeaa929771956c9539c2c4504b
+      size: 1381681
+    - path: scripts/visualizeImportance.py
+      hash: md5
+      md5: bb0e29e38505edd3fb176919ae884037
+      size: 5649
+    params:
+      params.yaml:
+        visualizeImportance:
+          scoresOnly: shapScores.npy
+          save_path: visualizeImportance.html
+          save_tokenized_path: visualizeImportance_tokenized.html
+    outs:
+    - path: output/importance/visualizeImportance.html
+      hash: md5
+      md5: 1a156ac26d40e34e3b9a7927ed5401d5
+      size: 6186472
+  findMotifs:
+    cmd: python scripts/find_motifs.py --SHAP output/importance/shap.pkl --save_file_dir
+      output/motifs
+    deps:
+    - path: output/importance/visualizeImportance.html
+      hash: md5
+      md5: 1a156ac26d40e34e3b9a7927ed5401d5
+      size: 6186472
+    - path: scripts/find_motifs.py
+      hash: md5
+      md5: 2356fffe73ca1bc8f62f99a0e4a4569b
+      size: 35044
+    params:
+      params.yaml:
+        findMotifs:
+          output_dir: output/motifs
+          control_file: control_seqs.fasta
+          motif_file: motif_seqs.fasta
+          interest_file: interest_seqs.fasta
+    outs:
+    - path: output/motifs/negative/control_seqs.fasta
+      hash: md5
+      md5: 5b47c5bfed59fd4dad5d82936a1ef61d
+      size: 671550
+    - path: output/motifs/negative/motif_seqs.fasta
+      hash: md5
+      md5: ddf285dacf2e8735d8882a7070754478
+      size: 13043
+    - path: output/motifs/positive/control_seqs.fasta
+      hash: md5
+      md5: cfcb60eee6e77b61fefbc9c52aba4aa8
+      size: 78271
+    - path: output/motifs/positive/motif_seqs.fasta
+      hash: md5
+      md5: 6857ce7eb7696a6c659582cb73f9ab2a
+      size: 69235
+  runAME@positive:
+    cmd: singularity exec -B $(readlink output/motifs/positive/control_seqs.fasta):/tmp/control_seqs.fasta
+      -B $(readlink output/motifs/positive/motif_seqs.fasta):/tmp/motif_seqs.fasta
+      docker://memesuite/memesuite:5.5.7 ame --oc output/motifs/positive/ame_output
+      --control /tmp/control_seqs.fasta --evalue-report-threshold 100 --method fisher
+      --rna /tmp/motif_seqs.fasta 
+      /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+    deps:
+    - path: output/motifs/positive/control_seqs.fasta
+      hash: md5
+      md5: cfcb60eee6e77b61fefbc9c52aba4aa8
+      size: 78271
+    - path: output/motifs/positive/motif_seqs.fasta
+      hash: md5
+      md5: 6857ce7eb7696a6c659582cb73f9ab2a
+      size: 69235
+    params:
+      params.yaml:
+        runAME:
+          output_dir: ame_output
+    outs:
+    - path: output/motifs/positive/ame_output
+      hash: md5
+      md5: 7e524cc17dc531723f163f6b5360a53d.dir
+      size: 1142498
+      nfiles: 3
+  runAME@negative:
+    cmd: singularity exec -B $(readlink output/motifs/negative/control_seqs.fasta):/tmp/control_seqs.fasta
+      -B $(readlink output/motifs/negative/motif_seqs.fasta):/tmp/motif_seqs.fasta
+      docker://memesuite/memesuite:5.5.7 ame --oc output/motifs/negative/ame_output
+      --control /tmp/control_seqs.fasta --evalue-report-threshold 100 --method fisher
+      --rna /tmp/motif_seqs.fasta 
+      /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+    deps:
+    - path: output/motifs/negative/control_seqs.fasta
+      hash: md5
+      md5: 5b47c5bfed59fd4dad5d82936a1ef61d
+      size: 671550
+    - path: output/motifs/negative/motif_seqs.fasta
+      hash: md5
+      md5: ddf285dacf2e8735d8882a7070754478
+      size: 13043
+    params:
+      params.yaml:
+        runAME:
+          output_dir: ame_output
+    outs:
+    - path: output/motifs/negative/ame_output
+      hash: md5
+      md5: d8962001897d454270acd1d0b5a091de.dir
+      size: 2826732
+      nfiles: 3
+  correctAME_pvalues@positive:
+    cmd: python scripts/correctAME_pvalues.py --params params.yaml --ame_input output/motifs/positive/ame_output/ame.tsv
+      --motif_seqs output/motifs/positive/motif_seqs.fasta --control_seqs output/motifs/positive/control_seqs.fasta
+      --ame_corrected output/motifs/positive/ame_corrected.tsv
+    deps:
+    - path: output/motifs/positive/ame_output/ame.tsv
+      hash: md5
+      md5: 3e3f70eba558b9ad0c1029a9452f06d5
+      size: 12309
+    - path: scripts/correctAME_pvalues.py
+      hash: md5
+      md5: 9ddf3d2361ed66eb52109b1a3f11a66b
+      size: 1876
+    params:
+      params.yaml:
+        correctAME_pvalues:
+          output_file: ame_corrected.tsv
+    outs:
+    - path: output/motifs/positive/ame_corrected.tsv
+      hash: md5
+      md5: b4b178fe64e8d465ac0f5fdcca80d979
+      size: 15367
+  correctAME_pvalues@negative:
+    cmd: python scripts/correctAME_pvalues.py --params params.yaml --ame_input output/motifs/negative/ame_output/ame.tsv
+      --motif_seqs output/motifs/negative/motif_seqs.fasta --control_seqs output/motifs/negative/control_seqs.fasta
+      --ame_corrected output/motifs/negative/ame_corrected.tsv
+    deps:
+    - path: output/motifs/negative/ame_output/ame.tsv
+      hash: md5
+      md5: c8dc9af026da8d621505b5fbb2a0a743
+      size: 12229
+    - path: scripts/correctAME_pvalues.py
+      hash: md5
+      md5: 9ddf3d2361ed66eb52109b1a3f11a66b
+      size: 1876
+    params:
+      params.yaml:
+        correctAME_pvalues:
+          output_file: ame_corrected.tsv
+    outs:
+    - path: output/motifs/negative/ame_corrected.tsv
+      hash: md5
+      md5: 526d18e5907fc9a4bdabc939b6c39fc4
+      size: 14750
+  splitHighLowDecay:
+    cmd: python scripts/splitHighLowDecay.py --params params.yaml --input output/data/decay/test.fasta
+    deps:
+    - path: output/data/decay/test.fasta
+      hash: md5
+      md5: 439c60179bd0997df7875cbf7e50f252
+      size: 122015
+    - path: scripts/splitHighLowDecay.py
+      hash: md5
+      md5: 7abc6beff3b46ded2220b95a903ab88d
+      size: 4713
+    params:
+      params.yaml:
+        splitHighLowDecay:
+          output: output/splitDecay
+          high: highDecay.fasta
+          low: lowDecay.fasta
+    outs:
+    - path: output/splitDecay/highDecay.fasta
+      hash: md5
+      md5: 73fd089090c28aef0c402820f663d333
+      size: 35325
+    - path: output/splitDecay/lowDecay.fasta
+      hash: md5
+      md5: 9d320a60f0ca2bae90e038db03170f86
+      size: 52516
+  runAME_highLowDecay@0:
+    cmd: mkdir -p output/splitDecay/high/ame_output && singularity exec -B $(readlink
+      output/splitDecay/all_lowDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/all_highDecay.fasta):/tmp/rna.fasta
+      docker://memesuite/memesuite ame --oc output/splitDecay/high/all_ame_output
+      --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher --rna
+      /tmp/rna.fasta 
+      /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+    deps:
+    - path: output/splitDecay/all_highDecay.fasta
+      hash: md5
+      md5: a58522b57957d214decb5d06c5fcf7a0
+      size: 345274
+    - path: output/splitDecay/all_lowDecay.fasta
+      hash: md5
+      md5: 2a48b812d7035a1b16406eb45c69b22f
+      size: 378587
+    params:
+      params.yaml:
+        runAME_highLowDecay:
+          output_dir: ame_output
+    outs:
+    - path: output/splitDecay/high/all_ame_output
+      hash: md5
+      md5: 59549caf1eb5e323ab271b7c2508482e.dir
+      size: 849584
+      nfiles: 3
+  runAME_highLowDecay@1:
+    cmd: mkdir -p output/splitDecay/low/ame_output && singularity exec -B $(readlink
+      output/splitDecay/all_highDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/all_lowDecay.fasta):/tmp/rna.fasta
+      docker://memesuite/memesuite ame --oc output/splitDecay/low/all_ame_output --control
+      /tmp/control.fasta --evalue-report-threshold 100 --method fisher --rna /tmp/rna.fasta
+      /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+    deps:
+    - path: output/splitDecay/all_highDecay.fasta
+      hash: md5
+      md5: a58522b57957d214decb5d06c5fcf7a0
+      size: 345274
+    - path: output/splitDecay/all_lowDecay.fasta
+      hash: md5
+      md5: 2a48b812d7035a1b16406eb45c69b22f
+      size: 378587
+    params:
+      params.yaml:
+        runAME_highLowDecay:
+          output_dir: ame_output
+    outs:
+    - path: output/splitDecay/low/all_ame_output
+      hash: md5
+      md5: 97c77eac9c13c8ddce7b4588bcb917f5.dir
+      size: 1378273
+      nfiles: 3
+  splitHighLowDecay@0:
+    cmd: python scripts/splitHighLowDecay.py --params params.yaml --input output/data/utrDecayRates.fasta
+      --high all_highDecay.fasta --low all_lowDecay.fasta
+    deps:
+    - path: output/data/utrDecayRates.fasta
+      hash: md5
+      md5: 598e8e9d16f74d3608117f77311acf8a
+      size: 891903
+    - path: scripts/splitHighLowDecay.py
+      hash: md5
+      md5: 7abc6beff3b46ded2220b95a903ab88d
+      size: 4713
+    params:
+      params.yaml:
+        splitHighLowDecay:
+          output: output/splitDecay
+          high: highDecay.fasta
+          low: lowDecay.fasta
+    outs:
+    - path: output/splitDecay/all_highDecay.fasta
+      hash: md5
+      md5: a58522b57957d214decb5d06c5fcf7a0
+      size: 345274
+    - path: output/splitDecay/all_lowDecay.fasta
+      hash: md5
+      md5: 2a48b812d7035a1b16406eb45c69b22f
+      size: 378587
+  splitHighLowDecay@1:
+    cmd: python scripts/splitHighLowDecay.py --params params.yaml --input output/data/decay/test.fasta
+      --high test_highDecay.fasta --low test_lowDecay.fasta
+    deps:
+    - path: output/data/decay/test.fasta
+      hash: md5
+      md5: 439c60179bd0997df7875cbf7e50f252
+      size: 122015
+    - path: scripts/splitHighLowDecay.py
+      hash: md5
+      md5: 7abc6beff3b46ded2220b95a903ab88d
+      size: 4713
+    params:
+      params.yaml:
+        splitHighLowDecay:
+          output: output/splitDecay
+          high: highDecay.fasta
+          low: lowDecay.fasta
+    outs:
+    - path: output/splitDecay/test_highDecay.fasta
+      hash: md5
+      md5: 73fd089090c28aef0c402820f663d333
+      size: 35325
+    - path: output/splitDecay/test_lowDecay.fasta
+      hash: md5
+      md5: 9d320a60f0ca2bae90e038db03170f86
+      size: 52516
+  prepRandomizeSeqsAndExtraFeatures@same3UTR:
+    cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
+      --sequence_file output/data/decay/test.fasta --process same3UTR --output_file
+      output/data/sanityCheck/same3UTR.fasta
+    deps:
+    - path: output/data/decay/test.fasta
+      hash: md5
+      md5: 439c60179bd0997df7875cbf7e50f252
+      size: 122015
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 7fb01bbec3f656cac4d34013df6fff54
+      size: 2969
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/same3UTR.fasta
+      hash: md5
+      md5: 917e7470b10653094b52e1d7642ca80a
+      size: 72865
+  prepRandomizeSeqsAndExtraFeatures@originalSeqs:
+    cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
+      --sequence_file output/data/decay/test.fasta --process originalSeqs --output_file
+      output/data/sanityCheck/originalSeqs.fasta
+    deps:
+    - path: output/data/decay/test.fasta
+      hash: md5
+      md5: 439c60179bd0997df7875cbf7e50f252
+      size: 122015
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 7fb01bbec3f656cac4d34013df6fff54
+      size: 2969
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/originalSeqs.fasta
+      hash: md5
+      md5: 1b78f33af0320531161425325f3e7a4a
+      size: 121206
+  prepRandomizeSeqsAndExtraFeatures@same5UTR:
+    cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
+      --sequence_file output/data/decay/test.fasta --process same5UTR --output_file
+      output/data/sanityCheck/same5UTR.fasta
+    deps:
+    - path: output/data/decay/test.fasta
+      hash: md5
+      md5: 439c60179bd0997df7875cbf7e50f252
+      size: 122015
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 7fb01bbec3f656cac4d34013df6fff54
+      size: 2969
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/same5UTR.fasta
+      hash: md5
+      md5: fff5019a8960b8413e66202e3f0653b1
+      size: 118537
+  prepRandomizeSeqsAndExtraFeatures@sameSeq:
+    cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
+      --sequence_file output/data/decay/test.fasta --process sameSeq --output_file
+      output/data/sanityCheck/sameSeq.fasta
+    deps:
+    - path: output/data/decay/test.fasta
+      hash: md5
+      md5: 439c60179bd0997df7875cbf7e50f252
+      size: 122015
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 7fb01bbec3f656cac4d34013df6fff54
+      size: 2969
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/sameSeq.fasta
+      hash: md5
+      md5: 8563f74e06325780680eddff57a92927
+      size: 71350
+  runAME_highLowDecay@2:
+    cmd: mkdir -p output/splitDecay/high/ame_output && singularity exec -B $(readlink
+      output/splitDecay/test_lowDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/test_highDecay.fasta):/tmp/rna.fasta
+      docker://memesuite/memesuite ame --oc output/splitDecay/high/test_ame_output
+      --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher --rna
+      /tmp/rna.fasta 
+      /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+    deps:
+    - path: output/splitDecay/test_highDecay.fasta
+      hash: md5
+      md5: 73fd089090c28aef0c402820f663d333
+      size: 35325
+    - path: output/splitDecay/test_lowDecay.fasta
+      hash: md5
+      md5: 9d320a60f0ca2bae90e038db03170f86
+      size: 52516
+    params:
+      params.yaml:
+        runAME_highLowDecay:
+          output_dir: ame_output
+    outs:
+    - path: output/splitDecay/high/test_ame_output
+      hash: md5
+      md5: b012bdc1cad0017160b2545d6cc1b48b.dir
+      size: 395361
+      nfiles: 3
+  runAME_highLowDecay@3:
+    cmd: mkdir -p output/splitDecay/low/ame_output && singularity exec -B $(readlink
+      output/splitDecay/test_highDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/test_lowDecay.fasta):/tmp/rna.fasta
+      docker://memesuite/memesuite ame --oc output/splitDecay/low/test_ame_output
+      --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher --rna
+      /tmp/rna.fasta 
+      /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+    deps:
+    - path: output/splitDecay/test_highDecay.fasta
+      hash: md5
+      md5: 73fd089090c28aef0c402820f663d333
+      size: 35325
+    - path: output/splitDecay/test_lowDecay.fasta
+      hash: md5
+      md5: 9d320a60f0ca2bae90e038db03170f86
+      size: 52516
+    params:
+      params.yaml:
+        runAME_highLowDecay:
+          output_dir: ame_output
+    outs:
+    - path: output/splitDecay/low/test_ame_output
+      hash: md5
+      md5: 23af2e3a44941fe37313e2bafabe40d4.dir
+      size: 437007
+      nfiles: 3
+  randomizeSeqsAndExtraFeatures@same5UTR:
+    cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
+      output/data/sanityCheck/same5UTR.fasta --save_path output/data/sanityCheck/same5UTR_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv
+    deps:
+    - path: output/data/sanityCheck/same5UTR.fasta
+      hash: md5
+      md5: 6c51b9e08174d354c584ad14937337e6
+      size: 122291
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: e019d3720d7ed3ac11c02efb336703b6
+      size: 10178
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/same5UTR_predictions.csv
+      hash: md5
+      md5: 0a7ae0b3120e29e6867a538e8725ba93
+      size: 1196
+  randomizeSeqsAndExtraFeatures@same3UTR:
+    cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
+      output/data/sanityCheck/same3UTR.fasta --save_path output/data/sanityCheck/same3UTR_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv
+    deps:
+    - path: output/data/sanityCheck/same3UTR.fasta
+      hash: md5
+      md5: 917e7470b10653094b52e1d7642ca80a
+      size: 72865
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: e019d3720d7ed3ac11c02efb336703b6
+      size: 10178
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/same3UTR_predictions.csv
+      hash: md5
+      md5: 43dd16bd65cb2ffb1b5d816b2a770f41
+      size: 1269
+  randomizeSeqsAndExtraFeatures@originalSeqs:
+    cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
+      output/data/sanityCheck/originalSeqs.fasta --save_path output/data/sanityCheck/originalSeqs_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv
+    deps:
+    - path: output/data/sanityCheck/originalSeqs.fasta
+      hash: md5
+      md5: 1b78f33af0320531161425325f3e7a4a
+      size: 121206
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: e019d3720d7ed3ac11c02efb336703b6
+      size: 10178
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/originalSeqs_predictions.csv
+      hash: md5
+      md5: 8174601d5a0dd7f9b8b5dd82a54f292c
+      size: 1213
+  randomizeSeqsAndExtraFeatures@sameSeq:
+    cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
+      output/data/sanityCheck/sameSeq.fasta --save_path output/data/sanityCheck/sameSeq_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv
+    deps:
+    - path: output/data/sanityCheck/sameSeq.fasta
+      hash: md5
+      md5: 8563f74e06325780680eddff57a92927
+      size: 71350
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: e019d3720d7ed3ac11c02efb336703b6
+      size: 10178
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/sameSeq_predictions.csv
+      hash: md5
+      md5: 5bb9232ba5933150066effeb6a7719d6
+      size: 1274
