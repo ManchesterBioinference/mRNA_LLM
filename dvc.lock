@@ -694,8 +694,8 @@ stages:
       size: 122015
     - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
       hash: md5
-      md5: 7fb01bbec3f656cac4d34013df6fff54
-      size: 2969
+      md5: 87ad429f9d1f642a3febdefded03731f
+      size: 3000
     params:
       params.yaml:
         prepRandomizeSeqsAndExtraFeatures:
@@ -703,8 +703,8 @@ stages:
     outs:
     - path: output/data/sanityCheck/same3UTR.fasta
       hash: md5
-      md5: 917e7470b10653094b52e1d7642ca80a
-      size: 72865
+      md5: 8656f20df275a5c0dfd1078b3688b060
+      size: 70251
   prepRandomizeSeqsAndExtraFeatures@originalSeqs:
     cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
       --sequence_file output/data/decay/test.fasta --process originalSeqs --output_file
@@ -716,8 +716,8 @@ stages:
       size: 122015
     - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
       hash: md5
-      md5: 7fb01bbec3f656cac4d34013df6fff54
-      size: 2969
+      md5: 87ad429f9d1f642a3febdefded03731f
+      size: 3000
     params:
       params.yaml:
         prepRandomizeSeqsAndExtraFeatures:
@@ -738,8 +738,8 @@ stages:
       size: 122015
     - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
       hash: md5
-      md5: 7fb01bbec3f656cac4d34013df6fff54
-      size: 2969
+      md5: 87ad429f9d1f642a3febdefded03731f
+      size: 3000
     params:
       params.yaml:
         prepRandomizeSeqsAndExtraFeatures:
@@ -747,8 +747,8 @@ stages:
     outs:
     - path: output/data/sanityCheck/same5UTR.fasta
       hash: md5
-      md5: fff5019a8960b8413e66202e3f0653b1
-      size: 118537
+      md5: 899bcb06f3b20cc9f63276416c563ba6
+      size: 119677
   prepRandomizeSeqsAndExtraFeatures@sameSeq:
     cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
       --sequence_file output/data/decay/test.fasta --process sameSeq --output_file
@@ -760,8 +760,8 @@ stages:
       size: 122015
     - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
       hash: md5
-      md5: 7fb01bbec3f656cac4d34013df6fff54
-      size: 2969
+      md5: 87ad429f9d1f642a3febdefded03731f
+      size: 3000
     params:
       params.yaml:
         prepRandomizeSeqsAndExtraFeatures:
@@ -830,8 +830,8 @@ stages:
     deps:
     - path: output/data/sanityCheck/same5UTR.fasta
       hash: md5
-      md5: 6c51b9e08174d354c584ad14937337e6
-      size: 122291
+      md5: 899bcb06f3b20cc9f63276416c563ba6
+      size: 119677
     - path: scripts/sanityCheck_predictions.py
       hash: md5
       md5: e019d3720d7ed3ac11c02efb336703b6
@@ -843,8 +843,8 @@ stages:
     outs:
     - path: output/data/sanityCheck/same5UTR_predictions.csv
       hash: md5
-      md5: 0a7ae0b3120e29e6867a538e8725ba93
-      size: 1196
+      md5: 72e24ff270ae5852f19b96db0da49c53
+      size: 1201
   randomizeSeqsAndExtraFeatures@same3UTR:
     cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
       output/data/sanityCheck/same3UTR.fasta --save_path output/data/sanityCheck/same3UTR_predictions.csv
@@ -852,8 +852,8 @@ stages:
     deps:
     - path: output/data/sanityCheck/same3UTR.fasta
       hash: md5
-      md5: 917e7470b10653094b52e1d7642ca80a
-      size: 72865
+      md5: 8656f20df275a5c0dfd1078b3688b060
+      size: 70251
     - path: scripts/sanityCheck_predictions.py
       hash: md5
       md5: e019d3720d7ed3ac11c02efb336703b6
@@ -865,8 +865,8 @@ stages:
     outs:
     - path: output/data/sanityCheck/same3UTR_predictions.csv
       hash: md5
-      md5: 43dd16bd65cb2ffb1b5d816b2a770f41
-      size: 1269
+      md5: a8c5665d14a099c03d27d3ea870a6fc5
+      size: 1282
   randomizeSeqsAndExtraFeatures@originalSeqs:
     cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
       output/data/sanityCheck/originalSeqs.fasta --save_path output/data/sanityCheck/originalSeqs_predictions.csv

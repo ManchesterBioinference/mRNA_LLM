@@ -42,7 +42,7 @@ def main():
     elif args.process == "same5UTR":
         first_record_5utr = str(records[0].seq.split(',')[0])
         first_record = records[0]
-        for record in records:
+        for record in records[1:]: #skip the first record
             variable3UTR = str(record.seq).split(',')[1]
             record.id = first_record.id
             record.description = ' '.join(first_record.description.split(' ')[1:])
@@ -50,7 +50,7 @@ def main():
     elif args.process == "same3UTR":
         first_record_3utr = str(records[0].seq.split(',')[1])
         first_record = records[0]
-        for record in records:
+        for record in records[1:]:
             variable5UTR = str(record.seq).split(',')[0]
             record.id = first_record.id
             record.description = ' '.join(first_record.description.split(' ')[1:])

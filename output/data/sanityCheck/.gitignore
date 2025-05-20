@@ -4,3 +4,5 @@
 /originalSeqs.fasta
 /sameSeq.fasta
 /same3UTR.fasta
+/same5UTR.fasta
+/same5UTR_predictions.csv

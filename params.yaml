@@ -60,7 +60,7 @@ RMT:
   block_size: 512
   max_n_segments: 10
 
-mergeUTRsAndDecayRates:
+mergeUTRsAndDecayRates: #TODO - run with translation efficiency data
   decay_rates: "data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv" #"data/results_zygotic_tr_extended_filtered.csv" #"data/maternal-halflifes_modified_filtered.csv"
   output_file: "output/data/utrDecayRates.fasta"
 
