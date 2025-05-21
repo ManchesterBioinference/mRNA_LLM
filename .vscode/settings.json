@@ -1,3 +1,17 @@
 {
-    "dvc.dvcPath": "dvc"
+    "dvc.dvcPath": "dvc",
+    "cSpell.words": [
+        "Dmel",
+        "halflifes",
+        "kmer",
+        "Mpredict",
+        "outprefix",
+        "pvalues",
+        "rnadecay",
+        "seqs",
+        "Seqs",
+        "shap",
+        "UTRBERT",
+        "utrfly"
+    ]
 }
