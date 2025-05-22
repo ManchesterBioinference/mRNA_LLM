@@ -1,7 +1,9 @@
 #!/bin/bash --login
 
-#$ -cwd
-#$ -l l40s=2
+#SBATCH -p gpuL
+#SBATCH -G 2
+#SBATCH -n 4
+#SBATCH -t 1-0
 
 #####################################################
 ### run command
@@ -11,7 +13,7 @@
 conda activate inseq
 #~/.local/share/mamba/bin/dvc repro runAME_highLowDecay #dvc exp run
 #~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures #dvc exp run
-~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures #dvc exp run
+~/.local/share/mamba/bin/dvc repro #randomizeSeqsAndExtraFeatures #dvc exp run
 # ~/.local/share/mamba/bin/git add -u
 # ~/.local/share/mamba/bin/git add dvclive/
 # ~/.local/share/mamba/bin/git add data/

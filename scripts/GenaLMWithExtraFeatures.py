@@ -12,7 +12,7 @@ class GenaLMWithExtraFeatures(nn.Module):
     def __init__(self, base_model_name, num_extra_features=0, num_labels=1, dropout_percent=0.1, max_length=512):
         super(GenaLMWithExtraFeatures, self).__init__()
         self.model = AutoModel.from_pretrained(base_model_name, trust_remote_code=True).bert
-        self.num_extra_features = num_extra_features
+        self.num_extra_features = num_extra_features # This will now include MFE
         self.num_labels = num_labels
         self.dropout_percent = dropout_percent
         self.device = next(self.parameters()).device
@@ -51,6 +51,9 @@ class GenaLMWithExtraFeatures(nn.Module):
             #    print(pooled_output.shape)
             #    print(f"Extra features mean: {torch.mean(extra_features, dim=0)}")
             #    print(f"Pooled output mean: {torch.mean(pooled_output, dim=0)}")
+            # Ensure extra_features is 2D: [batch_size, num_extra_features]
+            if extra_features.ndim == 1:
+                extra_features = extra_features.unsqueeze(1)
             pooled_output = torch.cat((pooled_output, extra_features), dim=1)
 
         logits = self.classifier(pooled_output)
@@ -91,7 +94,7 @@ class GenaLMWithExtraFeatures(nn.Module):
             "base_model_name": self.model.config._name_or_path,
             "hidden_size": self.model.config.hidden_size,
             "num_labels": self.num_labels,
-            "num_extra_features": self.num_extra_features,
+            "num_extra_features": self.num_extra_features, # Ensure this is saved correctly
             "dropout_percent": self.dropout_percent,
             "max_length": self.max_length
         }
@@ -119,7 +122,7 @@ class GenaLMWithExtraFeatures(nn.Module):
         # Initialize the model with the configuration
         model = GenaLMWithExtraFeatures(
             base_model_name=config["base_model_name"],
-            num_extra_features=config["num_extra_features"],
+            num_extra_features=config["num_extra_features"], # Ensure this is loaded correctly
             num_labels=config["num_labels"],
             dropout_percent=config["dropout_percent"],
             max_length=config["max_length"]

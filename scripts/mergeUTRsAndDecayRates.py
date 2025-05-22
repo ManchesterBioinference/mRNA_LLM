@@ -41,11 +41,30 @@ def loadParams(parser):
 
     return(parser.parse_args())
 
-def merge_utr_and_decay_rates(fasta_dir, gtf_file, decay_rates_file, output_file):
+def findHighlyExpressedTranscript(gene_to_transcripts, transcriptExpression, geneList):
+    # Load transcript expression data
+    transcript_expression_df = pd.read_csv(transcriptExpression, index_col=0)
+    # Create a dictionary to store the most highly expressed transcript for each gene
+    gene_to_highest_transcript = {}
+    for gene in geneList:
+        transcripts = gene_to_transcripts.get(gene, [])
+        # Get the expression values for the transcripts
+        expression_values = transcript_expression_df.loc[[t for t in transcripts if t in transcript_expression_df.index]].mean(axis=1).values.flatten()
+        # Find the transcript with the highest expression
+        if len(expression_values) == 0:
+            highest_transcript = transcripts[0] if transcripts else None
+        else:
+            highest_transcript = transcripts[np.argmax(expression_values)]
+        gene_to_highest_transcript[gene] = highest_transcript
+    return gene_to_highest_transcript
+
+def merge_utr_and_decay_rates(args):
     #construct a dictionary of gene_id to transcript
-    gene_to_transcripts = load_transcripts_from_gtf(gtf_file)
+    gene_to_transcripts = load_transcripts_from_gtf(args.gtf_file)
     # Load decay rates
-    decay_rates_df = pd.read_csv(decay_rates_file,index_col=0)
+    decay_rates_df = pd.read_csv(args.decay_rates, index_col=0)
+    # identify most highly expressed transcript for each gene
+    gene_to_transcripts = findHighlyExpressedTranscript(gene_to_transcripts, args.transcriptExpression, decay_rates_df.index.tolist())
     # Merge UTR sequences with decay rates
     id_decay = {}
     for index, row in decay_rates_df.iterrows():
@@ -56,8 +75,8 @@ def merge_utr_and_decay_rates(fasta_dir, gtf_file, decay_rates_file, output_file
     
     # Load UTR sequences
     decaySeqs = []
-    for file in os.listdir(fasta_dir):
-        filepath = os.path.join(fasta_dir, file)
+    for file in os.listdir(args.fasta):
+        filepath = os.path.join(args.fasta, file)
         for record in SeqIO.parse(filepath, "fasta"):
             if record.id in id_decay:
                 description = record.description
@@ -66,7 +85,7 @@ def merge_utr_and_decay_rates(fasta_dir, gtf_file, decay_rates_file, output_file
                 decaySeqs.append(record)
     
     # Write decaySeqs to output file
-    with open(output_file, 'w') as file:
+    with open(args.output_file, 'w') as file:
         SeqIO.write(decaySeqs, file, "fasta-2line")
     
 def main():
@@ -75,10 +94,11 @@ def main():
     parser.add_argument('--fasta', help='Path to the input FASTA file')
     parser.add_argument('--decay_rates', help='Path to the input decay rates file')
     parser.add_argument('--gtf_file', help='Path to the GTF file')
+    parser.add_argument('--transcriptExpression', help='Path to the transcript expression csv file')
     parser.add_argument('--output_file', help='Path to the output file')
     args = loadParams(parser)
     
-    merge_utr_and_decay_rates(args.fasta, args.gtf_file, args.decay_rates, args.output_file)
+    merge_utr_and_decay_rates(args)
 
 if __name__ == "__main__":
     main()

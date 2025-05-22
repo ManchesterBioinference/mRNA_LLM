@@ -42,7 +42,8 @@ from data_loaders import visualize
 
 from dvclive import Live
 
-from src.transformers import glue_compute_metrics as compute_metrics
+from __init__ import glue_compute_metrics as compute_metrics
+#/mnt/mr01-home01/m65338lb/worktrees/rnaDecay/gena_lm_extraFeatures/3UTRBERT/functions/src/transformers/data/metrics/__init__.py:
 
 from transformers import (
     AutoTokenizer,
@@ -51,9 +52,10 @@ from transformers import (
 ) 
 
 from GenaLMWithExtraFeatures import GenaLMWithExtraFeatures
+import pandas as pd # Add pandas import
 
 logger = logging.getLogger(__name__)
-live = Live('dvclive/decay', cache_images=True)
+live = Live('dvclive/TE', cache_images=True)
 
 TOKEN_ID_GROUP = ["bert", "3utrlong", "3utrlongcat", "xlnet", "albert"]
 
@@ -474,11 +476,32 @@ def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False, extraF
     eval_output_dir = args.output_dir
 
     results = {}
-    labels, seqs, atten_masks, tr_ids = load_data(args, tokenizer, split='dev.fasta')
+    # Ensure tr_ids from load_data are strings for matching with extraFeatures index
+    labels, seqs, atten_masks, tr_ids_raw = load_data(args, tokenizer, split='dev.fasta')
+    tr_ids = [str(tid) for tid in tr_ids_raw]
 
-    tr_ids_index = torch.tensor([extraFeatures.index.tolist().index(tr_id) for tr_id in tr_ids]) if extraFeatures is not None else torch.zeros_like(seqs)
+
+    # Create tr_ids_index for the evaluation dataset
+    if extraFeatures is not None:
+        # Ensure extraFeatures index is string for matching
+        if not pd.api.types.is_string_dtype(extraFeatures.index):
+            extraFeatures.index = extraFeatures.index.astype(str)
+            
+        eval_tr_ids_index_list = []
+        ef_index_list_str = extraFeatures.index.tolist()
+        for tr_id_str_val in tr_ids: # Use stringified tr_ids from current dev split
+            try:
+                eval_tr_ids_index_list.append(ef_index_list_str.index(tr_id_str_val))
+            except ValueError:
+                logger.error(f"Evaluation: Transcript ID '{tr_id_str_val}' from dev split not found in extraFeatures index.")
+                # Handle missing IDs during evaluation, e.g., by skipping or using default features
+                # For now, raising an error to highlight data inconsistency
+                raise ValueError(f"Evaluation: Transcript ID '{tr_id_str_val}' not found in extraFeatures index.")
+        tr_ids_index = torch.tensor(eval_tr_ids_index_list, dtype=torch.long)
+    else:
+        tr_ids_index = torch.zeros_like(labels, dtype=torch.long)
         
-    eval_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs), labels, tr_ids_index) #load_and_cache_examples(args, eval_task, tokenizer, evaluate=evaluate, val=val)
+    eval_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs), labels, tr_ids_index)
 
     if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
         os.makedirs(eval_output_dir)
@@ -694,52 +717,166 @@ def main():
 
 
     # LOAD AND INITIALIZE MODELS -----------------------------------------------------------------------------------------------------
-
     if args.local_rank not in [-1, 0]:
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
 
     args.model_type = args.model_type.lower()
-
     
-    if not args.do_visualize:
+    # Moved tokenizer loading and extra features processing outside do_visualize
+    # as model and features are needed for training/evaluation regardless of visualization.
+    # Ensure tokenizer_name from args is used if available, otherwise default.
+    tokenizer_path = args.tokenizer_name if args.tokenizer_name else 'AIRI-Institute/gena-lm-bert-base-fly'
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+    except Exception as e:
+        logger.error(f"Failed to load tokenizer from {tokenizer_path}: {e}")
+        # Fallback or re-raise, depending on desired behavior
+        logger.info("Falling back to default tokenizer 'AIRI-Institute/gena-lm-bert-base-fly'")
         tokenizer = AutoTokenizer.from_pretrained('AIRI-Institute/gena-lm-bert-base-fly')
 
-        if args.extraFeatures is not None:
-            extraFeatures = pd.read_csv(args.extraFeatures, index_col=0)
-            extraFeatures.drop(['Decay Rate', 'Residuals'], axis=1, inplace=True)
-            num_extra_features = extraFeatures.shape[1]
-        else:
-            extraFeatures = None
-            num_extra_features = 0
-        model = GenaLMWithExtraFeatures(args.model_name_or_path, num_extra_features=num_extra_features)
+    scaler = None  # Initialize scaler
 
+    # 1. Load original extraFeatures from args.extraFeatures CSV
+    if args.extraFeatures is not None:
+        logger.info(f"Loading original extra features from: {args.extraFeatures}")
+        try:
+            extraFeatures_df = pd.read_csv(args.extraFeatures, index_col=0)
+            # Drop specified columns if they exist
+            columns_to_drop = ['Decay Rate', 'Residuals']
+            existing_columns_to_drop = [col for col in columns_to_drop if col in extraFeatures_df.columns]
+            if existing_columns_to_drop:
+                extraFeatures_df.drop(columns=existing_columns_to_drop, inplace=True)
+                logger.info(f"Dropped columns: {existing_columns_to_drop} from original extra features.")
+        except FileNotFoundError:
+            logger.error(f"Original extra features file not found: {args.extraFeatures}")
+            extraFeatures_df = None
+        except Exception as e:
+            logger.error(f"Error loading original extra features from {args.extraFeatures}: {e}")
+            extraFeatures_df = None
+    else:
+        extraFeatures_df = None
+        logger.info("No original extra features CSV provided (args.extraFeatures is None).")
+
+    # 2. Load ViennaRNA features (MFE)
+    vienna_features_path = os.path.join(args.data_dir, "vienna_features.csv")
+    logger.info(f"Attempting to load ViennaRNA features from: {vienna_features_path}")
+    if os.path.exists(vienna_features_path):
+        try:
+            vienna_df = pd.read_csv(vienna_features_path)
+            if "id" not in vienna_df.columns:
+                logger.warning("ViennaRNA features file found but missing 'id' column. Cannot merge MFE.")
+                vienna_df = None
+            else:
+                vienna_df.set_index("id", inplace=True)
+                if 'mfe' in vienna_df.columns:
+                    logger.info("Found 'mfe' column in ViennaRNA features.")
+                    vienna_df_mfe = vienna_df[['mfe']].copy() # Use .copy() to avoid SettingWithCopyWarning
+                    vienna_df_mfe['mfe'] = pd.to_numeric(vienna_df_mfe['mfe'], errors='coerce').fillna(0)
+                    vienna_df = vienna_df_mfe # Assign back the processed DataFrame
+                else:
+                    logger.warning("'mfe' column not found in ViennaRNA features file. Skipping MFE.")
+                    vienna_df = None
+        except Exception as e:
+            logger.error(f"Error loading or processing ViennaRNA features from {vienna_features_path}: {e}")
+            vienna_df = None
+    else:
+        logger.warning(f"ViennaRNA features file not found at {vienna_features_path}. Proceeding without MFE.")
+        vienna_df = None
+
+    # 3. Merge DataFrames
+    if extraFeatures_df is not None and vienna_df is not None:
+        logger.info("Merging original extra features with ViennaRNA MFE features.")
+        # Ensure indices are of the same type for robust merging
+        extraFeatures_df.index = extraFeatures_df.index.astype(str)
+        vienna_df.index = vienna_df.index.astype(str)
+        extraFeatures_df = extraFeatures_df.merge(vienna_df, left_index=True, right_index=True, how='left')
+        if 'mfe' in extraFeatures_df.columns: # MFE column exists due to merge
+             extraFeatures_df['mfe'] = extraFeatures_df['mfe'].fillna(0) # Fill NaNs for IDs in extraFeatures_df but not in vienna_df
+        logger.info("Merge complete.")
+    elif vienna_df is not None and extraFeatures_df is None:
+        logger.info("Using only ViennaRNA MFE features as no original extra features were provided.")
+        extraFeatures_df = vienna_df.copy() # Use a copy
+        extraFeatures_df.index = extraFeatures_df.index.astype(str) # Ensure index is string
+    # If extraFeatures_df is not None and vienna_df is None, extraFeatures_df is used as is (index type already handled or assumed consistent).
+    # If both are None, extraFeatures_df remains None.
+
+    if extraFeatures_df is not None:
+        # Ensure index is string type if it was not already (e.g. if only original extraFeatures_df was used)
+        if not pd.api.types.is_string_dtype(extraFeatures_df.index):
+            extraFeatures_df.index = extraFeatures_df.index.astype(str)
+        logger.info(f"Final extra features DataFrame shape: {extraFeatures_df.shape}")
+        logger.info(f"Final extra features columns: {extraFeatures_df.columns.tolist()}")
+    else:
+        logger.info("No extra features will be used.")
+
+    # 4. Determine num_extra_features for model initialization
+    num_extra_features = extraFeatures_df.shape[1] if extraFeatures_df is not None else 0
+    
+    model = None # Initialize model to None
+    if not args.do_visualize: 
+        model_path = args.model_name_or_path if args.model_name_or_path else 'AIRI-Institute/gena-lm-bert-base-fly'
+        try:
+            model = GenaLMWithExtraFeatures(model_path, num_extra_features=num_extra_features)
+            logger.info(f"Model initialized from {model_path} with num_extra_features: {num_extra_features}")
+        except Exception as e:
+            logger.error(f"Failed to initialize model from {model_path}: {e}")
+            # Decide on fallback or re-raise
+            raise
         logger.info("finish loading model")
 
-        if args.local_rank == 0:
-            torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
+        if args.local_rank == 0 and torch.distributed.is_initialized(): # Check if distributed is initialized
+            torch.distributed.barrier()
 
-# %%
-        model.to(args.device)
+        if model: model.to(args.device)
+    # else: model remains None if only visualizing.
 
-        logger.info("Training/evaluation parameters %s", args)
+    logger.info("Training/evaluation parameters %s", args)
 
 
     # TRAIN  -----------------------------------------------------------------------------------------------------
     if args.do_train:
+        if model is None: 
+            raise ValueError("Model not initialized. Cannot proceed with training. Check --do_visualize flag or model loading steps.")
+
         labels, seqs, atten_masks, tr_ids = load_data(args, tokenizer)
-        # filter extraFeatures by tr_ids in the training set and then scale them
-        if extraFeatures is not None:
-            extraFeatures_sub = extraFeatures[extraFeatures.index.isin(tr_ids)]
-            scaler = StandardScaler()
-            # train the scaler only on the training data in extraFeatures_sub
-            scaler.fit(extraFeatures_sub)
-            # transform the full extraFeatures so we can grab the validation data too.
-            extraFeatures = pd.DataFrame(scaler.transform(extraFeatures), columns=extraFeatures.columns, index=extraFeatures.index)
-        # get index of tr_ids in extraFeatures
-        tr_ids_index = torch.tensor([extraFeatures.index.tolist().index(tr_id) for tr_id in tr_ids]) if extraFeatures is not None else torch.zeros_like(seqs)
+        tr_ids_str = [str(tid) for tid in tr_ids] # Ensure tr_ids from load_data are strings for matching
+
+        if extraFeatures_df is not None:
+            # Ensure extraFeatures_df index is string type for matching
+            if not pd.api.types.is_string_dtype(extraFeatures_df.index):
+                 extraFeatures_df.index = extraFeatures_df.index.astype(str)
+
+            # Filter extraFeatures_df to include only rows relevant to the current tr_ids for fitting the scaler
+            extraFeatures_train_subset = extraFeatures_df[extraFeatures_df.index.isin(tr_ids_str)]
+            
+            if not extraFeatures_train_subset.empty:
+                logger.info(f"Fitting scaler on training subset of extra features (shape: {extraFeatures_train_subset.shape}).")
+                scaler = StandardScaler()
+                scaler.fit(extraFeatures_train_subset)
+                # Transform the entire extraFeatures_df using the fitted scaler
+                logger.info("Applying scaler to the entire extra features DataFrame.")
+                scaled_values = scaler.transform(extraFeatures_df) # transform expects numpy array or df with same columns
+                extraFeatures_df = pd.DataFrame(scaled_values, columns=extraFeatures_df.columns, index=extraFeatures_df.index)
+            else:
+                logger.warning("No overlapping transcript IDs found between loaded training data and extra features for scaling. Scaler not fitted. Extra features might not be scaled or used effectively.")
         
-        train_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs),labels, tr_ids_index) #load_and_cache_examples(args, args.task_name, tokenizer, evaluate=False)
-        global_step, tr_loss = train(args, train_dataset, model, tokenizer, extraFeatures=extraFeatures, scaler=scaler)
+        # Create tr_ids_index for the TensorDataset
+        current_split_ef_indices = []
+        if extraFeatures_df is not None:
+            ef_index_list_str = extraFeatures_df.index.tolist() # Already ensured to be string
+
+            for tr_id_str_val in tr_ids_str: # Use stringified tr_ids from current split
+                try:
+                    current_split_ef_indices.append(ef_index_list_str.index(tr_id_str_val))
+                except ValueError:
+                    logger.error(f"Training: Transcript ID '{tr_id_str_val}' from training data not found in extraFeatures_df index. This sample will be problematic.")
+                    raise ValueError(f"Transcript ID '{tr_id_str_val}' not found in extraFeatures_df index during training data preparation.")
+            tr_ids_index = torch.tensor(current_split_ef_indices, dtype=torch.long)
+        else: 
+            tr_ids_index = torch.zeros_like(labels, dtype=torch.long) 
+        
+        train_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs), labels, tr_ids_index)
+        global_step, tr_loss = train(args, train_dataset, model, tokenizer, extraFeatures=extraFeatures_df, scaler=scaler)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
     
 
@@ -757,7 +894,7 @@ def main():
         tokenizer.save_pretrained(args.output_dir)
 
         # Save the scaler along with the model
-        if args.extraFeatures is not None:
+        if scaler is not None: # Changed condition to check if scaler exists
             joblib.dump(scaler, os.path.join(args.output_dir, "scaler.joblib"))
 
         # Good practice: save your training arguments together with the trained model

@@ -53,11 +53,12 @@ stages:
       nfiles: 3
   mergeUTRsAndDecayRates:
     cmd: python scripts/mergeUTRsAndDecayRates.py --params params.yaml --fasta output/data/flyUTRs
+      --gtf_file data/downloaded/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
     deps:
-    - path: data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv
+    - path: data/translationEfficiency/1h_TE.csv
       hash: md5
-      md5: f457204cec911d26cf261291e0d5eb3d
-      size: 218026
+      md5: ffbabda2ee63a0642106d1790530ad33
+      size: 1466663
     - path: output/data/flyUTRs
       hash: md5
       md5: d799de301c01f205bcdcf0cb8155a820.dir
@@ -65,26 +66,27 @@ stages:
       nfiles: 3
     - path: scripts/mergeUTRsAndDecayRates.py
       hash: md5
-      md5: 1b05f9edadd9d669ccc7ab9ffe73a6d5
-      size: 2065
+      md5: 9cc0b1f1f43d042c3c03e15069c9411f
+      size: 4442
     params:
       params.yaml:
         mergeUTRsAndDecayRates:
-          decay_rates: data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv
-          output_file: output/data/utrDecayRates.fasta
+          decay_rates: data/translationEfficiency/1h_TE.csv
+          transcriptExpression: data/translationEfficiency/transcripts.csv
+          output_file: output/data/utrTE.fasta
     outs:
-    - path: output/data/utrDecayRates.fasta
+    - path: output/data/utrTE.fasta
       hash: md5
-      md5: 598e8e9d16f74d3608117f77311acf8a
-      size: 891903
+      md5: 5cd537c198126d69b7fcf626ba326b8f
+      size: 6050601
   preprocessData:
-    cmd: python scripts/preprocess.py --params params.yaml --data_dir output/data/utrDecayRates.fasta
+    cmd: python scripts/preprocess.py --params params.yaml --data_dir output/data/utrTE.fasta
       --ncbi_geneID_map data/gene2refseq_Dmel.txt --geneID_flybase_map data/GeneID_to_FlybaseID.txt
     deps:
-    - path: output/data/utrDecayRates.fasta
+    - path: output/data/utrTE.fasta
       hash: md5
-      md5: 598e8e9d16f74d3608117f77311acf8a
-      size: 891903
+      md5: 5cd537c198126d69b7fcf626ba326b8f
+      size: 6050601
     - path: scripts/preprocess.py
       hash: md5
       md5: d743e017cd26a9041672d7260cc08d51
@@ -104,8 +106,8 @@ stages:
     outs:
     - path: output/data/decay
       hash: md5
-      md5: 33921ede90f63aad12fddbb798193ea7.dir
-      size: 900608
+      md5: 9a25cc4946b83116c04ef61043a1fcbe.dir
+      size: 6132515
       nfiles: 3
   trainToFlyUTRs:
     cmd: python scripts/trainToFlyUTRs.py --params params.yaml --data_dir output/data/flyUTRs
@@ -182,12 +184,12 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: d44302c0b7d6c7c79e272615c6527846
-      size: 859677
+      md5: 35e5268bd88df8860a90b93c131a889c
+      size: 10536023
     - path: output/data/decay
       hash: md5
-      md5: 33921ede90f63aad12fddbb798193ea7.dir
-      size: 900608
+      md5: 9a25cc4946b83116c04ef61043a1fcbe.dir
+      size: 6132515
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -200,8 +202,8 @@ stages:
       size: 5310
     - path: scripts/train.py
       hash: md5
-      md5: a7eedf2d58c51e2774e48fc5458113f1
-      size: 38343
+      md5: 070f07197f9bb43fba88cb6412bd834e
+      size: 38462
     params:
       params.yaml:
         fineTuneModel:
@@ -239,8 +241,8 @@ stages:
     outs:
     - path: output/ftModel
       hash: md5
-      md5: 37b1873d55dba958dd4819ec203ebe11.dir
-      size: 2216220287
+      md5: 09b1247ed18236c947923b0dee19c3d8.dir
+      size: 2216221186
       nfiles: 24
   predict:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
@@ -301,21 +303,21 @@ stages:
       size: 25
       nfiles: 1
   getDecayResiduals:
-    cmd: python scripts/getDecayResiduals.py --params params.yaml --decay_file data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv
-      --utr_fasta output/data/utrDecayRates.fasta --CDS_fasta data/3UTRs/Drosophila_melanogaster-cds.fa
+    cmd: python scripts/getDecayResiduals.py --params params.yaml --decay_file data/translationEfficiency/1h_TE.csv
+      --utr_fasta output/data/utrTE.fasta --CDS_fasta data/3UTRs/Drosophila_melanogaster-cds.fa
     deps:
     - path: data/3UTRs/Drosophila_melanogaster-cds.fa
       hash: md5
       md5: 99d74cc84b9079be0abfd3a0a29af10d
       size: 61914081
-    - path: output/data/utrDecayRates.fasta
+    - path: output/data/utrTE.fasta
       hash: md5
-      md5: 598e8e9d16f74d3608117f77311acf8a
-      size: 891903
+      md5: 5cd537c198126d69b7fcf626ba326b8f
+      size: 6050601
     - path: scripts/getDecayResiduals.py
       hash: md5
-      md5: 1a77005e4fefb8dd32d941a1986ed3b4
-      size: 10857
+      md5: f9604d471ca9364289889e5ef84921eb
+      size: 10913
     params:
       params.yaml:
         getDecayResiduals:
@@ -325,12 +327,12 @@ stages:
     outs:
     - path: output/data/codons/decayResiduals.fasta
       hash: md5
-      md5: bfc29e48ef01d5112d1586aaf49cbd9b
-      size: 904619
+      md5: bd0a61854ee75fa9d9fe6a68196dea2c
+      size: 6213580
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: d44302c0b7d6c7c79e272615c6527846
-      size: 859677
+      md5: 35e5268bd88df8860a90b93c131a889c
+      size: 10536023
   downloadSpeciesData:
     cmd: python scripts/downloadSpeciesData.py data/downloaded
     deps:
@@ -911,3 +913,25 @@ stages:
       hash: md5
       md5: 5bb9232ba5933150066effeb6a7719d6
       size: 1274
+  isolateFullTranscripts:
+    cmd: python scripts/isolateFullTranscripts.py --params params.yaml --data_dir
+      data/downloaded --target_ids_fasta output/data/utrTE.fasta
+    deps:
+    - path: data/downloaded
+      hash: md5
+      md5: edd2ffb5bae5b9df825ca55bf7409d09.dir
+      size: 50408678
+      nfiles: 2
+    - path: scripts/isolateFullTranscripts.py
+      hash: md5
+      md5: 3cddd96ffb1d2070c69db00c61d3d6a4
+      size: 8624
+    params:
+      params.yaml:
+        isolateFullTranscripts:
+          output_file: output/data/full_transcripts/Dmela-full_transcripts.fa
+    outs:
+    - path: output/data/full_transcripts/Dmela-full_transcripts.fa
+      hash: md5
+      md5: c5b8e5316133889ba60b49d4762b75ff
+      size: 57515476

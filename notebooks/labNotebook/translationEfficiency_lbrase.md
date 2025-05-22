@@ -15,7 +15,7 @@
 
 The data is by gene ID (flybase) but my previous analysis were done by transcript ID. I need to figure out the best way to get the best transcript ID for each gene.
 
-* [ ] Ask Declan if a specific transcript ID was used to for each of the genes.
+- [ ] Ask Declan if a specific transcript ID was used to for each of the genes.
 
 For now I will use the transcript level expression data that I have from Mike to identify which transcript is the most highly expressed for each gene.
 [script](../scripts/mergeUTRsAndDecayRates.py)
@@ -27,3 +27,20 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 
+<details>
+  <summary><B>2025.05.21 - ViennaRNA, TE filters, transcript level expression</B></summary>
+
+- I think I should use the ViennaRNA package to calculate the secondary structure and MFE of the mRNA. This will help me understand how the mRNA is folded and how this affects the translation efficiency. I can add these features to the classification head.
+- added a comment about TE value filtering to the github issue.
+- added code to the [script](../scripts/mergeUTRsAndDecayRates.py) to find the most highly expressed transcript for each gene. I used the transcript level expression data from Mike to do this. 
+  - some transcripts have no expression data. ***I will just pick the first one in these cases.*** [script](../scripts/mergeUTRsAndDecayRates.py) line 55
+
+</details>
+
+<details>
+  <summary><B>2025.05.22 - ViennaRNA script</B></summary>
+
+- start working on the ViennaRNA script.
+- I realize I need to also create a script that isolates the full transcript. right now I'm just extracting the UTRs and the CDS. I need to get the full transcript sequence for the ViennaRNA package.
+
+</details>

@@ -61,13 +61,21 @@ RMT:
   max_n_segments: 10
 
 mergeUTRsAndDecayRates: #TODO - run with translation efficiency data
-  decay_rates: "data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv" #"data/results_zygotic_tr_extended_filtered.csv" #"data/maternal-halflifes_modified_filtered.csv"
-  output_file: "output/data/utrDecayRates.fasta"
+  decay_rates: "data/translationEfficiency/1h_TE.csv" #"data/results_zygotic_tr_extended_filtered.csv" #"data/maternal-halflifes_modified_filtered.csv"
+  transcriptExpression: "data/translationEfficiency/transcripts.csv"
+  output_file: "output/data/utrTE.fasta"
+
+isolateFullTranscripts:
+  output_file: "output/data/full_transcripts/Dmela-full_transcripts.fa"
 
 getDecayResiduals:
   codon_output: "output/data/codons/codon_frequencies.pkl"
   residuals: "output/data/codons/decayResiduals.fasta"
   extraFeatures: "output/data/codons/extraFeatures.csv"
+
+runViennaRNA:
+  output_csv: 'output/data/codons/vienna_features.csv'
+  # RNAfold_path: "/mnt/mr01-home01/m65338lb/.local/share/mamba/envs/inseq/bin/RNAfold"
 
 preprocessData:
   output_dir: "output/data/decay"

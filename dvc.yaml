@@ -65,6 +65,8 @@ stages:
 
   mergeUTRsAndDecayRates:
     cmd: python scripts/mergeUTRsAndDecayRates.py --params params.yaml --fasta ${preprocessFlyUTRs.output_dir}
+      --gtf_file 
+      ${downloadSpeciesData.output_dir}/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
     deps:
     - scripts/mergeUTRsAndDecayRates.py
     - ${mergeUTRsAndDecayRates.decay_rates} #data/results_zygotic_tr_extended_filtered.csv
@@ -73,6 +75,16 @@ stages:
     - ${mergeUTRsAndDecayRates.output_file} #output/data/utrDecayRates.fasta
     params:
     - mergeUTRsAndDecayRates
+
+  isolateFullTranscripts:
+    cmd: python scripts/isolateFullTranscripts.py --params params.yaml --data_dir ${downloadSpeciesData.output_dir} --target_ids_fasta ${mergeUTRsAndDecayRates.output_file}
+    deps:
+    - scripts/isolateFullTranscripts.py
+    - ${downloadSpeciesData.output_dir}
+    outs:
+    - ${isolateFullTranscripts.output_file}
+    params:
+    - isolateFullTranscripts
 
   getDecayResiduals:
     cmd: python scripts/getDecayResiduals.py --params params.yaml --decay_file ${mergeUTRsAndDecayRates.decay_rates}
@@ -86,6 +98,17 @@ stages:
     - ${getDecayResiduals.extraFeatures}
     params:
     - getDecayResiduals
+  
+  runViennaRNA:
+    cmd: python scripts/runViennaRNA.py --input_fasta ${isolateFullTranscripts.output_file}
+      --output_csv ${runViennaRNA.output_csv} --RNAfold_path $( conda --help | grep Usage | awk '{print $2}' ) #$( which RNAfold )
+    deps:
+    - scripts/runViennaRNA.py
+    - ${isolateFullTranscripts.output_file} #output/data/utrDecayRates.fasta
+    outs:
+    - ${runViennaRNA.output_csv}
+    params:
+    - runViennaRNA
 
   preprocessData:
     cmd: python scripts/preprocess.py --params params.yaml --data_dir ${mergeUTRsAndDecayRates.output_file}
@@ -134,8 +157,7 @@ stages:
   importanceAnalysis:
     cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
       ${fineTuneModel.output_dir}/best_spearmanr/ --save_path ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
-      --extraFeatures ${getDecayResiduals.extraFeatures}
-      --sequence_file ${preprocessData.output_dir}/train.fasta #test.fasta
+      --extraFeatures ${getDecayResiduals.extraFeatures} --sequence_file ${preprocessData.output_dir}/train.fasta #test.fasta
     deps:
     - scripts/importanceAnalysis.py
     - ${fineTuneModel.output_dir}
@@ -147,8 +169,9 @@ stages:
   visualizeImportance:
     cmd: python scripts/visualizeImportance.py --params params.yaml --kmer ${preprocessData.kmer}
       --SHAP ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file} --scoresOnly
-      ${importanceAnalysis.output_dir}/${visualizeImportance.scoresOnly} --save_path ${importanceAnalysis.output_dir}/${visualizeImportance.save_path}
-      --save_tokenized_path ${importanceAnalysis.output_dir}/${visualizeImportance.save_tokenized_path}
+      ${importanceAnalysis.output_dir}/${visualizeImportance.scoresOnly} --save_path
+      ${importanceAnalysis.output_dir}/${visualizeImportance.save_path} --save_tokenized_path
+      ${importanceAnalysis.output_dir}/${visualizeImportance.save_tokenized_path}
     deps:
     - scripts/visualizeImportance.py
     - ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
@@ -159,7 +182,8 @@ stages:
     - visualizeImportance
 
   findMotifs:
-    cmd: python scripts/find_motifs.py --SHAP ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file} --save_file_dir ${findMotifs.output_dir}
+    cmd: python scripts/find_motifs.py --SHAP ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
+      --save_file_dir ${findMotifs.output_dir}
     deps:
     - scripts/find_motifs.py
     - ${importanceAnalysis.output_dir}/${visualizeImportance.save_path}
@@ -173,17 +197,16 @@ stages:
 
   runAME:
     foreach:
-     - positive
-     - negative
+    - positive
+    - negative
     do:
-      cmd: singularity exec
-        -B $(readlink ${findMotifs.output_dir}/${item}/${findMotifs.control_file}):/tmp/${findMotifs.control_file}
-        -B $(readlink ${findMotifs.output_dir}/${item}/${findMotifs.motif_file}):/tmp/${findMotifs.motif_file}
-        docker://memesuite/memesuite:5.5.7 ame
-        --oc ${findMotifs.output_dir}/${item}/${runAME.output_dir} 
-        --control /tmp/${findMotifs.control_file} 
-        --evalue-report-threshold 100 --method fisher 
-        --rna /tmp/${findMotifs.motif_file}  
+      cmd: singularity exec -B $(readlink 
+        ${findMotifs.output_dir}/${item}/${findMotifs.control_file}):/tmp/${findMotifs.control_file}
+        -B $(readlink 
+        ${findMotifs.output_dir}/${item}/${findMotifs.motif_file}):/tmp/${findMotifs.motif_file}
+        docker://memesuite/memesuite:5.5.7 ame --oc ${findMotifs.output_dir}/${item}/${runAME.output_dir}
+        --control /tmp/${findMotifs.control_file} --evalue-report-threshold 100 --method
+        fisher --rna /tmp/${findMotifs.motif_file} 
         /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
       outs:
       - ${findMotifs.output_dir}/${item}/${runAME.output_dir}
@@ -192,7 +215,7 @@ stages:
       - ${findMotifs.output_dir}/${item}/${findMotifs.motif_file}
       params:
       - runAME
-    
+
   # correctAME_pvalues:
   #   foreach:
   #     - positive
@@ -214,13 +237,14 @@ stages:
 
   prepRandomizeSeqsAndExtraFeatures:
     foreach:
-      - originalSeqs
-      - sameSeq
-      - same5UTR
-      - same3UTR
+    - originalSeqs
+    - sameSeq
+    - same5UTR
+    - same3UTR
     do:
-      cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml --sequence_file ${preprocessData.output_dir}/test.fasta
-        --process ${item} --output_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
+      cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
+        --sequence_file ${preprocessData.output_dir}/test.fasta --process ${item}
+        --output_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
       deps:
       - scripts/prepRandomizeSeqsAndExtraFeatures.py
       - ${preprocessData.output_dir}/test.fasta
@@ -231,12 +255,15 @@ stages:
 
   randomizeSeqsAndExtraFeatures:
     foreach:
-      - originalSeqs
-      - sameSeq
-      - same5UTR
-      - same3UTR
+    - originalSeqs
+    - sameSeq
+    - same5UTR
+    - same3UTR
     do:
-      cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta --save_path ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv --extraFeatures ${getDecayResiduals.extraFeatures}
+      cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
+        ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta --save_path
+        ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv
+        --extraFeatures ${getDecayResiduals.extraFeatures}
       deps:
       - scripts/sanityCheck_predictions.py
       - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
@@ -247,12 +274,13 @@ stages:
 
   splitHighLowDecay:
     foreach:
-      - input: ${mergeUTRsAndDecayRates.output_file}
-        label: all
-      - input: ${preprocessData.output_dir}/test.fasta
-        label: test
+    - input: ${mergeUTRsAndDecayRates.output_file}
+      label: all
+    - input: ${preprocessData.output_dir}/test.fasta
+      label: test
     do:
-      cmd: python scripts/splitHighLowDecay.py --params params.yaml --input ${item.input} --high ${item.label}_${splitHighLowDecay.high} --low ${item.label}_${splitHighLowDecay.low} #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
+      cmd: python scripts/splitHighLowDecay.py --params params.yaml --input ${item.input}
+        --high ${item.label}_${splitHighLowDecay.high} --low ${item.label}_${splitHighLowDecay.low}                                                                                   #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
       deps:
       - scripts/splitHighLowDecay.py
       - ${item.input} #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
@@ -264,33 +292,29 @@ stages:
 
   runAME_highLowDecay:
     foreach:
-      - interest: high
-        label: all
-        control: ${splitHighLowDecay.output}/all_${splitHighLowDecay.low}
-        rna: ${splitHighLowDecay.output}/all_${splitHighLowDecay.high}
-      - interest: low
-        label: all
-        control: ${splitHighLowDecay.output}/all_${splitHighLowDecay.high}
-        rna: ${splitHighLowDecay.output}/all_${splitHighLowDecay.low}
-      - interest: high
-        label: test
-        control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
-        rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
-      - interest: low
-        label: test
-        control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
-        rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
+    - interest: high
+      label: all
+      control: ${splitHighLowDecay.output}/all_${splitHighLowDecay.low}
+      rna: ${splitHighLowDecay.output}/all_${splitHighLowDecay.high}
+    - interest: low
+      label: all
+      control: ${splitHighLowDecay.output}/all_${splitHighLowDecay.high}
+      rna: ${splitHighLowDecay.output}/all_${splitHighLowDecay.low}
+    - interest: high
+      label: test
+      control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
+      rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
+    - interest: low
+      label: test
+      control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
+      rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
     do:
-      cmd: 
-        mkdir -p ${splitHighLowDecay.output}/${item.interest}/${runAME_highLowDecay.output_dir} && 
-        singularity exec 
-        -B $(readlink ${item.control}):/tmp/control.fasta
-        -B $(readlink ${item.rna}):/tmp/rna.fasta
-        docker://memesuite/memesuite ame 
-        --oc ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir} 
-        --control /tmp/control.fasta 
-        --evalue-report-threshold 100 --method fisher 
-        --rna /tmp/rna.fasta  
+      cmd: mkdir -p ${splitHighLowDecay.output}/${item.interest}/${runAME_highLowDecay.output_dir}
+        && singularity exec -B $(readlink ${item.control}):/tmp/control.fasta -B $(readlink
+        ${item.rna}):/tmp/rna.fasta docker://memesuite/memesuite ame --oc 
+        ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir}
+        --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher
+        --rna /tmp/rna.fasta 
         /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
       outs:
       - ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir}
@@ -336,6 +360,10 @@ plots:
 - dvclive/decay/plots/metrics:
     x: step
 - dvclive/decay/plots/images
+- dvclive/TE/plots/metrics:
+    x: step
+- dvclive/TE/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
+- dvclive/TE/metrics.json

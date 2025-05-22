@@ -214,15 +214,17 @@ args = parser.parse_args()
 #%%
 import pandas as pd
 # List of FlyBase transcript IDs
-ourDecay = pd.read_csv(args.decay_file)
-flybase_ids = ourDecay['tr_id'].tolist()
+# ourDecay = pd.read_csv(args.decay_file)
+# flybase_ids = ourDecay['tr_id'].tolist()
 
+flybase_ids = []
 CDSs = {}
 for record in SeqIO.parse(args.CDS_fasta, "fasta"):
     description = record.description
     transcript_id = description.split(" ")[0]
-    if transcript_id in flybase_ids:
-        CDSs[transcript_id] = record
+    #if transcript_id in flybase_ids:
+    flybase_ids.append(transcript_id)
+    CDSs[transcript_id] = record
 
 
 #%%
