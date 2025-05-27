@@ -14,8 +14,8 @@ conda activate inseq
 #~/.local/share/mamba/bin/dvc repro runAME_highLowDecay #dvc exp run
 #~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures #dvc exp run
 ~/.local/share/mamba/bin/dvc repro fineTuneModel
-# ~/.local/share/mamba/bin/git add -u
-# ~/.local/share/mamba/bin/git add dvclive/
-# ~/.local/share/mamba/bin/git add data/
-# ~/.local/share/mamba/bin/git add output/data/
-# ~/.local/share/mamba/bin/git commit -m "visualizeImportance of best model e05e6df, lr4e-5, 35 epochs, 0.07 wupPerc"
+~/.local/share/mamba/bin/git add -u
+~/.local/share/mamba/bin/git add dvclive/
+~/.local/share/mamba/bin/git add data/
+~/.local/share/mamba/bin/git add output/data/
+#~/.local/share/mamba/bin/git commit -m "1 count in each replicate (mRNA and ribo), double log transform"

@@ -64,8 +64,13 @@ def merge_utr_and_decay_rates(args):
     # Load decay rates
     decay_rates_df = pd.read_csv(args.decay_rates, index_col=0)
     # only keep rows where all RPFs and mRNA counts are greater than 0
-    filt = (decay_rates_df["RPFsRawCounts.DC1_184t_bw_star_Aligned.sortedByCoord.out.bam"].values > 0) * (decay_rates_df["RPFsRawCounts.DC2_184t_bw_star_Aligned.sortedByCoord.out.bam"].values > 0) * (decay_rates_df["RPFsRawCounts.DC3_184t_bw_star_Aligned.sortedByCoord.out.bam"].values > 0) * (decay_rates_df["mRNARawCounts.DC4_184t_star_Aligned.sortedByCoord.out.bam"].values > 0) * (decay_rates_df["mRNARawCounts.DC5_184t_star_Aligned.sortedByCoord.out.bam"].values > 0) * (decay_rates_df["mRNARawCounts.DC6_184t_star_Aligned.sortedByCoord.out.bam"].values > 0 )
-    decay_rates_df = decay_rates_df[filt]
+    filter_condition = ((decay_rates_df["RPFsRawCounts.DC1_184t_bw_star_Aligned.sortedByCoord.out.bam"] > 0) & 
+                       (decay_rates_df["RPFsRawCounts.DC2_184t_bw_star_Aligned.sortedByCoord.out.bam"] > 0) & 
+                       (decay_rates_df["RPFsRawCounts.DC3_184t_bw_star_Aligned.sortedByCoord.out.bam"] > 0) & 
+                       (decay_rates_df["mRNARawCounts.DC4_184t_star_Aligned.sortedByCoord.out.bam"] > 0) & 
+                       (decay_rates_df["mRNARawCounts.DC5_184t_star_Aligned.sortedByCoord.out.bam"] > 0) & 
+                       (decay_rates_df["mRNARawCounts.DC6_184t_star_Aligned.sortedByCoord.out.bam"] > 0))
+    decay_rates_df = decay_rates_df[filter_condition]
     # identify most highly expressed transcript for each gene
     gene_to_transcripts = findHighlyExpressedTranscript(gene_to_transcripts, args.transcriptExpression, decay_rates_df.index.tolist())
     # Merge UTR sequences with decay rates
@@ -73,7 +78,7 @@ def merge_utr_and_decay_rates(args):
     for index, row in decay_rates_df.iterrows():
         tr_id = gene_to_transcripts[index]
         #decay = row.iloc[-3:].mean()
-        decay = (row.iloc[:, :3].mean()+1) / (row.iloc[:, 6:9].mean()+1)
+        decay = (row.iloc[:3].mean()+1) / (row.iloc[6:9].mean()+1)
         halfLife = np.log(1+np.log(1+decay))
         id_decay[tr_id] = halfLife
     

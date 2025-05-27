@@ -44,3 +44,11 @@ For now I will use the transcript level expression data that I have from Mike to
 - I realize I need to also create a script that isolates the full transcript. right now I'm just extracting the UTRs and the CDS. I need to get the full transcript sequence for the ViennaRNA package.
 
 </details>
+
+<details>
+  <summary><B>2025.05.27 - filter TE values</B></summary>
+
+- After talking to Magnus we decided to find all the genes/transcripts with 0 mRNA values and set them all to the same max value. After identifying these transcripts, I realized that not all 0 mRNA counts led to a high TE value, which makes sense because the ribo counts can also be low. I've decided to go with a fairly conservative approach and only keep transcripts that have at least 1 count in each replicate for both the mRNA and ribo data.
+- I have also kept the double log transformation of the TE values, in the hopes that this will help focus the model on the bulk of the data and not the outliers.
+
+</details>
