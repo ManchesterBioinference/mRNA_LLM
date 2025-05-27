@@ -75,6 +75,7 @@ getDecayResiduals:
 
 runViennaRNA:
   output_csv: 'output/data/codons/vienna_features.csv'
+  condaPath: "/mnt/mr01-home01/m65338lb/.local/bin/micromamba"
   # RNAfold_path: "/mnt/mr01-home01/m65338lb/.local/share/mamba/envs/inseq/bin/RNAfold"
 
 preprocessData:

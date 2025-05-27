@@ -3,7 +3,7 @@
 #SBATCH -p gpuL
 #SBATCH -G 2
 #SBATCH -n 4
-#SBATCH -t 1-0
+#SBATCH -t 05:00:00
 
 #####################################################
 ### run command
@@ -13,7 +13,7 @@
 conda activate inseq
 #~/.local/share/mamba/bin/dvc repro runAME_highLowDecay #dvc exp run
 #~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures #dvc exp run
-~/.local/share/mamba/bin/dvc repro #randomizeSeqsAndExtraFeatures #dvc exp run
+~/.local/share/mamba/bin/dvc repro fineTuneModel
 # ~/.local/share/mamba/bin/git add -u
 # ~/.local/share/mamba/bin/git add dvclive/
 # ~/.local/share/mamba/bin/git add data/

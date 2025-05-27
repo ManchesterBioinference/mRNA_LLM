@@ -77,7 +77,8 @@ stages:
     - mergeUTRsAndDecayRates
 
   isolateFullTranscripts:
-    cmd: python scripts/isolateFullTranscripts.py --params params.yaml --data_dir ${downloadSpeciesData.output_dir} --target_ids_fasta ${mergeUTRsAndDecayRates.output_file}
+    cmd: python scripts/isolateFullTranscripts.py --params params.yaml --data_dir
+      ${downloadSpeciesData.output_dir} --target_ids_fasta ${mergeUTRsAndDecayRates.output_file}
     deps:
     - scripts/isolateFullTranscripts.py
     - ${downloadSpeciesData.output_dir}
@@ -98,10 +99,11 @@ stages:
     - ${getDecayResiduals.extraFeatures}
     params:
     - getDecayResiduals
-  
+
   runViennaRNA:
     cmd: python scripts/runViennaRNA.py --input_fasta ${isolateFullTranscripts.output_file}
-      --output_csv ${runViennaRNA.output_csv} --RNAfold_path $( conda --help | grep Usage | awk '{print $2}' ) #$( which RNAfold )
+      --output_csv ${runViennaRNA.output_csv} --condaPath ${runViennaRNA.condaPath}
+      --condaEnv inseq --RNAfold_path linearfold                                                                                                                                                                                                                                                                                                                                      #$( which RNAfold )
     deps:
     - scripts/runViennaRNA.py
     - ${isolateFullTranscripts.output_file} #output/data/utrDecayRates.fasta

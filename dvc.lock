@@ -66,8 +66,8 @@ stages:
       nfiles: 3
     - path: scripts/mergeUTRsAndDecayRates.py
       hash: md5
-      md5: 9cc0b1f1f43d042c3c03e15069c9411f
-      size: 4442
+      md5: 141fbf280deac9a3b88bc431cb5ac7ce
+      size: 4452
     params:
       params.yaml:
         mergeUTRsAndDecayRates:
@@ -77,16 +77,16 @@ stages:
     outs:
     - path: output/data/utrTE.fasta
       hash: md5
-      md5: 5cd537c198126d69b7fcf626ba326b8f
-      size: 6050601
+      md5: 851a8bb8cd397808d34cb73138eba6ce
+      size: 6051712
   preprocessData:
     cmd: python scripts/preprocess.py --params params.yaml --data_dir output/data/utrTE.fasta
       --ncbi_geneID_map data/gene2refseq_Dmel.txt --geneID_flybase_map data/GeneID_to_FlybaseID.txt
     deps:
     - path: output/data/utrTE.fasta
       hash: md5
-      md5: 5cd537c198126d69b7fcf626ba326b8f
-      size: 6050601
+      md5: 851a8bb8cd397808d34cb73138eba6ce
+      size: 6051712
     - path: scripts/preprocess.py
       hash: md5
       md5: d743e017cd26a9041672d7260cc08d51
@@ -106,8 +106,8 @@ stages:
     outs:
     - path: output/data/decay
       hash: md5
-      md5: 9a25cc4946b83116c04ef61043a1fcbe.dir
-      size: 6132515
+      md5: 73c75d6899f899cade8d3010b2c3bfd1.dir
+      size: 6133626
       nfiles: 3
   trainToFlyUTRs:
     cmd: python scripts/trainToFlyUTRs.py --params params.yaml --data_dir output/data/flyUTRs
@@ -184,12 +184,12 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 35e5268bd88df8860a90b93c131a889c
-      size: 10536023
+      md5: a064fe3a4d67bd9fee3bf09db5be5360
+      size: 10539402
     - path: output/data/decay
       hash: md5
-      md5: 9a25cc4946b83116c04ef61043a1fcbe.dir
-      size: 6132515
+      md5: 73c75d6899f899cade8d3010b2c3bfd1.dir
+      size: 6133626
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -198,12 +198,12 @@ stages:
       nfiles: 7
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
-      md5: ee9ef65bbe2c8cad3491c4259571f5b3
-      size: 5310
+      md5: 4db4929e37c2bc1d6a15ca483f235640
+      size: 5583
     - path: scripts/train.py
       hash: md5
-      md5: 070f07197f9bb43fba88cb6412bd834e
-      size: 38462
+      md5: a8145418e2b3ca4b78f8bfe8801ba93f
+      size: 46871
     params:
       params.yaml:
         fineTuneModel:
@@ -241,8 +241,8 @@ stages:
     outs:
     - path: output/ftModel
       hash: md5
-      md5: 09b1247ed18236c947923b0dee19c3d8.dir
-      size: 2216221186
+      md5: 4c186fa47294482779937ae286e74dc3.dir
+      size: 2216222085
       nfiles: 24
   predict:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
@@ -312,8 +312,8 @@ stages:
       size: 61914081
     - path: output/data/utrTE.fasta
       hash: md5
-      md5: 5cd537c198126d69b7fcf626ba326b8f
-      size: 6050601
+      md5: 851a8bb8cd397808d34cb73138eba6ce
+      size: 6051712
     - path: scripts/getDecayResiduals.py
       hash: md5
       md5: f9604d471ca9364289889e5ef84921eb
@@ -327,12 +327,12 @@ stages:
     outs:
     - path: output/data/codons/decayResiduals.fasta
       hash: md5
-      md5: bd0a61854ee75fa9d9fe6a68196dea2c
-      size: 6213580
+      md5: c1740b8cd81098b558905ed55269431f
+      size: 6216959
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 35e5268bd88df8860a90b93c131a889c
-      size: 10536023
+      md5: a064fe3a4d67bd9fee3bf09db5be5360
+      size: 10539402
   downloadSpeciesData:
     cmd: python scripts/downloadSpeciesData.py data/downloaded
     deps:

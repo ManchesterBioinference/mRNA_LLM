@@ -85,9 +85,9 @@ def main():
 
         print(f"Processing {seq_id}... of length {len(sequence)}")
         structure, mfe = run_rnafold(sequence, condaPath=args.condaPath, condaEnv=args.condaEnv, RNAfold_path=args.RNAfold_path)
-        print(mfe)
-        if seq_id == 'FBtr0113386':
-            break
+        # print(mfe)
+        # if seq_id == 'FBtr0113386':
+        #     break
         
         results.append({
             "id": seq_id,
