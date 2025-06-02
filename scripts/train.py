@@ -303,7 +303,7 @@ def train(args, train_dataset, model, tokenizer, extraFeatures=None, scaler=None
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
 
-            live.log_metric('batch/loss',loss.item())
+            #live.log_metric('batch/loss',loss.item())
             #loss += (1-abs(pearsonr_torch(np.squeeze(logits), inputs["labels"])))
             loss.backward()
 
@@ -445,6 +445,16 @@ def train(args, train_dataset, model, tokenizer, extraFeatures=None, scaler=None
             train_iterator.close()
             break
 
+    # Append results to CSV
+    csv_file_path = "hyperparameterTuningResults.csv"
+    file_exists = os.path.isfile(csv_file_path)
+    
+    with open(csv_file_path, 'a') as f:
+        if not file_exists:
+            f.write("best_val_spearmanr,num_train_epochs,learning_rate,patience,warmup_percent\n")
+        f.write(f"{best_val_spearmanr},{args.num_train_epochs},{args.learning_rate},{args.patience},{args.warmup_percent}\n")
+    logger.info(f"Appended results to {csv_file_path}")
+
     return global_step, tr_loss / global_step
 
 def plotPredictions(preds, out_label_ids, results, stage='train'):
@@ -569,6 +579,7 @@ def main():
     parser.add_argument("--params", default='params.yaml', type=str, help="Path to the YAML file containing parameters.",)
     parser.add_argument("--data_dir", default="output/data/decay", type=str, help="The input data dir. Should contain the .tsv files (or other data files) for the task.",)
     parser.add_argument("--extraFeatures", default=None, type=str, help="Path the the csv file containing the extra features",)
+    parser.add_argument("--mfe", default=None, type=str, help="Path the the csv file containing the MFE features from ViennaRNA",)
     parser.add_argument("--should_continue", action="store_true", help="Whether to continue from latest checkpoint in output_dir")
     parser.add_argument("--config_name", default="", type=str, help="Pretrained config name or path if not the same as model_name",)
     parser.add_argument("--model_name_or_path", default=None, type=str, help="Path to pre-trained model or shortcut name selected in the list",)
@@ -758,11 +769,10 @@ def main():
         logger.info("No original extra features CSV provided (args.extraFeatures is None).")
 
     # 2. Load ViennaRNA features (MFE)
-    vienna_features_path = os.path.join(args.data_dir, "vienna_features.csv")
-    logger.info(f"Attempting to load ViennaRNA features from: {vienna_features_path}")
-    if os.path.exists(vienna_features_path):
+    logger.info(f"Attempting to load ViennaRNA features from: {args.mfe}")
+    if os.path.exists(args.mfe):
         try:
-            vienna_df = pd.read_csv(vienna_features_path)
+            vienna_df = pd.read_csv(args.mfe)
             if "id" not in vienna_df.columns:
                 logger.warning("ViennaRNA features file found but missing 'id' column. Cannot merge MFE.")
                 vienna_df = None
@@ -777,10 +787,10 @@ def main():
                     logger.warning("'mfe' column not found in ViennaRNA features file. Skipping MFE.")
                     vienna_df = None
         except Exception as e:
-            logger.error(f"Error loading or processing ViennaRNA features from {vienna_features_path}: {e}")
+            logger.error(f"Error loading or processing ViennaRNA features from {args.mfe}: {e}")
             vienna_df = None
     else:
-        logger.warning(f"ViennaRNA features file not found at {vienna_features_path}. Proceeding without MFE.")
+        logger.warning(f"ViennaRNA features file not found at {args.mfe}. Proceeding without MFE.")
         vienna_df = None
 
     # 3. Merge DataFrames
@@ -878,6 +888,7 @@ def main():
         train_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs), labels, tr_ids_index)
         global_step, tr_loss = train(args, train_dataset, model, tokenizer, extraFeatures=extraFeatures_df, scaler=scaler)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
+        live.end()
     
 
     # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()

@@ -55,10 +55,10 @@ stages:
     cmd: python scripts/mergeUTRsAndDecayRates.py --params params.yaml --fasta output/data/flyUTRs
       --gtf_file data/downloaded/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
     deps:
-    - path: data/translationEfficiency/1h_TE.csv
+    - path: data/translationEfficiency/2h_TE.csv
       hash: md5
-      md5: ffbabda2ee63a0642106d1790530ad33
-      size: 1466663
+      md5: 6ff90e71a6362db80a85223d0b87c0b2
+      size: 1445241
     - path: output/data/flyUTRs
       hash: md5
       md5: d799de301c01f205bcdcf0cb8155a820.dir
@@ -66,27 +66,27 @@ stages:
       nfiles: 3
     - path: scripts/mergeUTRsAndDecayRates.py
       hash: md5
-      md5: 729d57ae7e832cfaacf848c9113afc16
-      size: 5233
+      md5: a69c5ea7e05b44cf8630707b20d76873
+      size: 4951
     params:
       params.yaml:
         mergeUTRsAndDecayRates:
-          decay_rates: data/translationEfficiency/1h_TE.csv
+          decay_rates: data/translationEfficiency/2h_TE.csv
           transcriptExpression: data/translationEfficiency/transcripts.csv
           output_file: output/data/utrTE.fasta
     outs:
     - path: output/data/utrTE.fasta
       hash: md5
-      md5: d13e767edac7525a1abd1b683e9a838c
-      size: 4491956
+      md5: 0d9f0b6f3bd89c0956c719f42505bcd4
+      size: 4287694
   preprocessData:
     cmd: python scripts/preprocess.py --params params.yaml --data_dir output/data/utrTE.fasta
       --ncbi_geneID_map data/gene2refseq_Dmel.txt --geneID_flybase_map data/GeneID_to_FlybaseID.txt
     deps:
     - path: output/data/utrTE.fasta
       hash: md5
-      md5: d13e767edac7525a1abd1b683e9a838c
-      size: 4491956
+      md5: 0d9f0b6f3bd89c0956c719f42505bcd4
+      size: 4287694
     - path: scripts/preprocess.py
       hash: md5
       md5: d743e017cd26a9041672d7260cc08d51
@@ -106,8 +106,8 @@ stages:
     outs:
     - path: output/data/decay
       hash: md5
-      md5: 878326c2da36aa9137f53cced209b61d.dir
-      size: 4553251
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
       nfiles: 3
   trainToFlyUTRs:
     cmd: python scripts/trainToFlyUTRs.py --params params.yaml --data_dir output/data/flyUTRs
@@ -181,15 +181,20 @@ stages:
   fineTuneModel:
     cmd: python scripts/train.py --params params.yaml --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay --extraFeatures output/data/codons/extraFeatures.csv
+      --mfe output/data/codons/vienna_features.csv
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 3264e90100c7dd3c01f27543179e71f4
-      size: 8374158
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/codons/vienna_features.csv
+      hash: md5
+      md5: 98189dc1400a6790de8c2c7c3b19e5d4
+      size: 40629645
     - path: output/data/decay
       hash: md5
-      md5: 878326c2da36aa9137f53cced209b61d.dir
-      size: 4553251
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -202,8 +207,8 @@ stages:
       size: 5583
     - path: scripts/train.py
       hash: md5
-      md5: a8145418e2b3ca4b78f8bfe8801ba93f
-      size: 46871
+      md5: fc6f137e2f83d37626d0cd2787ae7359
+      size: 47369
     params:
       params.yaml:
         fineTuneModel:
@@ -219,13 +224,13 @@ stages:
           tokenizer_name: rna4
           evaluate_during_training: true
           do_visualize_during_training: false
-          learning_rate: 4e-05
-          patience: 20
+          learning_rate: 0.0001
+          patience: 5
           per_gpu_train_batch_size: 48
           per_gpu_eval_batch_size: 48
-          num_train_epochs: 35
+          num_train_epochs: 40
           weight_decay: 0.01
-          warmup_percent: 0.07
+          warmup_percent: 0.15
           seed: 6
           eval_all_checkpoints: false
           no_cuda: false
@@ -241,8 +246,8 @@ stages:
     outs:
     - path: output/ftModel
       hash: md5
-      md5: b2e841e5f567e488a346e0dba2ee2bc3.dir
-      size: 2216222984
+      md5: 0d8927a7b6252c5128351216e12a5ce3.dir
+      size: 2216312503
       nfiles: 24
   predict:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
@@ -303,7 +308,7 @@ stages:
       size: 25
       nfiles: 1
   getDecayResiduals:
-    cmd: python scripts/getDecayResiduals.py --params params.yaml --decay_file data/translationEfficiency/1h_TE.csv
+    cmd: python scripts/getDecayResiduals.py --params params.yaml --decay_file data/translationEfficiency/2h_TE.csv
       --utr_fasta output/data/utrTE.fasta --CDS_fasta data/3UTRs/Drosophila_melanogaster-cds.fa
     deps:
     - path: data/3UTRs/Drosophila_melanogaster-cds.fa
@@ -312,8 +317,8 @@ stages:
       size: 61914081
     - path: output/data/utrTE.fasta
       hash: md5
-      md5: d13e767edac7525a1abd1b683e9a838c
-      size: 4491956
+      md5: 0d9f0b6f3bd89c0956c719f42505bcd4
+      size: 4287694
     - path: scripts/getDecayResiduals.py
       hash: md5
       md5: f9604d471ca9364289889e5ef84921eb
@@ -327,12 +332,12 @@ stages:
     outs:
     - path: output/data/codons/decayResiduals.fasta
       hash: md5
-      md5: e3449ed544b76c3d12eef087b8d8fc3b
-      size: 4622924
+      md5: 35034553938fd768cbb4bc6e9950e7ed
+      size: 4411336
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 3264e90100c7dd3c01f27543179e71f4
-      size: 8374158
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
   downloadSpeciesData:
     cmd: python scripts/downloadSpeciesData.py data/downloaded
     deps:
@@ -922,6 +927,10 @@ stages:
       md5: edd2ffb5bae5b9df825ca55bf7409d09.dir
       size: 50408678
       nfiles: 2
+    - path: output/data/utrTE.fasta
+      hash: md5
+      md5: 0d9f0b6f3bd89c0956c719f42505bcd4
+      size: 4287694
     - path: scripts/isolateFullTranscripts.py
       hash: md5
       md5: 3cddd96ffb1d2070c69db00c61d3d6a4
@@ -933,5 +942,29 @@ stages:
     outs:
     - path: output/data/full_transcripts/Dmela-full_transcripts.fa
       hash: md5
-      md5: c5b8e5316133889ba60b49d4762b75ff
-      size: 57515476
+      md5: d131646a2e5e49947e2156f85dcfe14a
+      size: 40637449
+  runViennaRNA:
+    cmd: python scripts/runViennaRNA.py --input_fasta output/data/full_transcripts/Dmela-full_transcripts.fa
+      --output_csv output/data/codons/vienna_features.csv --condaPath /mnt/mr01-home01/m65338lb/.local/bin/micromamba
+      --condaEnv inseq --RNAfold_path linearfold
+    deps:
+    - path: output/data/full_transcripts/Dmela-full_transcripts.fa
+      hash: md5
+      md5: d131646a2e5e49947e2156f85dcfe14a
+      size: 40637449
+    - path: scripts/runViennaRNA.py
+      hash: md5
+      md5: c2ead86d5971984a7894013084773939
+      size: 6181
+    params:
+      params.yaml:
+        runViennaRNA:
+          output_csv: output/data/codons/vienna_features.csv
+          condaPath: /mnt/mr01-home01/m65338lb/.local/bin/micromamba
+          maxWorkers: 8
+    outs:
+    - path: output/data/codons/vienna_features.csv
+      hash: md5
+      md5: 98189dc1400a6790de8c2c7c3b19e5d4
+      size: 40629645

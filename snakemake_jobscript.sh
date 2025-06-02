@@ -1,19 +1,18 @@
 #!/bin/bash --login
 
-#SBATCH -p gpuL
+#SBATCH -p gpuL #multicore
 #SBATCH -G 2
 #SBATCH -n 4
-#SBATCH -t 05:00:00
+#SBATCH -t 03:00:00
 
 #####################################################
 ### run command
 #####################################################
 source ~/.bashrc
 conda activate inseq
-#~/.local/share/mamba/bin/dvc repro runAME_highLowDecay #dvc exp run
+~/.local/share/mamba/bin/dvc repro fineTuneModel
 #~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures #dvc exp run
-cd /mnt/mr01-home01/m65338lb/projects/mRNA_LLM-worktrees/translationEfficiency/
-~/.local/share/mamba/bin/dvc exp run --run-all --jobs 1
+#~/.local/share/mamba/bin/dvc exp run --run-all --jobs 1
 #~/.local/share/mamba/bin/git add -u
 #~/.local/share/mamba/bin/git add dvclive/
 #~/.local/share/mamba/bin/git add data/

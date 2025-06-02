@@ -64,12 +64,8 @@ def merge_utr_and_decay_rates(args):
     # Load decay rates
     decay_rates_df = pd.read_csv(args.decay_rates, index_col=0)
     # only keep rows where all RPFs and mRNA counts are greater than 0
-    filter_condition = ((decay_rates_df["RPFsRawCounts.DC1_184t_bw_star_Aligned.sortedByCoord.out.bam"] > 0) & 
-                       (decay_rates_df["RPFsRawCounts.DC2_184t_bw_star_Aligned.sortedByCoord.out.bam"] > 0) & 
-                       (decay_rates_df["RPFsRawCounts.DC3_184t_bw_star_Aligned.sortedByCoord.out.bam"] > 0) & 
-                       (decay_rates_df["mRNARawCounts.DC4_184t_star_Aligned.sortedByCoord.out.bam"] > 0) & 
-                       (decay_rates_df["mRNARawCounts.DC5_184t_star_Aligned.sortedByCoord.out.bam"] > 0) & 
-                       (decay_rates_df["mRNARawCounts.DC6_184t_star_Aligned.sortedByCoord.out.bam"] > 0))
+    #filter_condition = ((decay_rates_df.iloc[:,3] > 0) & (decay_rates_df.iloc[:,4] > 0) & (decay_rates_df.iloc[:,5] > 0) & (decay_rates_df.iloc[:,9] > 0) & (decay_rates_df.iloc[:,10] > 0) & (decay_rates_df.iloc[:,11] > 0))
+    filter_condition = (decay_rates_df.iloc[:,[i for i,name in enumerate(decay_rates_df.columns) if 'counts' in name.lower()]] >= 1).sum(axis=1) == 6
     decay_rates_df = decay_rates_df[filter_condition]
     # identify most highly expressed transcript for each gene
     gene_to_transcripts = findHighlyExpressedTranscript(gene_to_transcripts, args.transcriptExpression, decay_rates_df.index.tolist())

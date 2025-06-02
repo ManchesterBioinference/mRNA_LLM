@@ -1,37 +1,37 @@
 setupEnv:
-  conda_env: "envs/3UTRBERT.yaml"
+  conda_env: envs/3UTRBERT.yaml
 
 downloadSpeciesData:
-  output_dir: "data/downloaded"
+  output_dir: data/downloaded
 
 isolate3UTRs:
-  output_dir: "data/3UTRs"
-  transcriptSection: 'three_prime_utr,CDS,five_prime_utr'
+  output_dir: data/3UTRs
+  transcriptSection: three_prime_utr,CDS,five_prime_utr
 
 preprocessFlyUTRs:
-  output_dir: "output/data/flyUTRs"
+  output_dir: output/data/flyUTRs
   kmer: 4
-  oma_groups: "data/oma-groups.txt.gz"
-  oma_ncbi_map: "data/oma-ncbi.txt.gz"
+  oma_groups: data/oma-groups.txt.gz
+  oma_ncbi_map: data/oma-ncbi.txt.gz
   #ncbi_flybase_map: "data/id_validation_table_ncbi_flybase.txt"
-  ncbi_geneID_map: "data/gene2refseq_Dmel.txt"
-  geneID_flybase_map: "data/GeneID_to_FlybaseID.txt"
+  ncbi_geneID_map: data/gene2refseq_Dmel.txt
+  geneID_flybase_map: data/GeneID_to_FlybaseID.txt
   #maxSeqLen: null
 
 trainToFlyUTRs:
-  test_run: False
-  do_train: True
-  do_eval: False
-  do_predict: False
-  do_visualize: False
-  output_dir: "output/flyTrained"
+  test_run: false
+  do_train: true
+  do_eval: false
+  do_predict: false
+  do_visualize: false
+  output_dir: output/flyTrained
   kmer: 4
-  model_type: "3utrfly"
-  should_continue: False
-  model_name_or_path: "data/4-new-12w-0"
-  tokenizer_name: "rna4"
-  evaluate_during_training: True
-  do_visualize_during_training: False
+  model_type: 3utrfly
+  should_continue: false
+  model_name_or_path: data/4-new-12w-0
+  tokenizer_name: rna4
+  evaluate_during_training: true
+  do_visualize_during_training: false
   numEpochsBeforeEarlyStopping: 20
   patience: 10
   per_gpu_train_batch_size: 48
@@ -43,17 +43,17 @@ trainToFlyUTRs:
   weight_decay: 0.01
   warmup_percent: 0.1
   seed: 6
-  eval_all_checkpoints: False
-  no_cuda: False
+  eval_all_checkpoints: false
+  no_cuda: false
   logging_steps: 100
   save_steps: 1000
   save_total_limit: 2
-  overwrite_output_dir: True
-  neptune_token: null
-  neptune_project: null
-  overwrite_cache: False
-  do_lower_case: False
-  curriculumLearning: False
+  overwrite_output_dir: true
+  neptune_token:
+  neptune_project:
+  overwrite_cache: false
+  do_lower_case: false
+  curriculumLearning: false
 
 RMT:
   memory_size: 10
@@ -61,106 +61,105 @@ RMT:
   max_n_segments: 10
 
 mergeUTRsAndDecayRates: #TODO - run with translation efficiency data
-  decay_rates: "data/translationEfficiency/1h_TE.csv" #"data/results_zygotic_tr_extended_filtered.csv" #"data/maternal-halflifes_modified_filtered.csv"
-  transcriptExpression: "data/translationEfficiency/transcripts.csv"
-  output_file: "output/data/utrTE.fasta"
+  decay_rates: data/translationEfficiency/2h_TE.csv   #"data/results_zygotic_tr_extended_filtered.csv" #"data/maternal-halflifes_modified_filtered.csv"
+  transcriptExpression: data/translationEfficiency/transcripts.csv
+  output_file: output/data/utrTE.fasta
 
 isolateFullTranscripts:
-  output_file: "output/data/full_transcripts/Dmela-full_transcripts.fa"
+  output_file: output/data/full_transcripts/Dmela-full_transcripts.fa
 
 getDecayResiduals:
-  codon_output: "output/data/codons/codon_frequencies.pkl"
-  residuals: "output/data/codons/decayResiduals.fasta"
-  extraFeatures: "output/data/codons/extraFeatures.csv"
+  codon_output: output/data/codons/codon_frequencies.pkl
+  residuals: output/data/codons/decayResiduals.fasta
+  extraFeatures: output/data/codons/extraFeatures.csv
 
 runViennaRNA:
-  output_csv: 'output/data/codons/vienna_features.csv'
-  condaPath: "/mnt/mr01-home01/m65338lb/.local/bin/micromamba"
+  output_csv: output/data/codons/vienna_features.csv
+  condaPath: /mnt/mr01-home01/m65338lb/.local/bin/micromamba
+  maxWorkers: 8
   # RNAfold_path: "/mnt/mr01-home01/m65338lb/.local/share/mamba/envs/inseq/bin/RNAfold"
 
 preprocessData:
-  output_dir: "output/data/decay"
+  output_dir: output/data/decay
   kmer: 4
 
 fineTuneModel:
-  output_dir: "output/ftModel"
-  do_train: True
-  do_eval: False
-  do_predict: False
-  do_visualize: False
+  output_dir: output/ftModel
+  do_train: true
+  do_eval: false
+  do_predict: false
+  do_visualize: false
 
 predict:
-  output_dir: "output/predict"
-  do_train: False
-  do_eval: False
-  do_predict: True
-  do_visualize: False
+  output_dir: output/predict
+  do_train: false
+  do_eval: false
+  do_predict: true
+  do_visualize: false
 
 modelParams:
-  model_type: "3utrfly"
-  task_name: "rnadecay"
-  should_continue: False
-  tokenizer_name: "rna4"
-  evaluate_during_training: True
-  do_visualize_during_training: False
-  learning_rate: 4e-5
+  model_type: 3utrfly
+  task_name: rnadecay
+  should_continue: false
+  tokenizer_name: rna4
+  evaluate_during_training: true
+  do_visualize_during_training: false
+  learning_rate: 1e-4
   #numEpochsBeforeEarlyStopping: 20
-  patience: 20
+  patience: 5
   per_gpu_train_batch_size: 48
   per_gpu_eval_batch_size: 48
-  num_train_epochs: 35
+  num_train_epochs: 40
   weight_decay: 0.01
-  warmup_percent: 0.07
+  warmup_percent: 0.15
   #warmup_steps: 7
   seed: 6
-  eval_all_checkpoints: False
-  no_cuda: False
+  eval_all_checkpoints: false
+  no_cuda: false
   logging_steps: 100
   save_steps: 100000
   save_total_limit: 10
-  overwrite_output_dir: True
-  neptune_token: null
-  neptune_project: null
-  overwrite_cache: False
-  do_lower_case: False
-  curriculumLearning: False
+  overwrite_output_dir: true
+  neptune_token:
+  neptune_project:
+  overwrite_cache: false
+  do_lower_case: false
+  curriculumLearning: false
 
 importanceAnalysis:
-  output_dir: "output/importance"
-  pickle_file: "shap.pkl"
-  debug: False
+  output_dir: output/importance
+  pickle_file: shap.pkl
+  debug: false
 
 visualizeImportance:
-  scoresOnly: "shapScores.npy"
-  save_path: "visualizeImportance.html"
-  save_tokenized_path: "visualizeImportance_tokenized.html"
+  scoresOnly: shapScores.npy
+  save_path: visualizeImportance.html
+  save_tokenized_path: visualizeImportance_tokenized.html
 
 findMotifs:
   #p_adjust: "fdr_bh"
-  output_dir: "output/motifs"
-  control_file: "control_seqs.fasta"
-  motif_file: "motif_seqs.fasta"
-  interest_file: "interest_seqs.fasta"
+  output_dir: output/motifs
+  control_file: control_seqs.fasta
+  motif_file: motif_seqs.fasta
+  interest_file: interest_seqs.fasta
 
 runAME:
-  output_dir: "ame_output"
-  
+  output_dir: ame_output
 correctAME_pvalues:
-  output_file: "ame_corrected.tsv"
+  output_file: ame_corrected.tsv
 
 prepRandomizeSeqsAndExtraFeatures:
-  sequence_dir: "output/data/sanityCheck"
-  
+  sequence_dir: output/data/sanityCheck
 splitHighLowDecay:
-  output: "output/splitDecay"
-  high: 'highDecay.fasta'
-  low: 'lowDecay.fasta'
+  output: output/splitDecay
+  high: highDecay.fasta
+  low: lowDecay.fasta
 
 runAME_highLowDecay:
-  output_dir: "ame_output"
+  output_dir: ame_output
 
 trainSVM:
-  outprefix: 'output/svm'
+  outprefix: output/svm
 
 SVMpredict:
-  output_file: "predictions.tsv"
+  output_file: predictions.tsv
