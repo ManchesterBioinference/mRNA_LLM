@@ -104,14 +104,14 @@ modelParams:
   tokenizer_name: rna4
   evaluate_during_training: true
   do_visualize_during_training: false
-  learning_rate: 5e-5
+  learning_rate: 1e-4
   #numEpochsBeforeEarlyStopping: 20
   patience: 5
   per_gpu_train_batch_size: 48
   per_gpu_eval_batch_size: 48
-  num_train_epochs: 50
+  num_train_epochs: 60
   weight_decay: 0.01
-  warmup_percent: 0.1
+  warmup_percent: 0.05
   #warmup_steps: 7
   seed: 6
   eval_all_checkpoints: false
