@@ -78,7 +78,7 @@ stages:
 
   isolateFullTranscripts:
     cmd: python scripts/isolateFullTranscripts.py --params params.yaml --data_dir
-      ${downloadSpeciesData.output_dir} --target_ids_fasta ${mergeUTRsAndDecayRates.output_file}
+      ${isolate3UTRs.output_dir} --target_ids_fasta ${mergeUTRsAndDecayRates.output_file}
     deps:
     - scripts/isolateFullTranscripts.py
     - ${mergeUTRsAndDecayRates.output_file}

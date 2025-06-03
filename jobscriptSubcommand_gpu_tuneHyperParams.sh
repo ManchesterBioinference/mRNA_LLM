@@ -3,7 +3,7 @@
 #SBATCH -p gpuL
 #SBATCH -G 2
 #SBATCH -n 4
-#SBATCH -t 06:00:00
+#SBATCH -t 03:00:00
 
 source ~/.bashrc
 conda activate inseq

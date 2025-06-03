@@ -1,9 +1,9 @@
 #!/bin/bash
 # This script will be used to run pieces of the pipeline in parallel when testing the effect of amount of training data on performance for the three models (SVM, iDeep, and 3UTRBERT-fly)
 
-learning_rates=(5e-4 1e-4 5e-5 1e-5 5e-6) #(1e-5 2e-5 3e-5 4e-5 5e-5) #(3e-5 3.5e-5 2.5e-5 4e-5 2e-5 4.5e-5 1.5e-5 5e-5 1e-5)
-nepochs=(30 35 40 45 50 55 60) #(29 32 35 38 41 44 47 50 53 56 59 62) #(50 53 47 56 44 59 41 62 38 65 35 68 32 71 29) #(40 39 41 38 42 37 43 36 44 35 45 34 46)
-warm_steps=(0.01 0.05 0.1 0.15) #(0.01 0.03 0.05 0.07 0.09 0.11 0.13 0.15)
+learning_rates=(5e-4 1e-4 5e-5) #(1e-5 2e-5 3e-5 4e-5 5e-5) #(3e-5 3.5e-5 2.5e-5 4e-5 2e-5 4.5e-5 1.5e-5 5e-5 1e-5)
+nepochs=(30 40 50 60) #(29 32 35 38 41 44 47 50 53 56 59 62) #(50 53 47 56 44 59 41 62 38 65 35 68 32 71 29) #(40 39 41 38 42 37 43 36 44 35 45 34 46)
+warm_steps=(0.05 0.1 0.15) #(0.01 0.03 0.05 0.07 0.09 0.11 0.13 0.15)
 
 
 # Remove all files in the jobscriptStatus dir

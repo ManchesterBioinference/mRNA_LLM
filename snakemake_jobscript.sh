@@ -1,8 +1,8 @@
 #!/bin/bash --login
 
-#SBATCH -p gpuL #multicore
+#SBATCH -p gpuL #multicore #
 #SBATCH -G 2
-#SBATCH -n 4
+#SBATCH -n 8
 #SBATCH -t 03:00:00
 
 #####################################################
@@ -10,7 +10,7 @@
 #####################################################
 source ~/.bashrc
 conda activate inseq
-~/.local/share/mamba/bin/dvc repro fineTuneModel
+~/.local/share/mamba/bin/dvc repro fineTuneModel #runViennaRNA #
 #~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures #dvc exp run
 #~/.local/share/mamba/bin/dvc exp run --run-all --jobs 1
 #~/.local/share/mamba/bin/git add -u
