@@ -93,11 +93,30 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>  
 
 <details>
-  <summary><B>2025.06.02 - </B></summary>
+  <summary><B>2025.06.02 - remove introns for viennaRNA run, deseq2, dvclive image cache</B></summary>
 
-- run ViennaRNA on the 5'UTR + CDS  + 3'UTR sequences not the intron inclusive sequences. 
-- do some research into deseq2 and if it has been used with TE before. 
+- run ViennaRNA on the 5'UTR + CDS  + 3'UTR sequences not the intron inclusive sequences.
+- do some research into deseq2 and if it has been used with TE before.
 - I just learned that in order for dvclive to cache the images, i need to run live.end(). so all the plots have been saved to git up to this point. it has increased the size of the repo by over 100MB. Hopefully, this fix will now keep the size down.
+
+</details>  
+
+<details>
+  <summary><B>2025.06.03 - grid search complete with introns removed</B></summary>
+
+- interestingly the results are a bit worse than the previous run with the introns included. I will have to look into this more.
+  - best run: spearman (0.49949925064783884) - 50 epochs, 5e-5 learning rate, 0.1 warmup percent
+  - best run with introns: spearman (0.5094562418533073) - 40 epochs, 0.0001 learning rate, 0.15 warm up percent
+
+</details>  
+
+<details>
+  <summary><B>2025.06.04 - DESeq2 dispersion, single log transform without adding 1</B></summary>
+
+- over the last couple of days I got DESeq2 working. I used it to calculate the corrected dispersion for the riboSeq and rnaSeq individually. Removing all genes with a dispersion value > 1 removes a few hundred more genes than the 1 count threshold I was using before. I'm not convinced it is different enough to warrant the extra complexity. I will stick with the 1 count threshold for now.
+  - LLM discussion about the DESeq2 dispersion: [link](https://grok.com/share/bGVnYWN5_5adfabad-17c7-482b-91f9-8ff01fef38be)
+- During this process I realized that the TE data is all > 0. this means i don't need to add 1 when doing the log transformation and makes the data extremely normalized from a single log transformation rather than a double log transformation. I am now doing a test run using the best hyperparameters from the grid search.
+  - This approach led to a distribution that was to tall and skinny (too much kertosis). I'll stay with the double log transformation for now.
 
 </details>  
 
