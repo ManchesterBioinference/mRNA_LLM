@@ -6,6 +6,84 @@ import pickle
 import yaml
 
 
+def filterWithLOWESS(importance, frac=0.3, save_file_dir=None):
+    """ Filters the importance scores using LOWESS smoothing to remove noise.
+    Args:
+        importance (list): List of Importance objects containing attention scores.
+    Returns:
+        list: Importance objects that have been filtered using LOWESS.
+    """
+    import dvclive
+    import statsmodels.api as sm
+    import matplotlib.pyplot as plt
+
+    actuals_arr = []
+    preds_arr = []
+    for x in importance:
+        actual, pred = x.text.split(' Pred:')
+        actuals_arr.append(float(actual))
+        preds_arr.append(float(pred))
+    actuals_arr = np.array(actuals_arr)
+    preds_arr = np.array(preds_arr)
+    residuals = preds_arr - actuals_arr
+
+    # Fit LOESS model: residuals ~ actuals
+    # The frac parameter controls the smoothing. Adjust as needed.
+    lowess_fit = sm.nonparametric.lowess(residuals, actuals_arr, frac=frac)
+
+    # Get the smoothed y-values (predicted residuals from LOESS)
+    loess_x = lowess_fit[:, 0]
+    loess_y_pred_residuals = lowess_fit[:, 1]
+
+    # Sort by actuals_arr for correct plotting of LOESS curve
+    sort_idx = np.argsort(actuals_arr)
+    actuals_sorted = actuals_arr[sort_idx]
+    residuals_sorted_by_actuals = residuals[sort_idx]
+
+    # Interpolate LOESS predictions to match the original residuals' order for deviation calculation
+    # This is important because lowess returns sorted x values
+    loess_pred_residuals_for_deviation = np.interp(actuals_arr, loess_x, loess_y_pred_residuals)
+
+    # Calculate the deviation of each residual from the LOESS curve
+    deviations_from_loess = residuals - loess_pred_residuals_for_deviation
+
+    # Calculate the standard deviation of these deviations
+    std_dev_of_deviations = np.std(deviations_from_loess)
+
+    # Define a threshold for flagging significant deviations (e.g., 2 standard deviations)
+    threshold = 2 * std_dev_of_deviations
+
+    # Flag samples whose residuals deviate significantly
+    outlier_indices = np.where(np.abs(deviations_from_loess) > threshold)[0]
+    outlier_actuals = actuals_arr[outlier_indices]
+    outlier_residuals = residuals[outlier_indices]
+
+    print(f"Number of points flagged as outliers: {len(outlier_indices)}")
+    print(f"Standard deviation of deviations from LOESS: {std_dev_of_deviations:.4f}")
+    print(f"Threshold for outliers (2*std_dev): {threshold:.4f}")
+
+    # Plotting
+    fig = plt.figure(figsize=(12, 7))
+    plt.scatter(actuals_arr, residuals, label='Residuals (Actual - Predicted)', alpha=0.5, s=10)
+    plt.plot(actuals_sorted, loess_y_pred_residuals[np.argsort(loess_x)], color='red', linewidth=2, label='LOESS fit to residuals')
+    plt.scatter(outlier_actuals, outlier_residuals, color='green', s=50, label='Flagged Outliers', edgecolor='black')
+
+    # Plot lines for threshold
+    plt.plot(actuals_sorted, loess_y_pred_residuals[np.argsort(loess_x)] + threshold, color='orange', linestyle='--', label=f'+{threshold:.2f} (Threshold)')
+    plt.plot(actuals_sorted, loess_y_pred_residuals[np.argsort(loess_x)] - threshold, color='orange', linestyle='--', label=f'-{threshold:.2f} (Threshold)')
+
+
+    plt.xlabel("Actual Values")
+    plt.ylabel("Residuals (Actual - Predicted)")
+    plt.title("Residual Analysis with LOESS Fit")
+    plt.axhline(0, color='gray', linestyle=':', linewidth=0.8)
+    plt.legend()
+    plt.grid(True, linestyle='--', alpha=0.7)
+    with dvclive.Live(os.path.join(os.getcwd(), 'dvclive/findMotifs')) as live:
+        live.log_image("residuals_with_loess_fit.png", fig)
+
+    return [importance[i] for i in range(len(importance)) if i not in outlier_indices]
+
 def kmer2seq(kmers):
     """
     Convert kmers to original sequence
@@ -71,7 +149,7 @@ def get_minimal_supersets(sequence_list):
 
         if not is_subsequence_of_another:
             minimal_supersets.append(current_seq)
-            
+        
     return minimal_supersets
 
 
@@ -739,6 +817,8 @@ def main():
         x.tokens = [t.replace('T','U') for t in x.tokens] # Ensure U instead of T
         x.lengths = [len(token) for token in x.tokens]
         iWithLen.append(x)
+
+    importance = filterWithLOWESS(importance)
 
     # Removed loading of unused data (atten_scores, pred, dev)
     # pos_atten_scores = atten_scores[dev_pos.index.values]

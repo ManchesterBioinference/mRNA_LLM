@@ -75,7 +75,7 @@ def merge_utr_and_decay_rates(args):
         tr_id = gene_to_transcripts[index]
         #decay = row.iloc[-3:].mean()
         decay = (row.iloc[:3].mean()+1) / (row.iloc[6:9].mean()+1)
-        halfLife = np.log(decay) #np.log(1+np.log(1+decay))
+        halfLife = np.log(1+np.log(1+decay))
         id_decay[tr_id] = halfLife
     
     # Load UTR sequences

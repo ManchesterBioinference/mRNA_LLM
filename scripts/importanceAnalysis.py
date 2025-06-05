@@ -155,6 +155,7 @@ parser.add_argument("--do_lower_case", action="store_true", help="Set this flag 
 parser.add_argument("--sequence_file", default="output/data/decay/train.fasta", type=str, help="Path to the TSV file containing sequences")
 parser.add_argument("--save_path", default="deleteme", type=str, help="the directory for output")
 parser.add_argument("--extraFeatures", default=None, type=str, help="Path the the csv file containing the extra features",)
+parser.add_argument("--mfe", default=None, type=str, help="Path the the csv file containing the MFE features from ViennaRNA",)
 parser.add_argument("--debug", default=False, type=bool, help="Path the the csv file containing the extra features",)
 
 
@@ -199,11 +200,77 @@ else:
 t = AutoTokenizer.from_pretrained(args.model_name_or_path)
 
 if args.extraFeatures is not None:
-    extraFeatures = pd.read_csv(args.extraFeatures, index_col=0)
-    extraFeatures.drop(['Decay Rate', 'Residuals'], axis=1, inplace=True)
-    extraFeatures = pd.DataFrame(scaler.transform(extraFeatures), columns=extraFeatures.columns, index=extraFeatures.index)
+    print(f"Loading original extra features from: {args.extraFeatures}")
+    try:
+        extraFeatures_df = pd.read_csv(args.extraFeatures, index_col=0)
+        # Drop specified columns if they exist
+        columns_to_drop = ['Decay Rate', 'Residuals']
+        existing_columns_to_drop = [col for col in columns_to_drop if col in extraFeatures_df.columns]
+        if existing_columns_to_drop:
+            extraFeatures_df.drop(columns=existing_columns_to_drop, inplace=True)
+            print(f"Dropped columns: {existing_columns_to_drop} from original extra features.")
+    except FileNotFoundError:
+        print(f"Original extra features file not found: {args.extraFeatures}")
+        extraFeatures_df = None
+    except Exception as e:
+        print(f"Error loading original extra features from {args.extraFeatures}: {e}")
+        extraFeatures_df = None
 else:
-    extraFeatures = None
+    extraFeatures_df = None
+    print("No original extra features CSV provided (args.extraFeatures is None).")
+
+# 2. Load ViennaRNA features (MFE)
+print(f"Attempting to load ViennaRNA features from: {args.mfe}")
+if os.path.exists(args.mfe):
+    try:
+        vienna_df = pd.read_csv(args.mfe)
+        if "id" not in vienna_df.columns:
+            print("ViennaRNA features file found but missing 'id' column. Cannot merge MFE.")
+            vienna_df = None
+        else:
+            vienna_df.set_index("id", inplace=True)
+            if 'mfe' in vienna_df.columns:
+                print("Found 'mfe' column in ViennaRNA features.")
+                vienna_df_mfe = vienna_df[['mfe']].copy() # Use .copy() to avoid SettingWithCopyWarning
+                vienna_df_mfe['mfe'] = pd.to_numeric(vienna_df_mfe['mfe'], errors='coerce').fillna(0)
+                vienna_df = vienna_df_mfe # Assign back the processed DataFrame
+            else:
+                print("'mfe' column not found in ViennaRNA features file. Skipping MFE.")
+                vienna_df = None
+    except Exception as e:
+        print(f"Error loading or processing ViennaRNA features from {args.mfe}: {e}")
+        vienna_df = None
+else:
+    print(f"ViennaRNA features file not found at {args.mfe}. Proceeding without MFE.")
+    vienna_df = None
+
+# 3. Merge DataFrames
+if extraFeatures_df is not None and vienna_df is not None:
+    print("Merging original extra features with ViennaRNA MFE features.")
+    # Ensure indices are of the same type for robust merging
+    extraFeatures_df.index = extraFeatures_df.index.astype(str)
+    vienna_df.index = vienna_df.index.astype(str)
+    extraFeatures_df = extraFeatures_df.merge(vienna_df, left_index=True, right_index=True, how='left')
+    if 'mfe' in extraFeatures_df.columns: # MFE column exists due to merge
+         extraFeatures_df['mfe'] = extraFeatures_df['mfe'].fillna(0) # Fill NaNs for IDs in extraFeatures_df but not in vienna_df
+    print("Merge complete.")
+elif vienna_df is not None and extraFeatures_df is None:
+    print("Using only ViennaRNA MFE features as no original extra features were provided.")
+    extraFeatures_df = vienna_df.copy() # Use a copy
+    extraFeatures_df.index = extraFeatures_df.index.astype(str) # Ensure index is string
+# If extraFeatures_df is not None and vienna_df is None, extraFeatures_df is used as is (index type already handled or assumed consistent).
+# If both are None, extraFeatures_df remains None.
+
+if extraFeatures_df is not None:
+    # Ensure index is string type if it was not already (e.g. if only original extraFeatures_df was used)
+    if not pd.api.types.is_string_dtype(extraFeatures_df.index):
+        extraFeatures_df.index = extraFeatures_df.index.astype(str)
+    scaled_values = scaler.transform(extraFeatures_df) if scaler is not None else extraFeatures_df
+    extraFeatures_df = pd.DataFrame(scaled_values, columns=extraFeatures_df.columns, index=extraFeatures_df.index)
+    print(f"Final extra features DataFrame shape: {extraFeatures_df.shape}")
+    print(f"Final extra features columns: {extraFeatures_df.columns.tolist()}")
+else:
+    print("No extra features will be used.")
 
 # Run bench.explain for each sequence
 explanations_list = []
@@ -223,9 +290,9 @@ for seq in tqdm(SeqIO.parse(args.sequence_file, 'fasta')):
     am = [1] * len(s) + [0] * (args.max_seq_length - len(s))
     s = s + [t.pad_token_id] * (args.max_seq_length - len(s))
     # Get extra features
-    if extraFeatures is not None:
+    if extraFeatures_df is not None:
         seq_id = seq.description.split()[1]
-        tmp_extraFeatures = extraFeatures.loc[seq_id].to_numpy()
+        tmp_extraFeatures = extraFeatures_df.loc[seq_id].to_numpy()
     else:
         tmp_extraFeatures = None
 

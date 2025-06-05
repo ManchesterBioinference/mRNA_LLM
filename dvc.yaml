@@ -145,23 +145,24 @@ stages:
     - fineTuneModel
     - modelParams
 
-  predict:
-    cmd: python scripts/predict.py --params params.yaml --model_name_or_path ${fineTuneModel.output_dir}/best_spearmanr/
-      --data_dir ${preprocessData.output_dir}
-    deps:
-    - scripts/predict.py
-    - ${preprocessData.output_dir}
-    - ${fineTuneModel.output_dir}/best_spearmanr
-    outs:
-    - ${predict.output_dir}
-    params:
-    - predict
-    - modelParams
+  # predict:
+  #   cmd: python scripts/predict.py --params params.yaml --model_name_or_path ${fineTuneModel.output_dir}/best_spearmanr/
+  #     --data_dir ${preprocessData.output_dir}
+  #   deps:
+  #   - scripts/predict.py
+  #   - ${preprocessData.output_dir}
+  #   - ${fineTuneModel.output_dir}/best_spearmanr
+  #   outs:
+  #   - ${predict.output_dir}
+  #   params:
+  #   - predict
+  #   - modelParams
 
   importanceAnalysis:
     cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
       ${fineTuneModel.output_dir}/best_spearmanr/ --save_path ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
-      --extraFeatures ${getDecayResiduals.extraFeatures} --sequence_file ${preprocessData.output_dir}/train.fasta #test.fasta
+      --extraFeatures ${getDecayResiduals.extraFeatures} --sequence_file ${preprocessData.output_dir}/train.fasta
+      --mfe ${runViennaRNA.output_csv}                                                                                                             #test.fasta
     deps:
     - scripts/importanceAnalysis.py
     - ${fineTuneModel.output_dir}
@@ -268,6 +269,7 @@ stages:
         ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta --save_path
         ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv
         --extraFeatures ${getDecayResiduals.extraFeatures}
+        --mfe ${runViennaRNA.output_csv}                                                                                                             #test.fasta
       deps:
       - scripts/sanityCheck_predictions.py
       - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
@@ -313,11 +315,15 @@ stages:
       control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
       rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
     do:
-      cmd: mkdir -p ${splitHighLowDecay.output}/${item.interest}/${runAME_highLowDecay.output_dir}
-        && singularity exec -B $(readlink ${item.control}):/tmp/control.fasta -B $(readlink
-        ${item.rna}):/tmp/rna.fasta docker://memesuite/memesuite ame --oc 
-        ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir}
-        --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher
+      cmd: mkdir -p ${splitHighLowDecay.output}/${item.interest}/${runAME_highLowDecay.output_dir} && 
+        singularity exec 
+        -B $(readlink ${item.control}):/tmp/control.fasta 
+        -B $(readlink ${item.rna}):/tmp/rna.fasta 
+        docker://memesuite/memesuite:5.5.7 ame 
+        --oc ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir}
+        --control /tmp/control.fasta 
+        --evalue-report-threshold 100 
+        --method fisher
         --rna /tmp/rna.fasta 
         /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
       outs:
@@ -367,6 +373,7 @@ plots:
 - dvclive/TE/plots/metrics:
     x: step
 - dvclive/TE/plots/images
+- dvclive/findMotifs/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json

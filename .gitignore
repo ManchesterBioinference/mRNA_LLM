@@ -1,2 +1,3 @@
 snakemake_jobscript.sh.*
 slurm-*
+**__pycache__**

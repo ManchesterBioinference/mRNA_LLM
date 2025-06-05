@@ -10,7 +10,7 @@
 #####################################################
 source ~/.bashrc
 conda activate inseq
-~/.local/share/mamba/bin/dvc repro fineTuneModel #runViennaRNA #
+~/.local/share/mamba/bin/dvc repro # visualizeImportance #runViennaRNA #
 #~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures #dvc exp run
 #~/.local/share/mamba/bin/dvc exp run --run-all --jobs 1
 #~/.local/share/mamba/bin/git add -u
