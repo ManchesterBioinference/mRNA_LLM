@@ -1,14 +1,15 @@
 import argparse
 from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
+import pickle
 
 def main():
     parser = argparse.ArgumentParser(description="Process FASTA files based on specified method.")
     parser.add_argument("--params", help="Path to a parameters file (not used in current logic).")
     parser.add_argument("--sequence_file", required=True, help="Path to the input FASTA file.")
-    parser.add_argument("--process", required=True, choices=['originalSeqs', 'sameSeq', 'same5UTR', 'same3UTR'],
-                        help="Processing mode: 'originalSeqs', 'sameSeq', 'same5UTR', 'same3UTR'.")
+    parser.add_argument("--process", required=True, choices=['seqImpact', 'extraFeatImpact', '5UTRImpact', '3UTRImpact'], help="Processing mode: 'seqImpact', 'extraFeatImpact', '5UTRImpact', '3UTRImpact'.")
     parser.add_argument("--output_file", required=True, help="Path to the output FASTA file.")
+    parser.add_argument("--importance", help="path to the importance file")
 
     args = parser.parse_args()
 
@@ -28,40 +29,85 @@ def main():
             pass
         return
 
-    if args.process == "originalSeqs":
-        first_record_description = records[0].description.split(' ')
-        id = first_record_description[0]
-        first_record_description = ' '.join(first_record_description[1:])
-        for record in records:
-            record.id = id
-            record.description = first_record_description
-    elif args.process == "sameSeq":
-        first_record_sequence = records[0].seq
-        for record in records:
-            record.seq = first_record_sequence
-    elif args.process == "same5UTR":
-        first_record_5utr = str(records[0].seq.split(',')[0])
-        first_record = records[0]
-        for record in records[1:]: #skip the first record
-            variable3UTR = str(record.seq).split(',')[1]
-            record.id = first_record.id
-            record.description = ' '.join(first_record.description.split(' ')[1:])
-            record.seq = ','.join([first_record_5utr, variable3UTR])
-    elif args.process == "same3UTR":
-        first_record_3utr = str(records[0].seq.split(',')[1])
-        first_record = records[0]
-        for record in records[1:]:
-            variable5UTR = str(record.seq).split(',')[0]
-            record.id = first_record.id
-            record.description = ' '.join(first_record.description.split(' ')[1:])
-            record.seq = ','.join([variable5UTR, first_record_3utr])
+    importance = pickle.load(open(args.importance, 'rb'))
+    idToPrediction = {imp.id: imp.prediction for imp in importance}
+
+    newRecords = []
+    if args.process == "seqImpact":
+        # keep the original prediction associated with the extraFeatures (E1S1) and the extraFeatures the same (E1). Change the sequence (S)
+        # id is prediction from E1S1, sample is E1S2 through E1SN so that the E1SN prediction can be compared to the E1S1 prediction. 
+        for i in range(len(records)):
+            first_record_description = records[i].description.split(' ') 
+            if first_record_description[1] not in idToPrediction:
+                print(f"Warning: No prediction found for {first_record_description[1]}. Skipping this record.")
+                continue
+            id = idToPrediction[first_record_description[1]] #original prediction (E1S1)
+            first_record_description = ' '.join(first_record_description[1:]) # defines the extraFeatures (E)
+            for j,record in enumerate(records):
+                if j == i:
+                    continue
+                if record.description.split(' ')[1] not in idToPrediction:
+                    continue
+                r = SeqRecord(record.seq, record.id, record.name, record.description, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
+                r.id = str(id)
+                r.description = first_record_description
+                newRecords.append(r)
+    elif args.process == "extraFeatImpact":
+        # keep the original prediction associated with the sequence (E1S1) and the sequence the same (S1). Change the extraFeatures (E).
+        # id is prediction from E1S1, sample is E2S1 through ENS1 so that the E2S1 prediction can be compared to the E1S1 prediction.
+        for i in range(len(records)):
+            if records[i].description.split(' ')[1] not in idToPrediction:
+                continue
+            id = str(idToPrediction[records[i].description.split(' ')[1]]) #original prediction (E1S1)
+            first_record_sequence = records[i].seq # defines the sequence (S)
+            for j,record in enumerate(records):
+                if j == i:
+                    continue
+                r = SeqRecord(first_record_sequence, id, record.name, ' '.join(record.description.split()[1:]), record.dbxrefs, record.features, record.annotations, record.letter_annotations)
+                newRecords.append(r)
+    elif args.process == "5UTRImpact":
+        # keep the original prediction associated with the sequence (E1S1) and the 3' UTR the same (3UTR). Change the 5' UTR (5UTR).
+        # id is prediction from E1S1, sample is E1S(5.2,3.1) through E1S(5.N,3.1) so that the E1S(5.N,3.1) prediction can be compared to the E1S1 prediction.
+        for i in range(len(records)):
+            if records[i].description.split(' ')[1] not in idToPrediction:
+                continue
+            id = idToPrediction[records[i].description.split(' ')[1]] #original prediction (E1S1)
+            first_record_3utr = str(records[i].seq.split(',')[1]) #3.1
+            first_record = records[i] # E1
+            for j,record in enumerate(records):
+                if j == i:
+                    continue
+                r = SeqRecord(record.seq, record.id, record.name, record.description, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
+                variable5UTR = str(record.seq).split(',')[0]
+                r.id = str(id)
+                r.description = ' '.join(first_record.description.split(' ')[1:])
+                r.seq = ','.join([variable5UTR, first_record_3utr])
+                newRecords.append(r)
+    elif args.process == "3UTRImpact":
+        # keep the original prediction associated with the sequence (E1S1) and the 5' UTR the same (5UTR). Change the 3' UTR (3UTR).
+        # id is prediction from E1S1, sample is E1S(5.1,3.2) through E1S(5.1,3.N) so that the E1S(5.1,3.N) prediction can be compared to the E1S1 prediction.
+        for i in range(len(records)):
+            if records[i].description.split(' ')[1] not in idToPrediction:
+                continue
+            id = idToPrediction[records[i].description.split(' ')[1]] #original prediction (E1S1)
+            first_record_5utr = str(records[i].seq.split(',')[0])
+            first_record = records[i]
+            for j,record in enumerate(records):
+                if j == i:
+                    continue
+                r = SeqRecord(record.seq, record.id, record.name, record.description, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
+                variable3UTR = str(record.seq).split(',')[1]
+                r.id = str(id)
+                r.description = ' '.join(first_record.description.split(' ')[1:])
+                r.seq = ','.join([first_record_5utr, variable3UTR])
+                newRecords.append(r)
     else:
         # This case should not be reached due to argparse choices
         print(f"Error: Unknown process type '{args.process}'.")
         return
 
     try:
-        SeqIO.write(records, args.output_file, "fasta")
+        SeqIO.write(newRecords, args.output_file, "fasta")
         print(f"Processed sequences saved to {args.output_file}")
     except Exception as e:
         print(f"Error writing output file: {e}")

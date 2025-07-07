@@ -21,6 +21,8 @@ from transformers import (
 ) 
 
 from GenaLMWithExtraFeatures import GenaLMWithExtraFeatures
+import torch 
+import numpy as np
 
 def set_seed(args):
     random.seed(args.seed)
@@ -115,20 +117,27 @@ if args.params:
             parser.set_defaults(**{key: value})
         for key, value in yaml_params['importanceAnalysis'].items():
             parser.set_defaults(**{key: value})
+        for key, value in yaml_params['randomizeSeqsAndExtraFeatures'].items():
+            parser.set_defaults(**{key: value})
 
 args = parser.parse_args()
 #args.sequence_file = 'output/data/sanityCheck/originalSeqs.fasta'
 
 # Set seed
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-if device == 'cuda':
-    args.n_gpu = 1
+print(f"Using device: {device}")
+if device.type == 'cuda':
+    args.n_gpu = torch.cuda.device_count()
 else: 
     args.n_gpu = 0
+print(f"Using {args.n_gpu} GPUs.")
 set_seed(args)
 
 model = GenaLMWithExtraFeatures.from_pretrained(args.model_name_or_path) #, num_labels=1, id2label={0: "LABEL_0"})
 model.to(device)
+if device.type == 'cuda' and args.n_gpu > 1:
+    model = torch.nn.DataParallel(model)  # Wrap the model for multi-GPU training
+    print("Model wrapped with DataParallel for multi-GPU training.")
 model.eval()
 
 # Load the scaler
@@ -138,7 +147,14 @@ if os.path.exists(scaler_path):
 else:
     scaler = None
 
-t = AutoTokenizer.from_pretrained(args.model_name_or_path)
+try:
+    t = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=True)
+    if not t.is_fast:
+        print("Warning: Loaded tokenizer is not a 'fast' tokenizer. Performance might be suboptimal.")
+except Exception:
+    print("Failed to load fast tokenizer, trying with use_fast=False.")
+    t = AutoTokenizer.from_pretrained(args.model_name_or_path, use_fast=False)
+
 
 if args.extraFeatures is not None:
     print(f"Loading original extra features from: {args.extraFeatures}")
@@ -202,49 +218,188 @@ elif vienna_df is not None and extraFeatures_df is None:
 # If extraFeatures_df is not None and vienna_df is None, extraFeatures_df is used as is (index type already handled or assumed consistent).
 # If both are None, extraFeatures_df remains None.
 
+extra_features_lookup_dict = None # Initialize
 if extraFeatures_df is not None:
     # Ensure index is string type if it was not already (e.g. if only original extraFeatures_df was used)
     if not pd.api.types.is_string_dtype(extraFeatures_df.index):
         extraFeatures_df.index = extraFeatures_df.index.astype(str)
-    scaled_values = scaler.transform(extraFeatures_df) if scaler is not None else extraFeatures_df
-    extraFeatures_df = pd.DataFrame(scaled_values, columns=extraFeatures_df.columns, index=extraFeatures_df.index)
-    print(f"Final extra features DataFrame shape: {extraFeatures_df.shape}")
-    print(f"Final extra features columns: {extraFeatures_df.columns.tolist()}")
+    
+    # Apply scaling if scaler exists
+    if scaler is not None:
+        scaled_values = scaler.transform(extraFeatures_df)
+        extraFeatures_df_processed = pd.DataFrame(scaled_values, columns=extraFeatures_df.columns, index=extraFeatures_df.index)
+    else:
+        extraFeatures_df_processed = extraFeatures_df.copy() # Use a copy if no scaling
+
+    print(f"Final extra features DataFrame shape: {extraFeatures_df_processed.shape}")
+    print(f"Final extra features columns: {extraFeatures_df_processed.columns.tolist()}")
+    
+    # Convert to dictionary for faster lookups
+    extra_features_lookup_dict = {idx: row_values.to_numpy() for idx, row_values in extraFeatures_df_processed.iterrows()}
 else:
     print("No extra features will be used.")
 
 
-# Run bench.explain for each sequence
-decay = []
-predDecay = []
-seqCount = []
-count = 0
-for seq in tqdm(SeqIO.parse(args.sequence_file, 'fasta')):
-    count += 1
-    seq.seq = str(seq.seq).replace('U', "T")
-    # Check seq length after tokenization
-    utr5, utr3 = str(seq.seq).split(',')
-    utr5 = t.encode(str(utr5), add_special_tokens=True)
-    utr3 = t.encode(str(utr3), add_special_tokens=True) #, max_length=args.max_seq_length-len(utr5)+1, pad_to_max_length=False, truncation=True)
-    s = utr5 + utr3[1:]
-    if len(s) > args.max_seq_length:
-        print(f"Skipping sequence {seq.id} due to length {len(s)}")
-        continue
-    am = [1] * len(s) + [0] * (args.max_seq_length - len(s))
-    s = s + [t.pad_token_id] * (args.max_seq_length - len(s))
-    # Get extra features
-    if extraFeatures_df is not None:
-        seq_id = seq.description.split()[1]
-        tmp_extraFeatures = extraFeatures_df.loc[seq_id].to_numpy()
-    else:
-        tmp_extraFeatures = None
+# Assuming 'model', 'device', 't' (tokenizer), 'args', 'extraFeatures_df', 'scaler'
+# are defined and initialized correctly before this block.
+# 'model' should be on 'device' and already wrapped with torch.nn.DataParallel if args.n_gpu > 1.
 
-    actualDecayRate = round(float(seq.name),2)
-    predictedDecayRate = round(model(input_ids=torch.tensor([s]).to(device), attention_mask=torch.tensor([am]).to(device), extra_features=torch.tensor([tmp_extraFeatures], dtype=torch.float32).to(device)).logits.item(),2)
-    decay.append(actualDecayRate)
-    predDecay.append(predictedDecayRate)
-    seqCount.append(count)
+# Lists to store results
+decay = []  # Stores actual decay rates
+predDecay = []  # Stores predicted decay rates
+seqCount = []  # Stores a counter or ID for each sequence processed
+
+processed_sequence_counter = 0  # Overall counter for sequences from the input file
+
+# Lists to accumulate data for the current batch
+current_batch_input_ids = []
+current_batch_attention_masks = []
+current_batch_extra_features = [] # Will store numpy arrays (if features are used) or None
+current_batch_actual_decay_rates = []
+current_batch_sequence_counters = [] # Stores the 'processed_sequence_counter' for items in batch
+
+# Determine effective batch size for model input.
+# If args.n_gpu > 0, DataParallel handles splitting this total batch across GPUs.
+# Each GPU will process args.per_gpu_pred_batch_size.
+if args.n_gpu > 0: # Handles single or multiple GPUs
+    effective_batch_size = args.per_gpu_pred_batch_size * args.n_gpu
+else: # CPU
+    effective_batch_size = args.per_gpu_pred_batch_size
+print(f"Effective batch size for prediction: {effective_batch_size}")
+
+# Helper function to process a collected batch
+def process_filled_batch(ids_list, masks_list, extras_list, actuals_list, counters_list):
+    if not ids_list:
+        return
+
+    input_ids_tensor = torch.tensor(ids_list, dtype=torch.long).to(device)
+    attention_mask_tensor = torch.tensor(masks_list, dtype=torch.long).to(device)
+    
+    extra_features_tensor = None
+    if extras_list and extras_list[0] is not None: # If feature data exists for the batch
+        # Assumes all items in extras_list are numpy arrays of consistent shape,
+        # due to skipping sequences with missing features if features are generally expected.
+        try:
+            # Convert list of numpy arrays to a single multi-dimensional numpy array, then to tensor
+            extra_features_tensor = torch.tensor(np.array(extras_list), dtype=torch.float32).to(device)
+        except Exception as e:
+            print(f"Error converting extra features to tensor: {e}. This batch might be skipped or processed without features.")
+            # Depending on model requirements, you might want to raise error or ensure fallback
+            extra_features_tensor = None # Fallback or ensure model can handle this
+    
+    with torch.no_grad(): # Disable gradient calculations for inference
+        outputs = model(input_ids=input_ids_tensor, attention_mask=attention_mask_tensor, extra_features=extra_features_tensor)
+        logits = outputs.logits
+        # Ensure logits are 1D (batch_size,)
+        if logits.ndim > 1 and logits.shape[-1] == 1:
+            logits = logits.squeeze(-1)
+
+    current_predictions = [round(logit.item(), 2) for logit in logits]
+    
+    # Extend the main result lists
+    predDecay.extend(current_predictions)
+    decay.extend(actuals_list)
+    seqCount.extend(counters_list)
+
+    # Clear the batch accumulation lists for the next batch
+    ids_list.clear()
+    masks_list.clear()
+    extras_list.clear()
+    actuals_list.clear()
+    counters_list.clear()
+
+# Iterate through sequences from the FASTA file
+for seq_record in tqdm(SeqIO.parse(args.sequence_file, 'fasta'), desc="Processing sequences"):
+    processed_sequence_counter += 1
+    
+    # Sequence preprocessing from original code
+    sequence_string = str(seq_record.seq).replace('U', "T")
+    
+    parts = sequence_string.split(',')
+    if len(parts) != 2:
+        # print(f"Skipping sequence {seq_record.id} (count: {processed_sequence_counter}): Incorrect format (expected UTR5,UTR3).")
+        continue
+    utr5_str, utr3_str = parts
+
+    tokenized_utr5 = t.encode(utr5_str, add_special_tokens=True, truncation=False)
+    tokenized_utr3 = t.encode(utr3_str, add_special_tokens=True, truncation=False)
+
+    if not tokenized_utr3: # Should not happen with add_special_tokens=True
+        combined_tokens = tokenized_utr5
+    else:
+        combined_tokens = tokenized_utr5 + tokenized_utr3[1:] # Remove CLS of UTR3
+    
+    if len(combined_tokens) > args.max_seq_length:
+        # print(f"Skipping sequence {seq_record.id} (count: {processed_sequence_counter}): Combined token length {len(combined_tokens)} exceeds max_seq_length {args.max_seq_length}.")
+        continue 
+
+    # Padding
+    padding_length = args.max_seq_length - len(combined_tokens)
+    padded_tokens = combined_tokens + [t.pad_token_id] * padding_length
+    attention_mask = [1] * len(combined_tokens) + [0] * padding_length
+
+    # Extra features processing
+    current_sequence_extra_features = None # Default to None
+    if extra_features_lookup_dict is not None:
+        # Original logic for FASTA header: >decay_rate_val id_for_features other_stuff
+        # seq_record.name is 'decay_rate_val'
+        # seq_record.description is the full line 'decay_rate_val id_for_features other_stuff'
+        desc_parts = seq_record.description.split()
+        if len(desc_parts) > 1:
+            seq_id_for_features = desc_parts[1] # The ID used for lookup in extraFeatures_df
+            current_sequence_extra_features = extra_features_lookup_dict.get(seq_id_for_features)
+            if current_sequence_extra_features is None:
+                # print(f"Warning: For sequence {seq_record.id} (count: {processed_sequence_counter}), feature ID '{seq_id_for_features}' not found in extra_features_lookup_dict. Skipping this sequence.")
+                continue # Skip if features are expected but missing for this ID
+        else:
+            # print(f"Warning: Could not parse feature ID from description for sequence {seq_record.id} (count: {processed_sequence_counter}): '{seq_record.description}'. Skipping this sequence.")
+            continue # Skip if description format is unsuitable for feature ID parsing
+    elif args.extraFeatures is not None: # If extraFeatures CSV was specified but lookup dict is None (e.g. empty after processing)
+        # This case implies that features were expected but something went wrong or the file was empty.
+        # Depending on desired behavior, you might want to skip all sequences or log a more prominent warning.
+        # For now, assume if extra_features_lookup_dict is None, we proceed without features if args.extraFeatures was also None.
+        # If args.extraFeatures was provided but lookup_dict is None (e.g. empty file), this means no features are available.
+        # The original code would skip if extraFeatures_df was not None but ID was missing.
+        # If features are mandatory when args.extraFeatures is set, this logic might need adjustment.
+        # The current logic: if extra_features_lookup_dict is None, no features are added.
+        # If it's not None, but ID is missing, sequence is skipped. This seems consistent.
+        pass
+
+
+    # Actual decay rate from FASTA name/header
+    try:
+        actual_decay_rate = round(float(seq_record.name), 2)
+    except ValueError:
+        # print(f"Warning: Could not parse decay rate from seq_record.name '{seq_record.name}' for sequence {seq_record.id} (count: {processed_sequence_counter}). Skipping this sequence.")
+        continue # Skip if actual decay rate is not parseable
+
+    # Add processed data to current batch lists
+    current_batch_input_ids.append(padded_tokens)
+    current_batch_attention_masks.append(attention_mask)
+    current_batch_extra_features.append(current_sequence_extra_features)
+    current_batch_actual_decay_rates.append(actual_decay_rate)
+    current_batch_sequence_counters.append(processed_sequence_counter)
+
+    # If batch is full, process it
+    if len(current_batch_input_ids) >= effective_batch_size:
+        process_filled_batch(
+            current_batch_input_ids, 
+            current_batch_attention_masks, 
+            current_batch_extra_features, 
+            current_batch_actual_decay_rates, 
+            current_batch_sequence_counters
+        )
+
+# Process any remaining sequences in the last batch (if not empty)
+if current_batch_input_ids:
+    process_filled_batch(
+        current_batch_input_ids, 
+        current_batch_attention_masks, 
+        current_batch_extra_features, 
+        current_batch_actual_decay_rates, 
+        current_batch_sequence_counters
+    )
 
 # write actual and predicted decay rates as two columns in a csv file
-df = pd.DataFrame({'actualDecayRate': decay, 'predictedDecayRate': predDecay, 'sequenceCount': seqCount})
+df = pd.DataFrame({'originalPrediction': decay, 'perturbedPrediction': predDecay, 'sequenceCount': seqCount})
 df.to_csv(args.save_path, index=False)

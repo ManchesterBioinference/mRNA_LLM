@@ -8,7 +8,7 @@ import joblib
 class SHAPExplainer(BaseExplainer):
     NAME = "Partition SHAP"
 
-    def compute_feature_importance(self, text, target=None, extra_features=None, actual=None, predicted = None, **explainer_args):
+    def compute_feature_importance(self, text, target=None, extra_features=None, ID=None, actual=None, predicted = None, **explainer_args):
         # For regression, target is not needed, but kept for compatibility (ignored)
         init_args, call_args = parse_explainer_args(explainer_args)
 
@@ -51,7 +51,7 @@ class SHAPExplainer(BaseExplainer):
         attr = shap_values.values[0]  # Take all feature contributions for the single output
 
         # Create explanation (target=None or 0 to indicate regression, adjust as needed)
-        output = Explanation(str(actual)+' Pred:' +str(predicted), masker._segments_s.tolist(), attr, self.NAME, target=None)
+        output = Explanation(ID, actual, predicted, masker._segments_s.tolist(), attr, self.NAME, target=None)
         #output = Explanation(text, masker._segments_s.tolist(), attr, self.NAME, target=None)
         return output
     
@@ -290,8 +290,8 @@ for seq in tqdm(SeqIO.parse(args.sequence_file, 'fasta')):
     am = [1] * len(s) + [0] * (args.max_seq_length - len(s))
     s = s + [t.pad_token_id] * (args.max_seq_length - len(s))
     # Get extra features
+    seq_id = seq.description.split()[1]
     if extraFeatures_df is not None:
-        seq_id = seq.description.split()[1]
         tmp_extraFeatures = extraFeatures_df.loc[seq_id].to_numpy()
     else:
         tmp_extraFeatures = None
@@ -303,7 +303,7 @@ for seq in tqdm(SeqIO.parse(args.sequence_file, 'fasta')):
 
     if not args.debug:
         # Pass extra_features to the compute_feature_importance method
-        e = myShap(str(seq.seq), target=None, extra_features=torch.tensor(tmp_extraFeatures, dtype=torch.float32).to(device), show_progress=True, actual = actualDecayRate, predicted = predictedDecayRate)
+        e = myShap(str(seq.seq), target=None, extra_features=torch.tensor(tmp_extraFeatures, dtype=torch.float32).to(device), show_progress=True, ID = seq_id, actual = actualDecayRate, predicted = predictedDecayRate)
         new_e = copy.copy(e)
         new_e.scores /= np.linalg.norm(e.scores, ord=1) #L1 normalization axis=-1, 
         explanations_list.append(new_e)

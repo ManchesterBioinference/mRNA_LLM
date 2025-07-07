@@ -391,8 +391,8 @@ stages:
       nfiles: 24
     - path: scripts/importanceAnalysis.py
       hash: md5
-      md5: 35319da3fb6fe80c1247f16136923e3e
-      size: 19243
+      md5: a0e14b0a628ef8e22631a96ae5475e38
+      size: 19246
     params:
       params.yaml:
         importanceAnalysis:
@@ -402,8 +402,8 @@ stages:
     outs:
     - path: output/importance/shap.pkl
       hash: md5
-      md5: 782a54eec8cdbb182ce90dc8bab0dcc6
-      size: 7629595
+      md5: 9b86e560625db45b402993f1d8cb9f58
+      size: 7723181
   visualizeImportance:
     cmd: python scripts/visualizeImportance.py --params params.yaml --kmer 4 --SHAP
       output/importance/shap.pkl --scoresOnly output/importance/shapScores.npy --save_path
@@ -411,12 +411,12 @@ stages:
     deps:
     - path: output/importance/shap.pkl
       hash: md5
-      md5: 782a54eec8cdbb182ce90dc8bab0dcc6
-      size: 7629595
+      md5: 9b86e560625db45b402993f1d8cb9f58
+      size: 7723181
     - path: scripts/visualizeImportance.py
       hash: md5
-      md5: bb0e29e38505edd3fb176919ae884037
-      size: 5649
+      md5: 7a4d5b867f1436ce277bcccc121b5935
+      size: 5881
     params:
       params.yaml:
         visualizeImportance:
@@ -426,8 +426,8 @@ stages:
     outs:
     - path: output/importance/visualizeImportance.html
       hash: md5
-      md5: a2eba87c5e0a21a2dab2031e602bf9d5
-      size: 33517607
+      md5: f64aafd85c8f3da9575e496e189759a8
+      size: 33517613
   findMotifs:
     cmd: python scripts/find_motifs.py --SHAP output/importance/shap.pkl --save_file_dir
       output/motifs
@@ -970,3 +970,195 @@ stages:
       hash: md5
       md5: af600d3e3adf97355b18c76bfee40ef4
       size: 15605730
+  prepRandomizeSeqsAndExtraFeatures@seqImpact:
+    cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
+      --sequence_file output/data/decay/train.fasta --process seqImpact --output_file
+      output/data/sanityCheck/seqImpact.fasta --importance output/importance/shap.pkl
+    deps:
+    - path: output/data/decay/train.fasta
+      hash: md5
+      md5: 4c7808bd05acff6e4808f9d5997c57ab
+      size: 3014517
+    - path: output/importance/shap.pkl
+      hash: md5
+      md5: 9b86e560625db45b402993f1d8cb9f58
+      size: 7723181
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 2d3be818da42ae0309249f341bb969df
+      size: 6617
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/seqImpact.fasta
+      hash: md5
+      md5: 02c0c115d0107ed01214a00661c068ad
+      size: 12103481052
+  prepRandomizeSeqsAndExtraFeatures@extraFeatImpact:
+    cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
+      --sequence_file output/data/decay/train.fasta --process extraFeatImpact --output_file
+      output/data/sanityCheck/extraFeatImpact.fasta --importance output/importance/shap.pkl
+    deps:
+    - path: output/data/decay/train.fasta
+      hash: md5
+      md5: 4c7808bd05acff6e4808f9d5997c57ab
+      size: 3014517
+    - path: output/importance/shap.pkl
+      hash: md5
+      md5: 9b86e560625db45b402993f1d8cb9f58
+      size: 7723181
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 2d3be818da42ae0309249f341bb969df
+      size: 6617
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/extraFeatImpact.fasta
+      hash: md5
+      md5: 06c452ab962f8b7c65905a1c25649dfe
+      size: 12192555306
+  prepRandomizeSeqsAndExtraFeatures@5UTRImpact:
+    cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
+      --sequence_file output/data/decay/train.fasta --process 5UTRImpact --output_file
+      output/data/sanityCheck/5UTRImpact.fasta --importance output/importance/shap.pkl
+    deps:
+    - path: output/data/decay/train.fasta
+      hash: md5
+      md5: 4c7808bd05acff6e4808f9d5997c57ab
+      size: 3014517
+    - path: output/importance/shap.pkl
+      hash: md5
+      md5: 9b86e560625db45b402993f1d8cb9f58
+      size: 7723181
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 2d3be818da42ae0309249f341bb969df
+      size: 6617
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/5UTRImpact.fasta
+      hash: md5
+      md5: d226b00be2fab24ec8be286a5d6c31fa
+      size: 12286448415
+  prepRandomizeSeqsAndExtraFeatures@3UTRImpact:
+    cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
+      --sequence_file output/data/decay/train.fasta --process 3UTRImpact --output_file
+      output/data/sanityCheck/3UTRImpact.fasta --importance output/importance/shap.pkl
+    deps:
+    - path: output/data/decay/train.fasta
+      hash: md5
+      md5: 4c7808bd05acff6e4808f9d5997c57ab
+      size: 3014517
+    - path: output/importance/shap.pkl
+      hash: md5
+      md5: 9b86e560625db45b402993f1d8cb9f58
+      size: 7723181
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 2d3be818da42ae0309249f341bb969df
+      size: 6617
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+    outs:
+    - path: output/data/sanityCheck/3UTRImpact.fasta
+      hash: md5
+      md5: b3dfc9bd433a86007f4653a87c8b940d
+      size: 12515357943
+  randomizeSeqsAndExtraFeatures@seqImpact:
+    cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
+      output/data/sanityCheck/seqImpact.fasta --save_path output/data/sanityCheck/seqImpact_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/seqImpact.fasta
+      hash: md5
+      md5: 02c0c115d0107ed01214a00661c068ad
+      size: 12103481052
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 01bd0505b54bbbb62c4f36a8afd36533
+      size: 22226
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/seqImpact_predictions.csv
+      hash: md5
+      md5: 56ace1b73a20627f831d288ea17ffaeb
+      size: 322453912
+  randomizeSeqsAndExtraFeatures@extraFeatImpact:
+    cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
+      output/data/sanityCheck/extraFeatImpact.fasta --save_path output/data/sanityCheck/extraFeatImpact_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/extraFeatImpact.fasta
+      hash: md5
+      md5: 06c452ab962f8b7c65905a1c25649dfe
+      size: 12192555306
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 01bd0505b54bbbb62c4f36a8afd36533
+      size: 22226
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/extraFeatImpact_predictions.csv
+      hash: md5
+      md5: 56255d4edc5bc0373a9d2be4cfc83fe7
+      size: 324829638
+  randomizeSeqsAndExtraFeatures@5UTRImpact:
+    cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
+      output/data/sanityCheck/5UTRImpact.fasta --save_path output/data/sanityCheck/5UTRImpact_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/5UTRImpact.fasta
+      hash: md5
+      md5: d226b00be2fab24ec8be286a5d6c31fa
+      size: 12286448415
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 01bd0505b54bbbb62c4f36a8afd36533
+      size: 22226
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/5UTRImpact_predictions.csv
+      hash: md5
+      md5: da4fe5d92465891cabc1b56eca8207ad
+      size: 324571755
+  randomizeSeqsAndExtraFeatures@3UTRImpact:
+    cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
+      output/data/sanityCheck/3UTRImpact.fasta --save_path output/data/sanityCheck/3UTRImpact_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/3UTRImpact.fasta
+      hash: md5
+      md5: b3dfc9bd433a86007f4653a87c8b940d
+      size: 12515357943
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 01bd0505b54bbbb62c4f36a8afd36533
+      size: 22226
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/3UTRImpact_predictions.csv
+      hash: md5
+      md5: 864590c3b2bd73d36f54f069d02b5454
+      size: 323371236

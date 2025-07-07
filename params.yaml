@@ -150,6 +150,10 @@ correctAME_pvalues:
 
 prepRandomizeSeqsAndExtraFeatures:
   sequence_dir: output/data/sanityCheck
+
+randomizeSeqsAndExtraFeatures:
+  per_gpu_pred_batch_size: 128
+
 splitHighLowDecay:
   output: output/splitDecay
   high: highDecay.fasta

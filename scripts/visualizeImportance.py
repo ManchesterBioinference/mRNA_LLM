@@ -105,7 +105,7 @@ args = parser.parse_args()
 
 importance = pickle.load(open(args.SHAP, 'rb'))
 for imp in importance:
-    imp.scores *= len(imp.scores)
+    imp.scores *= len(imp.scores) # this makes the scores comparable between samples of different lengths
 abs_values = [abs(min(sample.scores)) for sample in importance] + [abs(max(sample.scores)) for sample in importance]
 # #remove outliers [array([0.22186287]), array([0.04263635]), array([0.05845571]), array([0.03809491])]
 # Q1 = np.percentile(abs_values, 25)
@@ -113,7 +113,7 @@ abs_values = [abs(min(sample.scores)) for sample in importance] + [abs(max(sampl
 # IQR = Q3 - Q1
 # outlier_threshold = Q3 + 1.5 * IQR
 # abs_values = [x for x in abs_values if x <= outlier_threshold]
-max_abs_value = np.max(abs_values)
+max_abs_value = np.mean(abs_values) + 4 * np.std(abs_values) # everything above this is set to the max value
 #max_abs_value = max([abs(min(sample.scores)) for sample in importance] + [abs(max(sample.scores)) for sample in importance])
 scores = []
 
@@ -121,8 +121,8 @@ text = ''
 tokenizedText = ''
 count = 0
 for sample in tqdm(importance, desc='Plotting Colors'):
-    text += '<span style = "font-family: monospace;">' +str(count)+ ': ' + sample.text + ' </span>'
-    tokenizedText += '<span style = "font-family: monospace;">' +str(count)+ ': ' + sample.text + ' </span>'
+    text += '<span style = "font-family: monospace;">' +str(count)+ ': ' + str(sample.actual) + " Pred:" + str(sample.prediction) + ' </span>'
+    tokenizedText += '<span style = "font-family: monospace;">' +str(count)+ ': ' + str(sample.actual) + " Pred:" + str(sample.prediction) + ' </span>'
     text += ''.join([highlighter(k, sample.scores, sample.tokens, max_abs_value) for k in range(len(sample.tokens))]) + '<br>'
     tokenizedText += '|'.join([highlighter(k, sample.scores, sample.tokens, max_abs_value) for k in range(len(sample.tokens))]) + '<br>'
     scores.append(sample.scores)

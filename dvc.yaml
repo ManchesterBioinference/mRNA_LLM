@@ -242,17 +242,19 @@ stages:
 
   prepRandomizeSeqsAndExtraFeatures:
     foreach:
-    - originalSeqs
-    - sameSeq
-    - same5UTR
-    - same3UTR
+    - seqImpact
+    - extraFeatImpact
+    - 5UTRImpact
+    - 3UTRImpact
     do:
       cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
-        --sequence_file ${preprocessData.output_dir}/test.fasta --process ${item}
+        --sequence_file ${preprocessData.output_dir}/train.fasta --process ${item}
         --output_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
+        --importance ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
       deps:
       - scripts/prepRandomizeSeqsAndExtraFeatures.py
-      - ${preprocessData.output_dir}/test.fasta
+      - ${preprocessData.output_dir}/train.fasta
+      - ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
       outs:
       - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
       params:
@@ -260,10 +262,10 @@ stages:
 
   randomizeSeqsAndExtraFeatures:
     foreach:
-    - originalSeqs
-    - sameSeq
-    - same5UTR
-    - same3UTR
+    - seqImpact
+    - extraFeatImpact
+    - 5UTRImpact
+    - 3UTRImpact
     do:
       cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
         ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta --save_path
@@ -276,7 +278,7 @@ stages:
       outs:
       - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv
       params:
-      - prepRandomizeSeqsAndExtraFeatures
+      - randomizeSeqsAndExtraFeatures
 
   splitHighLowDecay:
     foreach:

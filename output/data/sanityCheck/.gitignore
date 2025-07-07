@@ -6,3 +6,11 @@
 /same3UTR.fasta
 /same5UTR.fasta
 /same5UTR_predictions.csv
+/seqImpact.fasta
+/extraFeatImpact.fasta
+/5UTRImpact.fasta
+/3UTRImpact.fasta
+/seqImpact_predictions.csv
+/extraFeatImpact_predictions.csv
+/5UTRImpact_predictions.csv
+/3UTRImpact_predictions.csv

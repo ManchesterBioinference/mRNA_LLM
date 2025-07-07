@@ -115,7 +115,7 @@ For now I will use the transcript level expression data that I have from Mike to
 - over the last couple of days I got DESeq2 working. I used it to calculate the corrected dispersion for the riboSeq and rnaSeq individually. Removing all genes with a dispersion value > 1 removes a few hundred more genes than the 1 count threshold I was using before. I'm not convinced it is different enough to warrant the extra complexity. I will stick with the 1 count threshold for now.
   - LLM discussion about the DESeq2 dispersion: [link](https://grok.com/share/bGVnYWN5_5adfabad-17c7-482b-91f9-8ff01fef38be)
 - During this process I realized that the TE data is all > 0. this means i don't need to add 1 when doing the log transformation and makes the data extremely normalized from a single log transformation rather than a double log transformation. I am now doing a test run using the best hyperparameters from the grid search.
-  - This approach led to a distribution that was to tall and skinny (too much kertosis). I'll stay with the double log transformation for now.
+  - This approach led to a distribution that was too tall and skinny (too much kertosis). I'll stay with the double log transformation for now.
 
 - [X] I need to adjust the findMotifs and runAME scripts to only use the training data that it successfully predicted on. According to Mikhail, this will prevent pulling features into the motif identification that led to incorrect predictions.
   - how exactly do i classify a prediction as correct or incorrect in a regression task? I was going to use a threshold on the difference, but I'm not so sure about that because error is not uniform across the range of TE values. the low values are over predicted and the high values are under predicted.
@@ -135,6 +135,41 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
-  <summary><B>2025.06.05 - </B></summary>
+  <summary><B>2025.06.06 - 5 vs 3 UTR effect, importance visualization threshold</B></summary>
+
+- plan for the day:
+  - [ ] try to interpret the motif results (is that AME database the best to use?)
+  - [ ] run a statistical test to see if the extra features are significantly better than the 5'UTR and 3'UTR
+    - I additionally, updated the script to run every combination of features and sequences to avoid any bias in the results. This should make the statistical tests more robust
+  - [X] review the importance visualization. All the colors are muted so i want to check if there are some outliers that should be thresholded to improve the visualization of the other values.
+    - I set a threshold of mean + 4*std for the importance values. This should help to visualize the important features better.
+
+</details>
+
+<details>
+  <summary><B>2025.06.13 - start run for all combinations of sequences, extraFeatures, 3UTR, and 5UTR to determine each components impact on prediction</B></summary>
+
+- when running every combination of features and sequences, I now skip sequences that were too long for the model. I also correctly copy the records so that the original data is not modified during the nested loop.
+- I didn't realize how long it would take to run the every combination. We have 4240 transcripts, so that is 4240^2 combinations (18 million) and I'm running that four different times (seqImpact, extraFeatImpact, 5UTRImpact, 3UTRImpact). At 206,080 iterations in 10min that will be 14.5 hours per run or 58.25 hours total. Good thing I can run it over the weekend.
+- I have RNP4F binding to the 3'UTR not the 5'UTR
+
+</details>
+
+<details>
+  <summary><B>2025.06.30 - fix a bug in extraFeatures impact</B></summary>
+
+- I found a bug in the way the extra features impact was being prepared. It was including the old and new sequence ID which made the transcript ID not fall in the correct position. I fixed this and reran the extra features impact. 
+
+</details>
+
+<details>
+  <summary><B>2025.07.07 - </B></summary>
+
+- I now look at the variability in each of the components to determine which one has the most impact on the prediction.
+  - sequence: 0.1201
+  - extraFeatures: 0.1048
+  - 5'UTR: 0.0752
+  - 3'UTR: 0.0840
+- I thought 5'UTR was supposed to have a bigger impact than the 3'UTR, but it appears that the 3'UTR has a bigger impact. I will have to look into this more.
 
 </details>
