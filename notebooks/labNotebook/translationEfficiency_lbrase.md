@@ -3,7 +3,7 @@
 ## Overview
 
 - [github_issue](https://github.com/ManchesterBioinference/mRNA_LLM/issues/1)
-- The translation efficiency (TE) of a gene is defined as the ratio of the number of ribosomes bound to the mRNA to the number of ribosomes that could potentially bind to the mRNA.
+- Translational efficiency (TE) refers to an increase in rate of protein synthesis per unit of mRNA, presumably through an increased number of ribosomes bound to a single mRNA. [source](https://www.sciencedirect.com/topics/agricultural-and-biological-sciences/translational-efficiency#:~:text=capacity.-,Translational%20efficiency%20refers%20to%20an%20increase%20in%20rate%20of%20protein%20synthesis%20per%20unit%20of%20mRNA%2C%20presumably%20through%20an%20increased%20number%20of%20ribosomes%20bound%20to%20a%20single%20mRNA.,-Translational)
 - This metric is important for understanding how efficiently a gene is translated into protein.
 - In this project I will use the TE data provided by Declan Creamer.
 - It has three replicates for each gene and has three different time points.
@@ -101,7 +101,7 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
-  <summary><B>2025.06.03 - grid search complete with introns removed</B></summary>
+  <summary><B>2025.06.03 - grid search complete with introns removed (worse than when they are retained)</B></summary>
 
 - interestingly the results are a bit worse than the previous run with the introns included. I will have to look into this more.
   - best run: spearman (0.49949925064783884) - 50 epochs, 5e-5 learning rate, 0.1 warmup percent
@@ -130,7 +130,7 @@ For now I will use the transcript level expression data that I have from Mike to
 
   - hmmm. maybe not. you could have predicted that the full seq would be better than the 5'UTR alone because of the extra information, but it is not. Why would swapping the 5'UTR by itself have a bigger impact that swapping the full sequence? I bet some of it is because I only tested it with one sequence, as in I used the same 5'UTR/3'UTRs for all the transcripts.
 
-  - [ ] I should probably test it with a few different sequences to see if that changes the results or use random sequences keeping the GC content the same.
+  - [X] I should probably test it with a few different sequences to see if that changes the results or use random sequences keeping the GC content the same.
 
 </details>
 
@@ -165,11 +165,89 @@ For now I will use the transcript level expression data that I have from Mike to
 <details>
   <summary><B>2025.07.07 - </B></summary>
 
-- I now look at the variability in each of the components to determine which one has the most impact on the prediction.
+- Look at the variability in each of the components to determine which one has the most impact on the prediction.
   - sequence: 0.1201
   - extraFeatures: 0.1048
   - 5'UTR: 0.0752
   - 3'UTR: 0.0840
 - I thought 5'UTR was supposed to have a bigger impact than the 3'UTR, but it appears that the 3'UTR has a bigger impact. I will have to look into this more.
+
+- What to do next:
+  - [ ] review the motif hits
+  - [ ] is there a better motif database to use? should I be looking at microRNA binding sites?
+  - [ ] what is an example of something we already know in the TE space that we can use to validate the model?
+    - [ ] Can I find a transcript that has already been well studied in the context of TE and see if the model extracts the same features as the literature?
+  - [ ] Is there a certain combination of RBPs that are important for TE according to the data?
+
+- Motif Hits
+  - No Negative Hits
+  - Positive Hits
+    - RNP4F: [lit review by LLM](https://chatgpt.com/share/686b87f4-73bc-8003-b639-a3d19deba145)
+    - MOD: [lit review by LLM](https://chatgpt.com/share/0b1d8f2c-3a4e-4b5f-9d6c-7a0b6d1e2f5c)
+
+- RBP combinations
+  - I've found RBPs that are significantly co-occurring with RNP4F, but it could simply be that the have such similar binding motifs that they are finding the same sequence and competing rather than working together. How can i correct for this?
+    - I used TomTom to compare the motifs and rank their similarity.
+      > singularity exec docker://memesuite/memesuite:5.5.7 bash --login
+      > tomtom -thresh 1 -m RNCMPT00060 /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+
+</details>
+
+<details>
+  <summary><B>2025.07.08 - investigate oskar (transcript with known loops influencing localization and translation rate)</B></summary>
+
+- In my attempt to find a transcript that has already been well studied in the context of TE, I found the oskar transcript. It is known to have a loop structure that influences its localization and translation rate. I will use this transcript to validate the model and see if it extracts the same features as the literature.
+- The 5'UTR is only "GGAUCACUUUCCUCCAAGCG", so I plugged just the 3'UTR into the ViennaRNA to predict and visualize the secondary structure. ![ViennaRNA structure](../../figures/rna.svg)
+- According to this manuscript [link](https://pmc.ncbi.nlm.nih.gov/articles/PMC8046350/) the green box is the SL2a loop most likely responsible for Stuafen binding (SRS Staufen recognized structures, double stranded RNA) that controls localization.
+- The blue box is the small region that has a negative SHAP score. The rest of the transcript has a low positive SHAP score, which makes a bit more sense when I see that the whole thing is bound in loops. I wonder if there is anything important about the blue loop that relates to TE.
+
+- I'm not sure oskar is going to be the best example. Doing an [LLM search](https://chatgpt.com/share/686d1a14-888c-8003-83ff-5c4d1537f1a7) shows that these transcripts have been studied in detail in relation to TE.
+  | In training set | Name | FlyBase ID         | Paper |
+  |-----------------|------------------------|----------------|-------|
+  | [ ]             | msl-2 (male-specific lethal-2) | FBgn0005616   | [link]() |
+  | [X]             | osk (oskar)            | FBgn0003015    | [link]() |
+  | [X]             | cad (caudal)           | FBgn0000251    | [link](https://www.nature.com/articles/379694a0) |
+  | [X]             | nos (nanos)            | FBgn0002962    | [link](https://genesdev.cshlp.org/content/10/20/2600.full.pdf) |
+  | [X]             | hb (hunchback)         | FBgn0001180    | [link](https://pdf.sciencedirectassets.com/272196/1-s2.0-S0092867400X03728/1-s2.0-0092867491903689/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEJf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJIMEYCIQCxqnfDeqT8AIqn4ZPAg2KLnTEKqMb2TlMoDQw8zBzNPAIhAK4kL7%2BPxwtcGF%2Fr3rdtFAcnicL1DiU0Bwe9EXbTQ7E8KrsFCKD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQBRoMMDU5MDAzNTQ2ODY1IgxMBulAE%2BVqtvfQt18qjwW4NBqk%2BFnULyd11h3S76CAv19iemklJkEqnJW1dVccrNW2P2O3BGWg2SpoMpy%2FjXYF5HTbPRpTK24sWCdmgl7DeE51mJTAUpCHUtUgd1fQWJYoek3OxdKYzzN4W61v%2FbxjfXnfAI8rGtyDbHhME%2BSqbSXqs%2BHUBVfirzqJynDhkO7lQ%2B8Pze2nwR2jeHNErEAwyZNEZWHKS2V4SkW%2Fr8jnq1MWC3%2FknG1km0A3D1JqptHCKBoP6biNtreLPUkIHMNnMiBf%2BxYPD3qRV90Ed71KFfo7%2BRRLUiP%2BNy2mePNHkgsd%2BTVJeHSL13eVohEbWxnhwDjzI7lmJa0wASG%2Brliw1Vu83OHRqme88GPxXQUShvrZqKnrHJU2qvH1rTvwn1lO8Or3%2BGqx3l9%2Bx0I%2BQNXJSkXu%2F5mXpepQ2MWWJ95wZGLiKF%2FCOEsKDLBkDpdQbbvTeGMvdPCSuPDxjAsRapX%2FpdUH%2B%2FFYyr2nDCcFOCRIad1QmM1npPOKyF7Z0W4m%2FsqETP2VeYpH496fxZ%2BG0jsYRgTbBAK2hvscqCU7XrsjaIgfmbCTWpgsMwjTvtzZchmhu8ZcnvDsEVhA9oJ837bSw0nBUnT0S5%2BwzUJu%2FxAD5FexNGHXgZKKHY3jDGJ%2BCOhPnWPFNbXwmDmZEyxxb7O1H%2ByV%2B9WMUAszn8cgTi6poOFcdZcSUx%2BXx8vxKNjy8sIZ74VBLXjwWRxqQF4f8w7kpRZQPng2oZ9RrytDkYh51lT12xcAMnWb65LRNGhnqDGE1wlV4MwKf07TTcBgCuWsk%2BeXGxeO%2BZ4%2BppWxKW3tMAVklj0VXA2LHFNc3rVa8b6t2ZMofJQ8Zmwu5JxhycMLyleeseAklRepTzAgW6BCMOeluMMGOrAB3F1iG3sAL7wmz0Lf1Ext094WvUKKeh%2BOcowz1JySAXieM4dVYuPgQypFw5gcAtmbRlsNUA8WiNBdc3BLPbWXF%2FFs8ueAxLnUsbTbvmz2Eunq0yH00bjmLvQ3GbRl4cPGLFFGeX6S0ADwZ35n9bhv%2B0o5AvxxDGO3f9ymU7spK3odXPZXeTb84CbB5PSsdxT0h8p3PUbQHgDP7ZFjELWLwhPeV%2F6uZu%2BxT%2BM8%2F%2Fa8ktg%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20250709T072528Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTYUGHUFUXG%2F20250709%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=7373d1d8ae4bb55be85440a1a9e20c0597cbe7371345ba8a48ba201496227010&hash=041b691301b81b7e50e3d084fd113a0eedaf1663aa8187c19564eb0b33fb4784&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=0092867491903689&tid=spdf-29b18a31-9d64-4211-b9e4-0d4e73c9d1db&sid=6831636340e8464750481a96dc985f0c52c0gxrqb&type=client&tsoh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&rh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&ua=080058510458515858&rr=95c6166aea6c0765&cc=gb)|
+
+</details>
+
+<details>
+  <summary><B>2025.07.09 - Model validation on known (hb, nos, cad) translationally regulated transcripts</B></summary>
+
+### hb
+
+- hb is known to be translationally repressed by two Nanos Response Elements (NREs) in the 3'UTR. Consenus (GUUGUnnnnnAUUGUA)
+  - NRE 1: "GUUGUCCAGAAUUGUA"
+  - NRE 2: "GUUGUCGAAAAUUGUA"
+
+![Importance visualization with highlighted NREs](../../figures/hb_NREs.svg)
+
+- It appears that the model is recognizing at least one of the NREs as leading to a **negative** impact on the TE value. This is a good sign that the model is learning the biology of the system.
+
+### nos
+
+- nos is known to be translationally repressed by the Smaug Response Elements (SRE) in the 21-80 nucleotide region of the 3'UTR.
+  - SRE: "GAGCAGAGGCUCUGGCAGCUUUUGCAGCGUUUAUAUAACAUGAAAUAUAUAUACGCAUUCC"
+  
+![Importance visualization with highlighted SRE](../../figures/nos_SRE.svg)
+
+- The model is showing this has a **positive** impact on the TE value, which is not what we expect. The model was pretty far off on its prediction.
+
+### cad
+
+- cad is translationally repressed by the bcd recognition element (BRE) in the 3'UTR (210-553 nucleotide region).
+  - BRE: "ACCGAACCGAAAAGUUAAUAGGCAGCCGGACGAAUGGAGGACUUGGCGGCCGUUGCACCUGGAAUAUUGCACGUUGUUAAUUUUUGUGAUUGUAUAUUCCUGGUUUCGACACGCGCCAGAGUCCUCACAGCUAAACAAGUCUUAUAUUAUUCUUGUAUUAUGUUUGUUUUUUGUUCAACGUGUGUAGUAGCUUAAAGUAAAAUGAAUAGCUCGUAAGCAGUAGUAAGUAAAGUUGCCCGAGAAAAACAAGAACAAUUCAAACCAGCCGUCCCAGCCGAUUAACGUUUAAAAGUACUCGCUGCAGUUAAACAUAAUUUUAGUACAAGCAACUCAUUUUAGAGCG"
+
+![Importance visualization with highlighted BRE](../../figures/cad_BRE.png)
+
+- This whole region plus a bit on each end is the BRE. This region has lower scores than most of the transcript, but still has several regions of **positive** impact on the TE value.
+
+</details>
+
+<details>
+  <summary><B>2025.07.</B></summary>
+
+- 
 
 </details>
