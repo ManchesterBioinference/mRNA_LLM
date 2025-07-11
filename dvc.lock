@@ -434,12 +434,12 @@ stages:
     deps:
     - path: output/importance/visualizeImportance.html
       hash: md5
-      md5: a2eba87c5e0a21a2dab2031e602bf9d5
-      size: 33517607
+      md5: f64aafd85c8f3da9575e496e189759a8
+      size: 33517613
     - path: scripts/find_motifs.py
       hash: md5
-      md5: dbea2f50cbd940e87cb60c3dbeb60907
-      size: 38698
+      md5: 495636d0daae61f53d7ba3c8c89ec5b6
+      size: 38646
     params:
       params.yaml:
         findMotifs:
@@ -450,20 +450,20 @@ stages:
     outs:
     - path: output/motifs/negative/control_seqs.fasta
       hash: md5
-      md5: 837f0d9f2a8ba24fef05a21ab8db50a2
+      md5: 861850bc7565e0d8d7a7f0f3998f10ac
       size: 6471742
     - path: output/motifs/negative/motif_seqs.fasta
       hash: md5
-      md5: d7fbd2ce391f1a7c1bb7f34c33940ac6
-      size: 53130
+      md5: 89d8f909d9e9e10efc4ba35ad4374e1c
+      size: 51753
     - path: output/motifs/positive/control_seqs.fasta
       hash: md5
-      md5: c522ea48bb32cd8d52b312eaeedc7f64
+      md5: d6a1b120995ffe210f3217211bf2639c
       size: 363826
     - path: output/motifs/positive/motif_seqs.fasta
       hash: md5
-      md5: d3a0a597d6d156f8179e0c414c11f02a
-      size: 489038
+      md5: b7ca624129e29f78c258a397cf6c56e8
+      size: 479540
   runAME@positive:
     cmd: singularity exec -B $(readlink output/motifs/positive/control_seqs.fasta):/tmp/control_seqs.fasta
       -B $(readlink output/motifs/positive/motif_seqs.fasta):/tmp/motif_seqs.fasta
@@ -474,12 +474,12 @@ stages:
     deps:
     - path: output/motifs/positive/control_seqs.fasta
       hash: md5
-      md5: c522ea48bb32cd8d52b312eaeedc7f64
+      md5: d6a1b120995ffe210f3217211bf2639c
       size: 363826
     - path: output/motifs/positive/motif_seqs.fasta
       hash: md5
-      md5: d3a0a597d6d156f8179e0c414c11f02a
-      size: 489038
+      md5: b7ca624129e29f78c258a397cf6c56e8
+      size: 479540
     params:
       params.yaml:
         runAME:
@@ -487,8 +487,8 @@ stages:
     outs:
     - path: output/motifs/positive/ame_output
       hash: md5
-      md5: 648b0e8a2a097e3a6f6aea5c96062727.dir
-      size: 6150565
+      md5: b8f01fb6eae8ce193ac3958001cbaeba.dir
+      size: 6208930
       nfiles: 3
   runAME@negative:
     cmd: singularity exec -B $(readlink output/motifs/negative/control_seqs.fasta):/tmp/control_seqs.fasta
@@ -500,12 +500,12 @@ stages:
     deps:
     - path: output/motifs/negative/control_seqs.fasta
       hash: md5
-      md5: 837f0d9f2a8ba24fef05a21ab8db50a2
+      md5: 861850bc7565e0d8d7a7f0f3998f10ac
       size: 6471742
     - path: output/motifs/negative/motif_seqs.fasta
       hash: md5
-      md5: d7fbd2ce391f1a7c1bb7f34c33940ac6
-      size: 53130
+      md5: 89d8f909d9e9e10efc4ba35ad4374e1c
+      size: 51753
     params:
       params.yaml:
         runAME:
@@ -513,8 +513,8 @@ stages:
     outs:
     - path: output/motifs/negative/ame_output
       hash: md5
-      md5: 2ac2c99e60cb7e9ebb287677a3276b04.dir
-      size: 22087958
+      md5: d855153a659f3b44b66b72830b05a55e.dir
+      size: 22102984
       nfiles: 3
   correctAME_pvalues@positive:
     cmd: python scripts/correctAME_pvalues.py --params params.yaml --ame_input output/motifs/positive/ame_output/ame.tsv
@@ -1162,3 +1162,24 @@ stages:
       hash: md5
       md5: 864590c3b2bd73d36f54f069d02b5454
       size: 323371236
+  runFIMO:
+    cmd: singularity exec -B $(readlink output/motifs/positive/motif_seqs.fasta):/tmp/motif_seqs.fasta
+      docker://memesuite/memesuite:5.5.7 fimo --oc output/fimo_out --thresh 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster_filtered.meme
+      /tmp/motif_seqs.fasta
+    deps:
+    - path: output/motifs/positive/motif_seqs.fasta
+      hash: md5
+      md5: b7ca624129e29f78c258a397cf6c56e8
+      size: 479540
+    params:
+      params.yaml:
+        runFIMO:
+          output_dir: output/fimo_out
+          motif_file: data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster_filtered.meme
+          fimo_pvalue_threshold: 0.05
+    outs:
+    - path: output/fimo_out
+      hash: md5
+      md5: 6c91eb1596950814ad83cc48e03b1e82.dir
+      size: 292284050
+      nfiles: 6

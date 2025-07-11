@@ -270,8 +270,7 @@ stages:
       cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
         ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta --save_path
         ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv
-        --extraFeatures ${getDecayResiduals.extraFeatures}
-        --mfe ${runViennaRNA.output_csv}                                                                                                             #test.fasta
+        --extraFeatures ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv}                                                          #test.fasta
       deps:
       - scripts/sanityCheck_predictions.py
       - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
@@ -317,15 +316,11 @@ stages:
       control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
       rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
     do:
-      cmd: mkdir -p ${splitHighLowDecay.output}/${item.interest}/${runAME_highLowDecay.output_dir} && 
-        singularity exec 
-        -B $(readlink ${item.control}):/tmp/control.fasta 
-        -B $(readlink ${item.rna}):/tmp/rna.fasta 
-        docker://memesuite/memesuite:5.5.7 ame 
-        --oc ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir}
-        --control /tmp/control.fasta 
-        --evalue-report-threshold 100 
-        --method fisher
+      cmd: mkdir -p ${splitHighLowDecay.output}/${item.interest}/${runAME_highLowDecay.output_dir}
+        && singularity exec -B $(readlink ${item.control}):/tmp/control.fasta -B $(readlink
+        ${item.rna}):/tmp/rna.fasta docker://memesuite/memesuite:5.5.7 ame --oc 
+        ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir}
+        --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher
         --rna /tmp/rna.fasta 
         /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
       outs:
@@ -335,6 +330,21 @@ stages:
       - ${splitHighLowDecay.output}/${item.label}_${splitHighLowDecay.high}
       params:
       - runAME_highLowDecay
+
+  runFIMO:
+    cmd: singularity exec 
+      -B $(readlink ${findMotifs.output_dir}/positive/${findMotifs.motif_file}):/tmp/motif_seqs.fasta 
+      docker://memesuite/memesuite:5.5.7 fimo 
+      --oc ${runFIMO.output_dir} 
+      --thresh ${runFIMO.fimo_pvalue_threshold}
+      ${runFIMO.motif_file} 
+      /tmp/motif_seqs.fasta
+    outs:
+    - ${runFIMO.output_dir}
+    deps:
+    - ${findMotifs.output_dir}/positive/${findMotifs.motif_file}
+    params:
+    - runFIMO
 
 #   trainSVM:
 #     cmd: mkdir -p ${trainSVM.outprefix} && lsgkm/src/gkmtrain ${preprocessData.output_dir}/train_dev_pos.fasta

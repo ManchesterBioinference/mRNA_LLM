@@ -167,3 +167,9 @@ trainSVM:
 
 SVMpredict:
   output_file: predictions.tsv
+
+runFIMO:
+  output_dir: output/fimo_out
+  motif_file: data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster_filtered.meme
+  #sequence_file: output/data/3UTRs/3UTRs.fasta
+  fimo_pvalue_threshold: 0.05

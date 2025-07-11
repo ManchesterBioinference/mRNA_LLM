@@ -183,7 +183,7 @@ For now I will use the transcript level expression data that I have from Mike to
   - No Negative Hits
   - Positive Hits
     - RNP4F: [lit review by LLM](https://chatgpt.com/share/686b87f4-73bc-8003-b639-a3d19deba145)
-    - MOD: [lit review by LLM](https://chatgpt.com/share/0b1d8f2c-3a4e-4b5f-9d6c-7a0b6d1e2f5c)
+    - MOD: [lit review by LLM](https://chatgpt.com/share/686b979b-4e88-8003-82de-978ddb13503d)
 
 - RBP combinations
   - I've found RBPs that are significantly co-occurring with RNP4F, but it could simply be that the have such similar binding motifs that they are finding the same sequence and competing rather than working together. How can i correct for this?
@@ -197,11 +197,15 @@ For now I will use the transcript level expression data that I have from Mike to
   <summary><B>2025.07.08 - investigate oskar (transcript with known loops influencing localization and translation rate)</B></summary>
 
 - In my attempt to find a transcript that has already been well studied in the context of TE, I found the oskar transcript. It is known to have a loop structure that influences its localization and translation rate. I will use this transcript to validate the model and see if it extracts the same features as the literature.
-- The 5'UTR is only "GGAUCACUUUCCUCCAAGCG", so I plugged just the 3'UTR into the ViennaRNA to predict and visualize the secondary structure. ![ViennaRNA structure](../../figures/rna.svg)
-- According to this manuscript [link](https://pmc.ncbi.nlm.nih.gov/articles/PMC8046350/) the green box is the SL2a loop most likely responsible for Stuafen binding (SRS Staufen recognized structures, double stranded RNA) that controls localization.
+- The 5'UTR is only "GGAUCACUUUCCUCCAAGCG", so I plugged just the 3'UTR into the ViennaRNA to predict and visualize the secondary structure. 
+
+![ViennaRNA structure](../../figures/rna.svg)
+
+- According to this [manuscript](https://pmc.ncbi.nlm.nih.gov/articles/PMC8046350/), the green box is the SL2a loop most likely responsible for Stuafen binding (SRS Staufen recognized structures, double stranded RNA) that controls localization.
 - The blue box is the small region that has a negative SHAP score. The rest of the transcript has a low positive SHAP score, which makes a bit more sense when I see that the whole thing is bound in loops. I wonder if there is anything important about the blue loop that relates to TE.
 
 - I'm not sure oskar is going to be the best example. Doing an [LLM search](https://chatgpt.com/share/686d1a14-888c-8003-83ff-5c4d1537f1a7) shows that these transcripts have been studied in detail in relation to TE.
+
   | In training set | Name | FlyBase ID         | Paper |
   |-----------------|------------------------|----------------|-------|
   | [ ]             | msl-2 (male-specific lethal-2) | FBgn0005616   | [link]() |
@@ -246,8 +250,33 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
+  <summary><B>2025.07.10 - </B></summary>
+
+- What to do next:
+  - [ ] review the motif hits
+  - [ ] is there a better motif database to use? should I be looking at microRNA binding sites?
+  - [ ] what is an example of something we already know in the TE space that we can use to validate the model?
+    - [ ] Can I find a transcript that has already been well studied in the context of TE and see if the model extracts the same features as the literature?
+  - [ ] Is there a certain combination of RBPs that are important for TE according to the data?
+
+</details>
+
+<details>
+  <summary><B>2025.07.11 - </B></summary>
+
+- I have been attempting to run a co-occurrence analysis on the predicted motifs, but was running into issues. I ended up running the data through a FIMO analysis to get the exact locations of the motifs that way i could exclude instances where the secondary motif was competing for the same location. [exploreRNP4F.ipynb](../../notebooks/explorativeJupyterNotebooks/exploreRNP4F.ipynb)
+
+- I also compared the highLow TE AME run results to the LLM_SHAP TE AME results [compare_highLow_to_LLMshap.ipynb](../../notebooks/explorativeJupyterNotebooks/compare_highLow_to_LLMshap.ipynb). The results are quite different, which could be interesting if we could find a way to prove that one method is better than the other.
+
+- gold standards to compare to:
+  - [ ] kmer SVM: did this for the RBP binding already, but would need to switch to svm regression. The package should be able to handle this.
+  - [ ] run a linear regression model that includes the extra features and the **counts for predicted motifs** (67 motifs from the database).
+
+</details>
+
+<details>
   <summary><B>2025.07.</B></summary>
 
-- 
+-
 
 </details>

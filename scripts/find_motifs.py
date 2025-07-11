@@ -20,9 +20,8 @@ def filterWithLOWESS(importance, frac=0.3, save_file_dir=None):
     actuals_arr = []
     preds_arr = []
     for x in importance:
-        actual, pred = x.text.split(' Pred:')
-        actuals_arr.append(float(actual))
-        preds_arr.append(float(pred))
+        actuals_arr.append(x.actual)
+        preds_arr.append(x.prediction)
     actuals_arr = np.array(actuals_arr)
     preds_arr = np.array(preds_arr)
     residuals = preds_arr - actuals_arr
@@ -769,13 +768,13 @@ def motif_analysis(importances,
     with open(os.path.join(output_dir,args.interest_file), 'w') as f:
         for k in interest_seqs.keys():
             for j, s in enumerate(interest_seqs[k]):
-                f.write(f">interest_seq_{k}_{j}\n{s}\n")
+                f.write(f">interestSeq_{k}.{j}\n{s}\n")
     # save motif sequences to fasta files
     with open(os.path.join(output_dir,args.motif_file), 'w') as f:
         for k in motif_seq.keys(): # This uses the updated motif_seq dictionary
             for j, s in enumerate(motif_seq[k]):
                 if len(s) >= 8: # Only save sequences longer than 8
-                    f.write(f">motif_seq_{k}_{j}\n{s}\n")
+                    f.write(f">motifSeq_{k}.{j}\n{s}\n")
     return
 
 def main():
