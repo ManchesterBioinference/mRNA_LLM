@@ -143,6 +143,12 @@ findMotifs:
   motif_file: motif_seqs.fasta
   interest_file: interest_seqs.fasta
 
+runMASTFilter:
+  output_dir: output/mastFilter_out
+
+motifsToKeep:
+  output_file: motifsToKeep.txt
+
 runAME:
   output_dir: ame_output
 correctAME_pvalues:
@@ -171,5 +177,18 @@ SVMpredict:
 runFIMO:
   output_dir: output/fimo_out
   motif_file: data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster_filtered.meme
-  #sequence_file: output/data/3UTRs/3UTRs.fasta
   fimo_pvalue_threshold: 0.05
+
+prepForMAST:
+  output_fasta: output/data/MEME_suite/TEseqs_split_by_utr.fasta
+
+runMAST:
+  output_dir: output/mast_out
+  output_file: mast_results.txt
+  motif_file: data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+  #sequence_file: output/data/3UTRs/3UTRs.fasta
+  mast_pvalue_threshold: 0.05
+
+runTOMTOM:
+  output_dir: output/tomtom_out
+  motif_file: data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme

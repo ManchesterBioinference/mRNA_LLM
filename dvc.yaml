@@ -200,6 +200,32 @@ stages:
     params:
     - findMotifs
 
+  runMASTFilter:
+    cmd: 
+      head ${prepForMAST.output_fasta} -n 10 > /tmp/train.fasta &&
+      singularity exec 
+      -B /tmp/train.fasta
+      docker://memesuite/memesuite:5.5.7 mast 
+      -oc ${runMASTFilter.output_dir}
+      -remcorr
+      /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+      /tmp/train.fasta 
+    outs:
+    - ${runMASTFilter.output_dir}/mast.txt
+    params:
+    - runMASTFilter
+
+  motifsToKeep:
+    cmd: python scripts/motifsToKeep.py --input ${runMASTFilter.output_dir}/mast.txt
+      --output ${runMASTFilter.output_dir}/${motifsToKeep.output_file}
+    deps:
+    - scripts/motifsToKeep.py
+    - ${runMASTFilter.output_dir}/mast.txt
+    outs:
+    - ${runMASTFilter.output_dir}/${motifsToKeep.output_file}
+    params:
+    - motifsToKeep
+
   runAME:
     foreach:
     - positive
@@ -209,13 +235,15 @@ stages:
         ${findMotifs.output_dir}/${item}/${findMotifs.control_file}):/tmp/${findMotifs.control_file}
         -B $(readlink 
         ${findMotifs.output_dir}/${item}/${findMotifs.motif_file}):/tmp/${findMotifs.motif_file}
-        docker://memesuite/memesuite:5.5.7 ame --oc ${findMotifs.output_dir}/${item}/${runAME.output_dir}
-        --control /tmp/${findMotifs.control_file} --evalue-report-threshold 100 --method
-        fisher --rna /tmp/${findMotifs.motif_file} 
+        docker://memesuite/memesuite:5.5.7 ame $( cat ${runMASTFilter.output_dir}/${motifsToKeep.output_file}) 
+        --oc ${findMotifs.output_dir}/${item}/${runAME.output_dir}
+        --control /tmp/${findMotifs.control_file} --evalue-report-threshold 100 
+        --method fisher --rna /tmp/${findMotifs.motif_file} 
         /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
       outs:
       - ${findMotifs.output_dir}/${item}/${runAME.output_dir}
       deps:
+      - ${runMASTFilter.output_dir}/${motifsToKeep.output_file}
       - ${findMotifs.output_dir}/${item}/${findMotifs.control_file}
       - ${findMotifs.output_dir}/${item}/${findMotifs.motif_file}
       params:
@@ -283,8 +311,8 @@ stages:
     foreach:
     - input: ${mergeUTRsAndDecayRates.output_file}
       label: all
-    - input: ${preprocessData.output_dir}/test.fasta
-      label: test
+    - input: ${preprocessData.output_dir}/train.fasta
+      label: train
     do:
       cmd: python scripts/splitHighLowDecay.py --params params.yaml --input ${item.input}
         --high ${item.label}_${splitHighLowDecay.high} --low ${item.label}_${splitHighLowDecay.low}                                                                                   #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
@@ -308,18 +336,20 @@ stages:
       control: ${splitHighLowDecay.output}/all_${splitHighLowDecay.high}
       rna: ${splitHighLowDecay.output}/all_${splitHighLowDecay.low}
     - interest: high
-      label: test
-      control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
-      rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
+      label: train
+      control: ${splitHighLowDecay.output}/train_${splitHighLowDecay.low}
+      rna: ${splitHighLowDecay.output}/train_${splitHighLowDecay.high}
     - interest: low
-      label: test
-      control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
-      rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
+      label: train
+      control: ${splitHighLowDecay.output}/train_${splitHighLowDecay.high}
+      rna: ${splitHighLowDecay.output}/train_${splitHighLowDecay.low}
     do:
-      cmd: mkdir -p ${splitHighLowDecay.output}/${item.interest}/${runAME_highLowDecay.output_dir}
-        && singularity exec -B $(readlink ${item.control}):/tmp/control.fasta -B $(readlink
-        ${item.rna}):/tmp/rna.fasta docker://memesuite/memesuite:5.5.7 ame --oc 
-        ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir}
+      cmd: mkdir -p ${splitHighLowDecay.output}/${item.interest}/${runAME_highLowDecay.output_dir} && 
+        singularity exec 
+        -B $(readlink ${item.control}):/tmp/control.fasta 
+        -B $(readlink ${item.rna}):/tmp/rna.fasta 
+        docker://memesuite/memesuite:5.5.7 ame $( cat ${runMASTFilter.output_dir}/${motifsToKeep.output_file}) 
+        --oc ${splitHighLowDecay.output}/${item.interest}/${item.label}_${runAME_highLowDecay.output_dir}
         --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher
         --rna /tmp/rna.fasta 
         /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
@@ -345,6 +375,49 @@ stages:
     - ${findMotifs.output_dir}/positive/${findMotifs.motif_file}
     params:
     - runFIMO
+
+  prepForMAST:
+    cmd: python scripts/prepForMAST.py --input_fasta ${preprocessData.output_dir}/train.fasta --output_fasta ${prepForMAST.output_fasta}
+    outs:
+    - ${prepForMAST.output_fasta}
+    deps:
+    - scripts/prepForMAST.py
+    - ${preprocessData.output_dir}/train.fasta
+    params:
+    - prepForMAST
+
+  runTOMTOM:
+    cmd: singularity exec 
+      -B $(readlink ${prepForMAST.output_fasta}):/tmp/train.fasta
+      docker://memesuite/memesuite:5.5.7 tomtom 
+      -oc ${runTOMTOM.output_dir} 
+      -norc
+      ${runTOMTOM.motif_file} 
+      ${runTOMTOM.motif_file} 
+    outs:
+    - ${runTOMTOM.output_dir}
+    deps:
+    - ${prepForMAST.output_fasta}
+    params:
+    - runTOMTOM
+
+  runMAST:
+    cmd: 
+      mkdir -p ${runMAST.output_dir} && 
+      singularity exec 
+      -B $(readlink ${prepForMAST.output_fasta}):/tmp/train.fasta
+      docker://memesuite/memesuite:5.5.7 mast 
+      -hit_list
+      -remcorr
+      -mt ${runMAST.mast_pvalue_threshold}
+      ${runMAST.motif_file} 
+      /tmp/train.fasta > ${runMAST.output_dir}/${runMAST.output_file}
+    outs:
+    - ${runMAST.output_dir}
+    deps:
+    - ${prepForMAST.output_fasta}
+    params:
+    - runMAST
 
 #   trainSVM:
 #     cmd: mkdir -p ${trainSVM.outprefix} && lsgkm/src/gkmtrain ${preprocessData.output_dir}/train_dev_pos.fasta

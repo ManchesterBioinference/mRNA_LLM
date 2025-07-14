@@ -467,11 +467,15 @@ stages:
   runAME@positive:
     cmd: singularity exec -B $(readlink output/motifs/positive/control_seqs.fasta):/tmp/control_seqs.fasta
       -B $(readlink output/motifs/positive/motif_seqs.fasta):/tmp/motif_seqs.fasta
-      docker://memesuite/memesuite:5.5.7 ame --oc output/motifs/positive/ame_output
-      --control /tmp/control_seqs.fasta --evalue-report-threshold 100 --method fisher
-      --rna /tmp/motif_seqs.fasta 
+      docker://memesuite/memesuite:5.5.7 ame $( cat output/mastFilter_out/motifsToKeep.txt)
+      --oc output/motifs/positive/ame_output --control /tmp/control_seqs.fasta --evalue-report-threshold
+      100 --method fisher --rna /tmp/motif_seqs.fasta 
       /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
     deps:
+    - path: output/mastFilter_out/motifsToKeep.txt
+      hash: md5
+      md5: 41d9031308f0ebaa466e2aab73833b49
+      size: 540
     - path: output/motifs/positive/control_seqs.fasta
       hash: md5
       md5: d6a1b120995ffe210f3217211bf2639c
@@ -487,17 +491,21 @@ stages:
     outs:
     - path: output/motifs/positive/ame_output
       hash: md5
-      md5: b8f01fb6eae8ce193ac3958001cbaeba.dir
-      size: 6208930
+      md5: 8ba7e3ef20b8dea110b097b164adfd03.dir
+      size: 3454622
       nfiles: 3
   runAME@negative:
     cmd: singularity exec -B $(readlink output/motifs/negative/control_seqs.fasta):/tmp/control_seqs.fasta
       -B $(readlink output/motifs/negative/motif_seqs.fasta):/tmp/motif_seqs.fasta
-      docker://memesuite/memesuite:5.5.7 ame --oc output/motifs/negative/ame_output
-      --control /tmp/control_seqs.fasta --evalue-report-threshold 100 --method fisher
-      --rna /tmp/motif_seqs.fasta 
+      docker://memesuite/memesuite:5.5.7 ame $( cat output/mastFilter_out/motifsToKeep.txt)
+      --oc output/motifs/negative/ame_output --control /tmp/control_seqs.fasta --evalue-report-threshold
+      100 --method fisher --rna /tmp/motif_seqs.fasta 
       /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
     deps:
+    - path: output/mastFilter_out/motifsToKeep.txt
+      hash: md5
+      md5: 41d9031308f0ebaa466e2aab73833b49
+      size: 540
     - path: output/motifs/negative/control_seqs.fasta
       hash: md5
       md5: 861850bc7565e0d8d7a7f0f3998f10ac
@@ -513,8 +521,8 @@ stages:
     outs:
     - path: output/motifs/negative/ame_output
       hash: md5
-      md5: d855153a659f3b44b66b72830b05a55e.dir
-      size: 22102984
+      md5: 29c5ab1d7a1233dc7e887f0464a7751a.dir
+      size: 10042221
       nfiles: 3
   correctAME_pvalues@positive:
     cmd: python scripts/correctAME_pvalues.py --params params.yaml --ame_input output/motifs/positive/ame_output/ame.tsv
@@ -589,9 +597,9 @@ stages:
   runAME_highLowDecay@0:
     cmd: mkdir -p output/splitDecay/high/ame_output && singularity exec -B $(readlink
       output/splitDecay/all_lowDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/all_highDecay.fasta):/tmp/rna.fasta
-      docker://memesuite/memesuite:5.5.7 ame --oc output/splitDecay/high/all_ame_output
-      --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher --rna
-      /tmp/rna.fasta 
+      docker://memesuite/memesuite:5.5.7 ame $( cat output/mastFilter_out/motifsToKeep.txt)
+      --oc output/splitDecay/high/all_ame_output --control /tmp/control.fasta --evalue-report-threshold
+      100 --method fisher --rna /tmp/rna.fasta 
       /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
     deps:
     - path: output/splitDecay/all_highDecay.fasta
@@ -609,15 +617,15 @@ stages:
     outs:
     - path: output/splitDecay/high/all_ame_output
       hash: md5
-      md5: eedacb37ea4e105ed1a92d3061599e80.dir
-      size: 1981679
+      md5: 8b12cc73387e7afa36d3bab4b6809341.dir
+      size: 1116069
       nfiles: 3
   runAME_highLowDecay@1:
     cmd: mkdir -p output/splitDecay/low/ame_output && singularity exec -B $(readlink
       output/splitDecay/all_highDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/all_lowDecay.fasta):/tmp/rna.fasta
-      docker://memesuite/memesuite:5.5.7 ame --oc output/splitDecay/low/all_ame_output
-      --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher --rna
-      /tmp/rna.fasta 
+      docker://memesuite/memesuite:5.5.7 ame $( cat output/mastFilter_out/motifsToKeep.txt)
+      --oc output/splitDecay/low/all_ame_output --control /tmp/control.fasta --evalue-report-threshold
+      100 --method fisher --rna /tmp/rna.fasta 
       /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
     deps:
     - path: output/splitDecay/all_highDecay.fasta
@@ -635,8 +643,8 @@ stages:
     outs:
     - path: output/splitDecay/low/all_ame_output
       hash: md5
-      md5: 312c9ab06c05bd2cfeb1b37689eac0fc.dir
-      size: 13561981
+      md5: 50362790d07f55c94a8da142c490381a.dir
+      size: 6050483
       nfiles: 3
   splitHighLowDecay@0:
     cmd: python scripts/splitHighLowDecay.py --params params.yaml --input output/data/utrTE.fasta
@@ -666,13 +674,13 @@ stages:
       md5: cffc242e8e45681a05cf8cb4858bda8d
       size: 1905816
   splitHighLowDecay@1:
-    cmd: python scripts/splitHighLowDecay.py --params params.yaml --input output/data/decay/test.fasta
-      --high test_highDecay.fasta --low test_lowDecay.fasta
+    cmd: python scripts/splitHighLowDecay.py --params params.yaml --input output/data/decay/train.fasta
+      --high train_highDecay.fasta --low train_lowDecay.fasta
     deps:
-    - path: output/data/decay/test.fasta
+    - path: output/data/decay/train.fasta
       hash: md5
-      md5: b261c024f57872ab67fa4ac555380895
-      size: 662914
+      md5: 4c7808bd05acff6e4808f9d5997c57ab
+      size: 3014517
     - path: scripts/splitHighLowDecay.py
       hash: md5
       md5: 7abc6beff3b46ded2220b95a903ab88d
@@ -684,14 +692,14 @@ stages:
           high: highDecay.fasta
           low: lowDecay.fasta
     outs:
-    - path: output/splitDecay/test_highDecay.fasta
+    - path: output/splitDecay/train_highDecay.fasta
       hash: md5
-      md5: a19201a8859d8ca1791495ebe8cb9477
-      size: 232469
-    - path: output/splitDecay/test_lowDecay.fasta
+      md5: aa53f369db8a11a7bddf03ab59d5c71a
+      size: 1043574
+    - path: output/splitDecay/train_lowDecay.fasta
       hash: md5
-      md5: a1aa8f945a28c0bdb1914b5d484f0a6c
-      size: 280591
+      md5: 566e9e5ce15cf87030062474d15b43df
+      size: 1356428
   prepRandomizeSeqsAndExtraFeatures@same3UTR:
     cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
       --sequence_file output/data/decay/test.fasta --process same3UTR --output_file
@@ -782,55 +790,55 @@ stages:
       size: 931505
   runAME_highLowDecay@2:
     cmd: mkdir -p output/splitDecay/high/ame_output && singularity exec -B $(readlink
-      output/splitDecay/test_lowDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/test_highDecay.fasta):/tmp/rna.fasta
-      docker://memesuite/memesuite:5.5.7 ame --oc output/splitDecay/high/test_ame_output
-      --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher --rna
-      /tmp/rna.fasta 
+      output/splitDecay/train_lowDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/train_highDecay.fasta):/tmp/rna.fasta
+      docker://memesuite/memesuite:5.5.7 ame $( cat output/mastFilter_out/motifsToKeep.txt)
+      --oc output/splitDecay/high/train_ame_output --control /tmp/control.fasta --evalue-report-threshold
+      100 --method fisher --rna /tmp/rna.fasta 
       /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
     deps:
-    - path: output/splitDecay/test_highDecay.fasta
+    - path: output/splitDecay/train_highDecay.fasta
       hash: md5
-      md5: a19201a8859d8ca1791495ebe8cb9477
-      size: 232469
-    - path: output/splitDecay/test_lowDecay.fasta
+      md5: aa53f369db8a11a7bddf03ab59d5c71a
+      size: 1043574
+    - path: output/splitDecay/train_lowDecay.fasta
       hash: md5
-      md5: a1aa8f945a28c0bdb1914b5d484f0a6c
-      size: 280591
+      md5: 566e9e5ce15cf87030062474d15b43df
+      size: 1356428
     params:
       params.yaml:
         runAME_highLowDecay:
           output_dir: ame_output
     outs:
-    - path: output/splitDecay/high/test_ame_output
+    - path: output/splitDecay/high/train_ame_output
       hash: md5
-      md5: d606b9ca6137ca2025814773759f8080.dir
-      size: 699203
+      md5: 9c54a3a9ecfadb207f9915d8d3c60974.dir
+      size: 792435
       nfiles: 3
   runAME_highLowDecay@3:
     cmd: mkdir -p output/splitDecay/low/ame_output && singularity exec -B $(readlink
-      output/splitDecay/test_highDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/test_lowDecay.fasta):/tmp/rna.fasta
-      docker://memesuite/memesuite:5.5.7 ame --oc output/splitDecay/low/test_ame_output
-      --control /tmp/control.fasta --evalue-report-threshold 100 --method fisher --rna
-      /tmp/rna.fasta 
+      output/splitDecay/train_highDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/train_lowDecay.fasta):/tmp/rna.fasta
+      docker://memesuite/memesuite:5.5.7 ame $( cat output/mastFilter_out/motifsToKeep.txt)
+      --oc output/splitDecay/low/train_ame_output --control /tmp/control.fasta --evalue-report-threshold
+      100 --method fisher --rna /tmp/rna.fasta 
       /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
     deps:
-    - path: output/splitDecay/test_highDecay.fasta
+    - path: output/splitDecay/train_highDecay.fasta
       hash: md5
-      md5: a19201a8859d8ca1791495ebe8cb9477
-      size: 232469
-    - path: output/splitDecay/test_lowDecay.fasta
+      md5: aa53f369db8a11a7bddf03ab59d5c71a
+      size: 1043574
+    - path: output/splitDecay/train_lowDecay.fasta
       hash: md5
-      md5: a1aa8f945a28c0bdb1914b5d484f0a6c
-      size: 280591
+      md5: 566e9e5ce15cf87030062474d15b43df
+      size: 1356428
     params:
       params.yaml:
         runAME_highLowDecay:
           output_dir: ame_output
     outs:
-    - path: output/splitDecay/low/test_ame_output
+    - path: output/splitDecay/low/train_ame_output
       hash: md5
-      md5: 89341f8fd90690451d4ef971b174166b.dir
-      size: 1636917
+      md5: 91f8ecae3b3b69bddbe52e07b9626934.dir
+      size: 4072782
       nfiles: 3
   randomizeSeqsAndExtraFeatures@same5UTR:
     cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
@@ -1183,3 +1191,82 @@ stages:
       md5: 6c91eb1596950814ad83cc48e03b1e82.dir
       size: 292284050
       nfiles: 6
+  prepForMAST:
+    cmd: python scripts/prepForMAST.py --input_fasta output/data/decay/train.fasta
+      --output_fasta output/data/MEME_suite/TEseqs_split_by_utr.fasta
+    deps:
+    - path: output/data/decay/train.fasta
+      hash: md5
+      md5: 4c7808bd05acff6e4808f9d5997c57ab
+      size: 3014517
+    - path: scripts/prepForMAST.py
+      hash: md5
+      md5: 2ecde82a6c4e4ac93a40b2e3ea2c17ff
+      size: 1112
+    params:
+      params.yaml:
+        prepForMAST:
+          output_fasta: output/data/MEME_suite/TEseqs_split_by_utr.fasta
+    outs:
+    - path: output/data/MEME_suite/TEseqs_split_by_utr.fasta
+      hash: md5
+      md5: b8a79b6167cdf55f2227803e68d57acd
+      size: 3622401
+  runMAST:
+    cmd: mkdir -p output/mast_out && singularity exec -B $(readlink output/data/MEME_suite/TEseqs_split_by_utr.fasta):/tmp/train.fasta
+      docker://memesuite/memesuite:5.5.7 mast -hit_list -remcorr -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+      /tmp/train.fasta > output/mast_out/mast_results.txt
+    deps:
+    - path: output/data/MEME_suite/TEseqs_split_by_utr.fasta
+      hash: md5
+      md5: b8a79b6167cdf55f2227803e68d57acd
+      size: 3622401
+    params:
+      params.yaml:
+        runMAST:
+          output_dir: output/mast_out
+          output_file: mast_results.txt
+          motif_file: data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+          mast_pvalue_threshold: 0.05
+    outs:
+    - path: output/mast_out
+      hash: md5
+      md5: 6e75026fc12f8b85e403099bbabd53d2.dir
+      size: 17745906
+      nfiles: 1
+  runMASTFilter:
+    cmd: head output/data/MEME_suite/TEseqs_split_by_utr.fasta -n 10 > /tmp/train.fasta
+      && singularity exec -B /tmp/train.fasta docker://memesuite/memesuite:5.5.7 mast
+      -oc output/mastFilter_out -remcorr 
+      /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+      /tmp/train.fasta
+    params:
+      params.yaml:
+        runMASTFilter:
+          output_dir: output/mastFilter_out
+    outs:
+    - path: output/mastFilter_out/mast.txt
+      hash: md5
+      md5: 2ef71d076dfd9f7e44a371f78326a52c
+      size: 11956
+  motifsToKeep:
+    cmd: python scripts/motifsToKeep.py --input output/mastFilter_out/mast.txt --output
+      output/mastFilter_out/motifsToKeep.txt
+    deps:
+    - path: output/mastFilter_out/mast.txt
+      hash: md5
+      md5: 2ef71d076dfd9f7e44a371f78326a52c
+      size: 11956
+    - path: scripts/motifsToKeep.py
+      hash: md5
+      md5: 711b67c3dea1b3662eaba628d457ed6b
+      size: 1369
+    params:
+      params.yaml:
+        motifsToKeep:
+          output_file: motifsToKeep.txt
+    outs:
+    - path: output/mastFilter_out/motifsToKeep.txt
+      hash: md5
+      md5: 41d9031308f0ebaa466e2aab73833b49
+      size: 540

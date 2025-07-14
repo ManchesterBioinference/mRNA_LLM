@@ -4,3 +4,5 @@
 /all_lowDecay.fasta
 /test_highDecay.fasta
 /test_lowDecay.fasta
+/train_highDecay.fasta
+/train_lowDecay.fasta

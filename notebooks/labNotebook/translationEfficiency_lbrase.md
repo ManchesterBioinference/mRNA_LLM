@@ -275,6 +275,23 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
+  <summary><B>2025.07.14 - linear regression: TE prediction using RBP counts and extraFeatures</B></summary>
+
+- So I implemented the linear regression model so we can determine if the LLM or the high/low analysis provides better RBP results. To get the RBP counts, I used MAST. MAST allows you to remove highly similar motifs so you don't skew your results. I realized that this same approach is not included in AME and is not even a feature in AME. I now run MAST before AME, so i can filter the motif database which makes the comparison between the two methods more fair (same motifs used across the board). 
+- interestingly, the low vs high has a much better correlation with the LLM method than the high vs low. this is strange because at first thought the LLM positive and high vs low should both be identifying the motifs associated with a higher TE score. Yet, the correlations are reversed. 
+  - high vs low & LLM: spearman (-0.13), pval (0.50)
+![high & LLM scatterPlot](../../figures/highVSllm.png)
+  - low vs high & LLM: spearman (0.27), pval (0.19)
+![low & LLM scatterPlot](../../figures/lowVSllm.png)
+  - Is this because the low and high TE mRNA are controlled differently and even though we are selecting for LLM regions that increase the TE, they are regions that increase the TE for the low TE mRNA specifically rather than both (globally)? Could it be that the low TE mRNA provided more positive LLM regions than the high TE mRNA? 
+  - We are including a bunch of extra features like GC content, MFE (secondary structure), utr length, and codon frequencies. Could it be that These features are the most important for predicting high and low TE, but then the RBP motifs are fine-tuning it from there? that potentially, these motifs are associated with Low TE, but they are making these low TE have higher TE than they would otherwise?
+- Either way, the LLM is very correlated with the linear regression model, especially when compared to the high vs low & regression model.
+  - Could this be a result of including the extra features in the LLM and regression model, where the high vs low only includes the sequence?
+![regression & LLM scatterPlot](../../figures/linearVSllm.png)
+
+</details>
+
+<details>
   <summary><B>2025.07.</B></summary>
 
 -
