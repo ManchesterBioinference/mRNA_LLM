@@ -208,8 +208,8 @@ For now I will use the transcript level expression data that I have from Mike to
 
   | In training set | Name | FlyBase ID         | Paper |
   |-----------------|------------------------|----------------|-------|
-  | [ ]             | msl-2 (male-specific lethal-2) | FBgn0005616   | [link]() |
-  | [X]             | osk (oskar)            | FBgn0003015    | [link]() |
+  | [ ]             | msl-2 (male-specific lethal-2) | FBgn0005616   |  |
+  | [X]             | osk (oskar)            | FBgn0003015    |  |
   | [X]             | cad (caudal)           | FBgn0000251    | [link](https://www.nature.com/articles/379694a0) |
   | [X]             | nos (nanos)            | FBgn0002962    | [link](https://genesdev.cshlp.org/content/10/20/2600.full.pdf) |
   | [X]             | hb (hunchback)         | FBgn0001180    | [link](https://pdf.sciencedirectassets.com/272196/1-s2.0-S0092867400X03728/1-s2.0-0092867491903689/main.pdf?X-Amz-Security-Token=IQoJb3JpZ2luX2VjEJf%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEaCXVzLWVhc3QtMSJIMEYCIQCxqnfDeqT8AIqn4ZPAg2KLnTEKqMb2TlMoDQw8zBzNPAIhAK4kL7%2BPxwtcGF%2Fr3rdtFAcnicL1DiU0Bwe9EXbTQ7E8KrsFCKD%2F%2F%2F%2F%2F%2F%2F%2F%2F%2FwEQBRoMMDU5MDAzNTQ2ODY1IgxMBulAE%2BVqtvfQt18qjwW4NBqk%2BFnULyd11h3S76CAv19iemklJkEqnJW1dVccrNW2P2O3BGWg2SpoMpy%2FjXYF5HTbPRpTK24sWCdmgl7DeE51mJTAUpCHUtUgd1fQWJYoek3OxdKYzzN4W61v%2FbxjfXnfAI8rGtyDbHhME%2BSqbSXqs%2BHUBVfirzqJynDhkO7lQ%2B8Pze2nwR2jeHNErEAwyZNEZWHKS2V4SkW%2Fr8jnq1MWC3%2FknG1km0A3D1JqptHCKBoP6biNtreLPUkIHMNnMiBf%2BxYPD3qRV90Ed71KFfo7%2BRRLUiP%2BNy2mePNHkgsd%2BTVJeHSL13eVohEbWxnhwDjzI7lmJa0wASG%2Brliw1Vu83OHRqme88GPxXQUShvrZqKnrHJU2qvH1rTvwn1lO8Or3%2BGqx3l9%2Bx0I%2BQNXJSkXu%2F5mXpepQ2MWWJ95wZGLiKF%2FCOEsKDLBkDpdQbbvTeGMvdPCSuPDxjAsRapX%2FpdUH%2B%2FFYyr2nDCcFOCRIad1QmM1npPOKyF7Z0W4m%2FsqETP2VeYpH496fxZ%2BG0jsYRgTbBAK2hvscqCU7XrsjaIgfmbCTWpgsMwjTvtzZchmhu8ZcnvDsEVhA9oJ837bSw0nBUnT0S5%2BwzUJu%2FxAD5FexNGHXgZKKHY3jDGJ%2BCOhPnWPFNbXwmDmZEyxxb7O1H%2ByV%2B9WMUAszn8cgTi6poOFcdZcSUx%2BXx8vxKNjy8sIZ74VBLXjwWRxqQF4f8w7kpRZQPng2oZ9RrytDkYh51lT12xcAMnWb65LRNGhnqDGE1wlV4MwKf07TTcBgCuWsk%2BeXGxeO%2BZ4%2BppWxKW3tMAVklj0VXA2LHFNc3rVa8b6t2ZMofJQ8Zmwu5JxhycMLyleeseAklRepTzAgW6BCMOeluMMGOrAB3F1iG3sAL7wmz0Lf1Ext094WvUKKeh%2BOcowz1JySAXieM4dVYuPgQypFw5gcAtmbRlsNUA8WiNBdc3BLPbWXF%2FFs8ueAxLnUsbTbvmz2Eunq0yH00bjmLvQ3GbRl4cPGLFFGeX6S0ADwZ35n9bhv%2B0o5AvxxDGO3f9ymU7spK3odXPZXeTb84CbB5PSsdxT0h8p3PUbQHgDP7ZFjELWLwhPeV%2F6uZu%2BxT%2BM8%2F%2Fa8ktg%3D&X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20250709T072528Z&X-Amz-SignedHeaders=host&X-Amz-Expires=300&X-Amz-Credential=ASIAQ3PHCVTYUGHUFUXG%2F20250709%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=7373d1d8ae4bb55be85440a1a9e20c0597cbe7371345ba8a48ba201496227010&hash=041b691301b81b7e50e3d084fd113a0eedaf1663aa8187c19564eb0b33fb4784&host=68042c943591013ac2b2430a89b270f6af2c76d8dfd086a07176afe7c76c2c61&pii=0092867491903689&tid=spdf-29b18a31-9d64-4211-b9e4-0d4e73c9d1db&sid=6831636340e8464750481a96dc985f0c52c0gxrqb&type=client&tsoh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&rh=d3d3LnNjaWVuY2VkaXJlY3QuY29t&ua=080058510458515858&rr=95c6166aea6c0765&cc=gb)|
@@ -288,6 +288,16 @@ For now I will use the transcript level expression data that I have from Mike to
 - Either way, the LLM is very correlated with the linear regression model, especially when compared to the high vs low & regression model.
   - Could this be a result of including the extra features in the LLM and regression model, where the high vs low only includes the sequence?
 ![regression & LLM scatterPlot](../../figures/linearVSllm.png)
+
+</details>
+
+<details>
+  <summary><B>2025.07.15 - add microRNA analysis </B></summary>
+
+- I download all the microRNA binding sites from [targetScan](https://www.targetscan.org/cgi-bin/targetscan/data_download.fly72.cgi).
+  - This only has binding sites for the 3'UTR. 
+- I updated the [findMotifs.py](../scripts/find_motifs.py) script to return the positions of the high/low SHAP scores so that they could be checked for overlap with the microRNA binding locations.
+- Interestingly, the microRNA binding sites seem to be mostly found in the regions with SHAP scores close to 0. This presents as finding microRNAs that are depleted in the high or low SHAP regions compared to the controls. **I guess this means microRNA binding is not picked up by the LLM.**
 
 </details>
 

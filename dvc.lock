@@ -438,32 +438,50 @@ stages:
       size: 33517613
     - path: scripts/find_motifs.py
       hash: md5
-      md5: 495636d0daae61f53d7ba3c8c89ec5b6
-      size: 38646
+      md5: ab8c8dd90d38d1aaf842c6f28cc249f7
+      size: 40136
     params:
       params.yaml:
         findMotifs:
           output_dir: output/motifs
           control_file: control_seqs.fasta
           motif_file: motif_seqs.fasta
+          control_positions: control_positions.txt
+          motif_positions: motif_positions.txt
           interest_file: interest_seqs.fasta
     outs:
+    - path: output/motifs/negative/control_positions.txt
+      hash: md5
+      md5: 396d5772bb595c7883e5e0bd927a5e6e
+      size: 255653
     - path: output/motifs/negative/control_seqs.fasta
       hash: md5
-      md5: 861850bc7565e0d8d7a7f0f3998f10ac
+      md5: 2ab4458eec0842fb509fc5700c84ecca
       size: 6471742
+    - path: output/motifs/negative/motif_positions.txt
+      hash: md5
+      md5: 2b1e89c798fde1f71fc6d40f06e60d33
+      size: 55160
     - path: output/motifs/negative/motif_seqs.fasta
       hash: md5
-      md5: 89d8f909d9e9e10efc4ba35ad4374e1c
-      size: 51753
+      md5: 2cdef669c28f609cb3613614f8618b9b
+      size: 61726
+    - path: output/motifs/positive/control_positions.txt
+      hash: md5
+      md5: 5a0e0715bb78caf532b67b768d78c0e7
+      size: 118037
     - path: output/motifs/positive/control_seqs.fasta
       hash: md5
-      md5: d6a1b120995ffe210f3217211bf2639c
+      md5: 5f93df882d1e172745b6540f4eaa795b
       size: 363826
+    - path: output/motifs/positive/motif_positions.txt
+      hash: md5
+      md5: 31d71377344c8b5ce6dd0b464ee793dd
+      size: 326850
     - path: output/motifs/positive/motif_seqs.fasta
       hash: md5
-      md5: b7ca624129e29f78c258a397cf6c56e8
-      size: 479540
+      md5: 1f0fb36b4c369e92f3cbc1a64b650fa4
+      size: 548422
   runAME@positive:
     cmd: singularity exec -B $(readlink output/motifs/positive/control_seqs.fasta):/tmp/control_seqs.fasta
       -B $(readlink output/motifs/positive/motif_seqs.fasta):/tmp/motif_seqs.fasta
@@ -1270,3 +1288,89 @@ stages:
       hash: md5
       md5: 41d9031308f0ebaa466e2aab73833b49
       size: 540
+  downloadMicroRNAData:
+    cmd: mkdir -p data/microRNA && wget -P data/microRNA 
+      https://www.targetscan.org/fly_72/fly_72_data_download/Predicted_Targets_Info.default_predictions.txt.zip
+      && unzip data/microRNA/Predicted_Targets_Info.default_predictions.txt.zip -d
+      data/microRNA
+    outs:
+    - path: data/microRNA/Predicted_Targets_Info.default_predictions.txt
+      hash: md5
+      md5: f5d2c8460d14271344247e8133752da6
+      size: 35335305
+  microRNABindingEnrichment@positive:
+    cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file
+      output/motifs/positive/control_positions.txt --interest_file output/motifs/positive/motif_positions.txt
+      --output_dir output/microRNA/positive --mirna_file data/microRNA/Predicted_Targets_Info.default_predictions.txt
+    deps:
+    - path: output/motifs/positive/control_positions.txt
+      hash: md5
+      md5: 5a0e0715bb78caf532b67b768d78c0e7
+      size: 118037
+    - path: output/motifs/positive/motif_positions.txt
+      hash: md5
+      md5: 31d71377344c8b5ce6dd0b464ee793dd
+      size: 326850
+    - path: scripts/microRNABindingEnrichment.py
+      hash: md5
+      md5: eeaad604416da6a1f92b31cf4ab6084e
+      size: 5860
+    params:
+      params.yaml:
+        microRNABindingEnrichment:
+          mirna_file: data/microRNA/Predicted_Targets_Info.default_predictions.txt
+          output_dir: output/microRNA
+          control_overlap_file: control_overlap.csv
+          interest_overlap_file: interest_overlap.csv
+          fisher_file: fisher_results.csv
+    outs:
+    - path: output/microRNA/positive/control_overlap.csv
+      hash: md5
+      md5: 2151da0f1df47289794a2c2c09584c95
+      size: 5772
+    - path: output/microRNA/positive/fisher_results.csv
+      hash: md5
+      md5: af477aa3d77e005d74276feebb70b9a1
+      size: 3971
+    - path: output/microRNA/positive/interest_overlap.csv
+      hash: md5
+      md5: 7636e5efbefdf44b68567c634b36f99c
+      size: 7374
+  microRNABindingEnrichment@negative:
+    cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file
+      output/motifs/negative/control_positions.txt --interest_file output/motifs/negative/motif_positions.txt
+      --output_dir output/microRNA/negative --mirna_file data/microRNA/Predicted_Targets_Info.default_predictions.txt
+    deps:
+    - path: output/motifs/negative/control_positions.txt
+      hash: md5
+      md5: 396d5772bb595c7883e5e0bd927a5e6e
+      size: 255653
+    - path: output/motifs/negative/motif_positions.txt
+      hash: md5
+      md5: 2b1e89c798fde1f71fc6d40f06e60d33
+      size: 55160
+    - path: scripts/microRNABindingEnrichment.py
+      hash: md5
+      md5: eeaad604416da6a1f92b31cf4ab6084e
+      size: 5860
+    params:
+      params.yaml:
+        microRNABindingEnrichment:
+          mirna_file: data/microRNA/Predicted_Targets_Info.default_predictions.txt
+          output_dir: output/microRNA
+          control_overlap_file: control_overlap.csv
+          interest_overlap_file: interest_overlap.csv
+          fisher_file: fisher_results.csv
+    outs:
+    - path: output/microRNA/negative/control_overlap.csv
+      hash: md5
+      md5: 489149914074fb9cb54dc59a4ac5eb7a
+      size: 59616
+    - path: output/microRNA/negative/fisher_results.csv
+      hash: md5
+      md5: aa6b0950c007defa31d1968bd995c565
+      size: 4382
+    - path: output/microRNA/negative/interest_overlap.csv
+      hash: md5
+      md5: a201522ed0bad48c2dd1f0a9751b893a
+      size: 885

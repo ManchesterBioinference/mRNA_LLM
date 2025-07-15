@@ -350,7 +350,7 @@ def find_high_attention(imp, min_len=5, positive = True, **kwargs):
     score = np.asarray(score)
 
     if sum(score) == 0:
-        return [], [], [], []
+        return [], [], [], [], [], []
     tmpMean = np.mean([x for x in score if x > 0])
     tmpStd = np.std([x for x in score if x > 0])
     cond1 = (score > tmpMean+tmpStd) #(score > np.mean([x for x in score if x > 0]))
@@ -376,9 +376,11 @@ def find_high_attention(imp, min_len=5, positive = True, **kwargs):
     interestIdx = contiguous_regions(imp,score > 0,10,max_len=None)
     controlIdx = contiguous_regions(imp,score == 0,10,max_len=None)
 
+    fullSeq = ''.join(imp.tokens)
+
     interestRegions = []
     for x in interestIdx:
-        seq = ''.join(imp.tokens)[x[0]:x[1]]
+        seq = fullSeq[x[0]:x[1]]
         if '[SEP]' in seq:
             seq = seq.split('[SEP]')
             for s in seq:
@@ -388,8 +390,10 @@ def find_high_attention(imp, min_len=5, positive = True, **kwargs):
             interestRegions.append(seq)
 
     controlRegions = []
+    controlPositions = []
     for x in controlIdx:
-        seq = ''.join(imp.tokens)[x[0]:x[1]]
+        controlPositions.append((fullSeq.index('['), fullSeq.index(']'), x[0], x[1]))
+        seq = fullSeq[x[0]:x[1]]
         if '[SEP]' in seq:
             seq = seq.split('[SEP]')
             for s in seq:
@@ -398,8 +402,10 @@ def find_high_attention(imp, min_len=5, positive = True, **kwargs):
         else:
             controlRegions.append(seq)
     motif_seqs = []
+    motifPositions = []
     for x in motif_regions:
-        seq = ''.join(imp.tokens)[x[0]:x[1]]
+        motifPositions.append((fullSeq.index('['), fullSeq.index(']'), x[0], x[1]))
+        seq = fullSeq[x[0]:x[1]]
         if '[SEP]' in seq:
             seq = seq.split('[SEP]')
             for s in seq:
@@ -408,7 +414,7 @@ def find_high_attention(imp, min_len=5, positive = True, **kwargs):
         else:
             motif_seqs.append(seq)
 
-    return motif_regions, controlRegions, interestRegions, motif_seqs
+    return motif_regions, controlRegions, interestRegions, motif_seqs, motifPositions, controlPositions
 
 def count_motif_instances(seqs, motifs, allow_multi_match=False):
     
@@ -700,21 +706,27 @@ def motif_analysis(importances,
     control_seqs = {}
     interest_seqs = {}
     motif_seq = {} # This dictionary will store motif sequences per importance score index
+    control_positions = {}
+    motif_positions = {}
     for i, imp in enumerate(importances):
         # handle kwargs
         if 'atten_cond' in kwargs:
-            motif_regions, controlRegions, interestRegions, current_motif_s_list = find_high_attention(imp, min_len=min_len, positive=positive, cond=kwargs['atten_cond'])
+            motif_regions, controlRegions, interestRegions, current_motif_s_list, motifPositions, controlPositions = find_high_attention(imp, min_len=min_len, positive=positive, cond=kwargs['atten_cond'])
         else:
-            motif_regions, controlRegions, interestRegions, current_motif_s_list = find_high_attention(imp, min_len=min_len, positive=positive)
+            motif_regions, controlRegions, interestRegions, current_motif_s_list, motifPositions, controlPositions = find_high_attention(imp, min_len=min_len, positive=positive)
         
         # Collect control and interest sequences (regions) using the new helper function
         if controlRegions: # Check if the list is not empty
-            _update_sequences_in_dict(control_seqs, i, controlRegions)
+            _update_sequences_in_dict(control_seqs, str(imp.id), controlRegions,)
         if interestRegions: # Check if the list is not empty
-            interest_seqs[i] = interestRegions
+            interest_seqs[str(imp.id)] = interestRegions
         if current_motif_s_list: # Check if the list is not empty
-            _update_sequences_in_dict(motif_seq, i, current_motif_s_list)
-          
+            _update_sequences_in_dict(motif_seq, str(imp.id), current_motif_s_list)
+        if motifPositions: # Check if the list is not empty
+            motif_positions[str(imp.id)] = motifPositions
+        if controlPositions: # Check if the list is not empty
+            control_positions[str(imp.id)] = controlPositions
+
     positive_label = 'positive' if positive else 'negative'
     output_dir = os.path.join(save_file_dir, positive_label)
     os.makedirs(output_dir, exist_ok=True)
@@ -775,6 +787,16 @@ def motif_analysis(importances,
             for j, s in enumerate(motif_seq[k]):
                 if len(s) >= 8: # Only save sequences longer than 8
                     f.write(f">motifSeq_{k}.{j}\n{s}\n")
+    with open(os.path.join(output_dir,args.control_positions), 'w') as f:
+        f.write('trID\tsepStart\tsepEnd\tstart\tend\n') # Header for control positions
+        for k in control_positions.keys():
+            for j, s in enumerate(control_positions[k]):
+                f.write(f"{k}\t{s[0]}\t{s[1]}\t{s[2]}\t{s[3]}\n")
+    with open(os.path.join(output_dir,args.motif_positions), 'w') as f:
+        f.write('trID\tsepStart\tsepEnd\tstart\tend\n') # Header for motif positions
+        for k in motif_positions.keys():
+            for j, s in enumerate(motif_positions[k]):
+                f.write(f"{k}\t{s[0]}\t{s[1]}\t{s[2]}\t{s[3]}\n")
     return
 
 def main():
@@ -792,6 +814,8 @@ def main():
     parser.add_argument( "--save_file_dir", default='.', type=str, help="Path to save outputs",)
     parser.add_argument( "--motif_file", default='.', type=str, help="Path to save outputs",)
     parser.add_argument( "--control_file", default='.', type=str, help="Path to save outputs",)
+    parser.add_argument( "--motif_positions", default='.', type=str, help="Path to save outputs",)
+    parser.add_argument( "--control_positions", default='.', type=str, help="Path to save outputs",)
     parser.add_argument( "--interest_file", default='.', type=str, help="Path to save outputs",)
     parser.add_argument( "--verbose", action='store_true', help="Verbosity controller",)
     parser.add_argument("--SHAP", default="output/importance/shap.pkl", type=str, help="The path to the pickled SHAP data for each sample")

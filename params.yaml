@@ -141,6 +141,8 @@ findMotifs:
   output_dir: output/motifs
   control_file: control_seqs.fasta
   motif_file: motif_seqs.fasta
+  control_positions: control_positions.txt
+  motif_positions: motif_positions.txt
   interest_file: interest_seqs.fasta
 
 runMASTFilter:
@@ -151,8 +153,16 @@ motifsToKeep:
 
 runAME:
   output_dir: ame_output
+
 correctAME_pvalues:
   output_file: ame_corrected.tsv
+
+microRNABindingEnrichment:
+  mirna_file: data/microRNA/Predicted_Targets_Info.default_predictions.txt
+  output_dir: output/microRNA
+  control_overlap_file: control_overlap.csv
+  interest_overlap_file: interest_overlap.csv
+  fisher_file: fisher_results.csv
 
 prepRandomizeSeqsAndExtraFeatures:
   sequence_dir: output/data/sanityCheck
