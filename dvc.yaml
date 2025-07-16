@@ -275,6 +275,20 @@ stages:
       params:
       - microRNABindingEnrichment
 
+  microRNABindingEnrichment_posVSneg:
+    cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file ${findMotifs.output_dir}/negative/${findMotifs.motif_positions}
+      --interest_file ${findMotifs.output_dir}/positive/${findMotifs.motif_positions} --output_dir ${microRNABindingEnrichment.output_dir}/positiveVSnegative
+      --mirna_file ${microRNABindingEnrichment.mirna_file}
+    deps:
+    - scripts/microRNABindingEnrichment.py
+    - ${findMotifs.output_dir}/negative/${findMotifs.motif_positions}
+    - ${findMotifs.output_dir}/positive/${findMotifs.motif_positions}
+    outs:
+    - ${microRNABindingEnrichment.output_dir}/positiveVSnegative/${microRNABindingEnrichment.control_overlap_file}
+    - ${microRNABindingEnrichment.output_dir}/positiveVSnegative/${microRNABindingEnrichment.interest_overlap_file}
+    - ${microRNABindingEnrichment.output_dir}/positiveVSnegative/${microRNABindingEnrichment.fisher_file}
+    params:
+    - microRNABindingEnrichment
   # correctAME_pvalues:
   #   foreach:
   #     - positive

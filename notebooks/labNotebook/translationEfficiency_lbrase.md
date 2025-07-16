@@ -289,15 +289,38 @@ For now I will use the transcript level expression data that I have from Mike to
   - Could this be a result of including the extra features in the LLM and regression model, where the high vs low only includes the sequence?
 ![regression & LLM scatterPlot](../../figures/linearVSllm.png)
 
+  [linear regression results](../explorativeJupyterNotebooks/TE_prediction_using_motif_counts.ipynb)
+
+  [LLM results](../../output/motifs/positive/ame_output/ame.tsv)
+
 </details>
 
 <details>
   <summary><B>2025.07.15 - add microRNA analysis </B></summary>
 
 - I download all the microRNA binding sites from [targetScan](https://www.targetscan.org/cgi-bin/targetscan/data_download.fly72.cgi).
-  - This only has binding sites for the 3'UTR. 
-- I updated the [findMotifs.py](../scripts/find_motifs.py) script to return the positions of the high/low SHAP scores so that they could be checked for overlap with the microRNA binding locations.
+  - This only has binding sites for the 3'UTR.
+- I updated the [findMotifs.py](../../scripts/find_motifs.py) script to return the positions of the high/low SHAP scores so that they could be checked for overlap with the microRNA binding locations.
 - Interestingly, the microRNA binding sites seem to be mostly found in the regions with SHAP scores close to 0. This presents as finding microRNAs that are depleted in the high or low SHAP regions compared to the controls. **I guess this means microRNA binding is not picked up by the LLM.**
+
+</details>
+
+<details>
+  <summary><B>2025.07.16 - update microRNA analysis method</B></summary>
+
+- I was looking at each SHAP high region independently and checking for microRNA binding sites. This led to a really small binding ratio compared to the number of regions (3 hits out of ~4500 sites). I realized that I should be looking the transcript level, so i then have a count of 1 if there is a binding site in any of the SHAP high regions for that transcript. This led to a much higher binding ratio (3 hits out of ~2300 transcripts). 
+- Despite this change, the microRNA binding sites are still mostly found in the regions with SHAP scores close to 0. 
+- I also added in an analysis comparing the very high to the very low SHAP regions. There are very few hits, which supports the idea that microRNA binding is not picked up by the LLM.
+  - There was however, one nominal enrichment: miR-277-3p is enriched in the high SHAP regions. [ChatGPT](https://chatgpt.com/share/68777cc1-3580-8003-8f00-ecb9f8149954) states there is no evidence that this microRNA is involved in TE and that most microRNAs increase mRNA decay not influence TE. 
+
+    |microRNA|totalInterest|TP|%TP|totalControl|FP|%FP|odds_ratio|p_value|
+    |---|---|---|---|---|---|---|---|---|
+    |miR-277-3p|2832|13|0.46|930|0|0.0|0.0|4.74e-02|
+
+### SVR
+
+- Look into SVR (SVM regression) as the non neural network model to compare results to. 
+  - I previously used [lsgkm](https://github.com/Dongwon-Lee/lsgkm) for the RBP binding site prediction, but because TE is a regression task I will use [lsgkm-SVR](https://github.com/kundajelab/lsgkm-svr) as it is the SVR extension of the lsgkm package. 
 
 </details>
 

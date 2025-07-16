@@ -76,31 +76,33 @@ def main():
 
     controlOverlap = overlap(control_df, mirna_filtered)
     controlOverlap.to_csv(os.path.join(args.output_dir, args.control_overlap_file), sep=',', index=False)
+    controlHits = controlOverlap.groupby(['trID','microRNA']).count().groupby('microRNA').count()['start']
     motifOverlap = overlap(motif_df, mirna_filtered)
     motifOverlap.to_csv(os.path.join(args.output_dir, args.interest_overlap_file), sep=',', index=False)
+    motifHits = motifOverlap.groupby(['trID','microRNA']).count().groupby('microRNA').count()['start']
 
-    total_control_overlap = len(controlOverlap)
-    total_motif_overlap = len(motifOverlap)
+    total_control_possible = control_df['trID'].nunique()
+    total_motif_possible = motif_df['trID'].nunique()
 
     # Fisher exact test for each microRNA
     from scipy.stats import fisher_exact
     control_counts = controlOverlap['microRNA'].value_counts()
     motif_counts = motifOverlap['microRNA'].value_counts()
-    all_microRNAs = set(control_counts.index).union(set(motif_counts.index))
+    all_microRNAs = set(controlHits.index).union(set(motifHits.index))
     fisher_results = []
     for mirna in all_microRNAs:
-        control_count = control_counts.get(mirna, 0)
-        motif_count = motif_counts.get(mirna, 0)
-        not_control_count = total_control - control_count
-        not_motif_count = total_motif - motif_count
-        
+        control_count = controlHits.get(mirna, 0)
+        motif_count = motifHits.get(mirna, 0)
+        neg_control_count = total_control_possible - control_count
+        neg_motif_count = total_motif_possible - motif_count
+
         # Create a contingency table
         contingency_table = [[control_count, motif_count],
-                             [not_control_count, not_motif_count]]
+                             [neg_control_count, neg_motif_count]]
         
         odds_ratio, p_value = fisher_exact(contingency_table)
-        fisher_results.append({'microRNA': mirna, 'totalInterest': total_motif, 'TP': motif_count, '%TP': motif_count / total_motif * 100 if total_motif > 0 else 0,
-                               'totalControl': total_control, 'FP': control_count, '%FP': control_count / total_control * 100 if total_control > 0 else 0,
+        fisher_results.append({'microRNA': mirna, 'totalInterest': total_motif_possible, 'TP': motif_count, '%TP': motif_count / total_motif_possible * 100 if total_motif_possible > 0 else 0,
+                               'totalControl': total_control_possible, 'FP': control_count, '%FP': control_count / total_control_possible * 100 if total_control_possible > 0 else 0,
                                'odds_ratio': odds_ratio, 'p_value': p_value})
 
     # Save results

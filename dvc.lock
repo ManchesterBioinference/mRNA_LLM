@@ -1313,8 +1313,8 @@ stages:
       size: 326850
     - path: scripts/microRNABindingEnrichment.py
       hash: md5
-      md5: eeaad604416da6a1f92b31cf4ab6084e
-      size: 5860
+      md5: 1fae39efbe70d4afdbe3d53daded9c11
+      size: 6142
     params:
       params.yaml:
         microRNABindingEnrichment:
@@ -1330,8 +1330,8 @@ stages:
       size: 5772
     - path: output/microRNA/positive/fisher_results.csv
       hash: md5
-      md5: af477aa3d77e005d74276feebb70b9a1
-      size: 3971
+      md5: af74bdd6bc45a8a8bf91b18680f02fd7
+      size: 3970
     - path: output/microRNA/positive/interest_overlap.csv
       hash: md5
       md5: 7636e5efbefdf44b68567c634b36f99c
@@ -1351,8 +1351,8 @@ stages:
       size: 55160
     - path: scripts/microRNABindingEnrichment.py
       hash: md5
-      md5: eeaad604416da6a1f92b31cf4ab6084e
-      size: 5860
+      md5: 1fae39efbe70d4afdbe3d53daded9c11
+      size: 6142
     params:
       params.yaml:
         microRNABindingEnrichment:
@@ -1368,9 +1368,47 @@ stages:
       size: 59616
     - path: output/microRNA/negative/fisher_results.csv
       hash: md5
-      md5: aa6b0950c007defa31d1968bd995c565
-      size: 4382
+      md5: 9aecd51edd289b66deae8be92d178913
+      size: 4407
     - path: output/microRNA/negative/interest_overlap.csv
       hash: md5
       md5: a201522ed0bad48c2dd1f0a9751b893a
       size: 885
+  microRNABindingEnrichment_posVSneg:
+    cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file
+      output/motifs/negative/motif_positions.txt --interest_file output/motifs/positive/motif_positions.txt
+      --output_dir output/microRNA/positiveVSnegative --mirna_file data/microRNA/Predicted_Targets_Info.default_predictions.txt
+    deps:
+    - path: output/motifs/negative/motif_positions.txt
+      hash: md5
+      md5: 2b1e89c798fde1f71fc6d40f06e60d33
+      size: 55160
+    - path: output/motifs/positive/motif_positions.txt
+      hash: md5
+      md5: 31d71377344c8b5ce6dd0b464ee793dd
+      size: 326850
+    - path: scripts/microRNABindingEnrichment.py
+      hash: md5
+      md5: 1fae39efbe70d4afdbe3d53daded9c11
+      size: 6142
+    params:
+      params.yaml:
+        microRNABindingEnrichment:
+          mirna_file: data/microRNA/Predicted_Targets_Info.default_predictions.txt
+          output_dir: output/microRNA
+          control_overlap_file: control_overlap.csv
+          interest_overlap_file: interest_overlap.csv
+          fisher_file: fisher_results.csv
+    outs:
+    - path: output/microRNA/positiveVSnegative/control_overlap.csv
+      hash: md5
+      md5: a201522ed0bad48c2dd1f0a9751b893a
+      size: 885
+    - path: output/microRNA/positiveVSnegative/fisher_results.csv
+      hash: md5
+      md5: 1fab641cb85e6d806b0f42c35bdc937a
+      size: 3344
+    - path: output/microRNA/positiveVSnegative/interest_overlap.csv
+      hash: md5
+      md5: 7636e5efbefdf44b68567c634b36f99c
+      size: 7374
