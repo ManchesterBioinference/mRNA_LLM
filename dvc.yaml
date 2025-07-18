@@ -445,34 +445,73 @@ stages:
     params:
     - runMAST
 
-#   trainSVM:
-#     cmd: mkdir -p ${trainSVM.outprefix} && lsgkm/src/gkmtrain ${preprocessData.output_dir}/train_dev_pos.fasta
-#       ${preprocessData.output_dir}/train_dev_neg.fasta ${trainSVM.outprefix}
-#     deps:
-#     - ${preprocessData.output_dir}
-#     - ${predict.output_dir}/test_results.txt
-#     outs:
-#     - ${trainSVM.outprefix}.model.txt
-#     params:
-#     - trainSVM
-# 
-#   SVMpredict:
-#     cmd: ../Dmel_RBP/lsgkm/src/gkmpredict ${preprocessData.output_dir}/test.fasta
-#       ${trainSVM.outprefix}.model.txt ${trainSVM.outprefix}_${SVMpredict.output_file}
-#     deps:
-#     - ${trainSVM.outprefix}.model.txt
-#     outs:
-#     - ${trainSVM.outprefix}_predictions.tsv
-#     params:
-#     - SVMpredict
-# 
-#   SVMmetrics:
-#     cmd: python scripts/calculateMetrics.py ${trainSVM.outprefix}_predictions.tsv
-#       ${trainSVM.outprefix}_predictions_metrics.txt
-#     deps:
-#     - ${trainSVM.outprefix}_predictions.tsv
-#     outs:
-#     - ${trainSVM.outprefix}_predictions_metrics.txt
+  getLSGKM_SVR:
+    # clone lsgkm-svr repository, update max seq length, and compile it
+    cmd:
+      git submodule add https://github.com/kundajelab/lsgkm-svr.git
+    outs:
+    - lsgkm-svr/bin:
+        cache: false
+
+  compileLSGKM_SVR:
+    cmd:
+      MAX_LEN=$(wc -L ${preprocessData.output_dir}/train.fasta | cut -d' ' -f1) &&
+      sed -i "s/#define MAX_SEQ_LENGTH 2048/#define MAX_SEQ_LENGTH $MAX_LEN/" lsgkm-svr/src/libsvm_gkm.h &&
+      cd lsgkm-svr/src &&
+      make &&
+      cd ../.. 
+    outs:
+    - lsgkm-svr/src/gkmtrain:
+        cache: false
+
+  prepCovariates:
+    cmd:
+      mkdir -p ${trainSVM.outprefix} && 
+      cat ${preprocessData.output_dir}/train.fasta ${preprocessData.output_dir}/dev.fasta > ${trainSVM.outprefix}/train_dev.fasta &&
+      sed -i 's/U/T/g' ${trainSVM.outprefix}/train_dev.fasta &&
+      awk '/^>/ {print substr($0,2)}' ${trainSVM.outprefix}/train_dev.fasta | cut -d' ' -f1 > ${trainSVM.outprefix}.seqlabels.txt &&
+      python scripts/prepCovariates.py 
+        --data_dir ${trainSVM.outprefix}/train_dev.fasta
+        --covariates ${getDecayResiduals.extraFeatures} 
+        --output_file ${trainSVM.outprefix}/covariates.tsv
+    deps:
+    - scripts/prepCovariates.py
+    - ${getDecayResiduals.extraFeatures}
+    - ${preprocessData.output_dir}/train.fasta
+    outs:
+    - ${trainSVM.outprefix}/covariates.tsv
+
+  trainSVM:
+    #NOTE - all the ',' will be converted to 'A' by lsgkm-svr
+    cmd: 
+      lsgkm-svr/src/gkmtrain -y 3 -m ${trainSVM.mem} -T ${trainSVM.threads} -N -t 7 ${trainSVM.outprefix}/train_dev.fasta ${trainSVM.outprefix}.seqlabels.txt ${trainSVM.outprefix} ${trainSVM.outprefix}/covariates.tsv
+    deps:
+    - ${trainSVM.outprefix}/covariates.tsv
+    - ${preprocessData.output_dir}
+    - lsgkm-svr/src/gkmtrain
+    outs:
+    - ${trainSVM.outprefix}.model.txt
+    params:
+    - trainSVM
+
+  SVMpredict:
+    cmd: 
+      sed 's/U/T/g' ${preprocessData.output_dir}/test.fasta > ${trainSVM.outprefix}/test.fasta &&
+      lsgkm-svr/src/gkmpredict -T ${trainSVM.threads} ${trainSVM.outprefix}/test.fasta ${trainSVM.outprefix}.model.txt ${trainSVM.outprefix}_${SVMpredict.output_file}
+    deps:
+    - ${trainSVM.outprefix}.model.txt
+    outs:
+    - ${trainSVM.outprefix}_predictions.tsv
+    params:
+    - SVMpredict
+
+  SVMmetrics:
+    cmd: python scripts/calculateMetrics.py ${trainSVM.outprefix}_predictions.tsv
+      ${trainSVM.outprefix}_predictions_metrics.txt
+    deps:
+    - ${trainSVM.outprefix}_predictions.tsv
+    outs:
+    - ${trainSVM.outprefix}_predictions_metrics.txt
 
 plots:
 - dvclive/decayPrediction/plots/images

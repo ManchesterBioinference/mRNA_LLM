@@ -1412,3 +1412,84 @@ stages:
       hash: md5
       md5: 7636e5efbefdf44b68567c634b36f99c
       size: 7374
+  compileLSGKM_SVR:
+    cmd: MAX_LEN=$(wc -L output/data/decay/train.fasta | cut -d' ' -f1) && sed -i
+      "s/#define MAX_SEQ_LENGTH 2048/#define MAX_SEQ_LENGTH $MAX_LEN/" lsgkm-svr/src/libsvm_gkm.h
+      && cd lsgkm-svr/src && make && cd ../..
+    outs:
+    - path: lsgkm-svr/src/gkmtrain
+      hash: md5
+      md5: 7d929e6db5bbf671e916ea6490056bf8
+      size: 182080
+      isexec: true
+  trainSVM:
+    cmd: mkdir -p output/svm/svm && cat output/data/decay/train.fasta output/data/decay/dev.fasta
+      > output/svm/svm/train_dev.fasta && sed -i 's/U/T/g' output/svm/svm/train_dev.fasta
+      && awk '/^>/ {print substr($0,2)}' output/svm/svm/train_dev.fasta | cut -d'
+      ' -f1 > output/svm/svm.seqlabels.txt && lsgkm-svr/src/gkmtrain -y 3 -m 16000
+      -T 4 output/svm/svm/train_dev.fasta output/svm/svm.seqlabels.txt output/svm/svm
+    deps:
+    - path: lsgkm-svr/src/gkmtrain
+      hash: md5
+      md5: 295f819b1995a278f9781094eeb027ff
+      size: 169136
+      isexec: true
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    params:
+      params.yaml:
+        trainSVM:
+          outprefix: output/svm/svm
+          mem: 16000
+          threads: 4
+    outs:
+    - path: output/svm/svm.model.txt
+      hash: md5
+      md5: 40b6eaaa23e654a0cd27152a78d9cae3
+      size: 2097852
+  SVMpredict:
+    cmd: sed 's/U/T/g' output/data/decay/test.fasta > output/svm/svm/test.fasta &&
+      lsgkm-svr/src/gkmpredict -T 4 output/svm/svm/test.fasta output/svm/svm.model.txt
+      output/svm/svm_predictions.tsv
+    deps:
+    - path: output/svm/svm.model.txt
+      hash: md5
+      md5: 40b6eaaa23e654a0cd27152a78d9cae3
+      size: 2097852
+    params:
+      params.yaml:
+        SVMpredict:
+          output_file: predictions.tsv
+    outs:
+    - path: output/svm/svm_predictions.tsv
+      hash: md5
+      md5: 3ac7e681a0ef7d93a9be2aeb07ef6d69
+      size: 25548
+  prepCovariates:
+    cmd: mkdir -p output/svm/svm && cat output/data/decay/train.fasta output/data/decay/dev.fasta
+      > output/svm/svm/train_dev.fasta && sed -i 's/U/T/g' output/svm/svm/train_dev.fasta
+      && awk '/^>/ {print substr($0,2)}' output/svm/svm/train_dev.fasta | cut -d'
+      ' -f1 > output/svm/svm.seqlabels.txt && python scripts/prepCovariates.py --data_dir
+      output/svm/svm/train_dev.fasta --covariates output/data/codons/extraFeatures.csv
+      --output_file output/svm/svm/covariates.tsv
+    deps:
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/decay/train.fasta
+      hash: md5
+      md5: 4c7808bd05acff6e4808f9d5997c57ab
+      size: 3014517
+    - path: scripts/prepCovariates.py
+      hash: md5
+      md5: 41f1c1698a23ff8e552747c60494d9d7
+      size: 1370
+    outs:
+    - path: output/svm/svm/covariates.tsv
+      hash: md5
+      md5: d62a29a765fd3fca6a6556a6f07f9087
+      size: 5903026
