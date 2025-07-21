@@ -1,3 +1,8 @@
 snakemake_jobscript.sh.*
 slurm-*
 **__pycache__**
+.vscode/launch.json
+data/microRNA/Predicted_Targets_Info.default_predictions.txt.zip
+jobscriptStatus/
+nohup_vienna.out
+*deleteme*

@@ -1413,32 +1413,55 @@ stages:
       md5: 7636e5efbefdf44b68567c634b36f99c
       size: 7374
   compileLSGKM_SVR:
-    cmd: MAX_LEN=$(wc -L output/data/decay/train.fasta | cut -d' ' -f1) && sed -i
-      "s/#define MAX_SEQ_LENGTH 2048/#define MAX_SEQ_LENGTH $MAX_LEN/" lsgkm-svr/src/libsvm_gkm.h
-      && cd lsgkm-svr/src && make && cd ../..
+    cmd: bash scripts/compile_lsgkm_svr.sh output/data/decay
+    deps:
+    - path: output/data/decay/train.fasta
+      hash: md5
+      md5: 4c7808bd05acff6e4808f9d5997c57ab
+      size: 3014517
+    - path: scripts/compile_lsgkm_svr.sh
+      hash: md5
+      md5: bf232f961b49e5dbd279bc1395ab47a6
+      size: 1837
+      isexec: true
+    - path: scripts/detect_cuda.sh
+      hash: md5
+      md5: 234b06e005e23c84c36930fa731af147
+      size: 1342
+      isexec: true
     outs:
     - path: lsgkm-svr/src/gkmtrain
       hash: md5
-      md5: 7d929e6db5bbf671e916ea6490056bf8
-      size: 182080
+      md5: f9df170d58b2a1da4385462112cea576
+      size: 225080
       isexec: true
   trainSVM:
-    cmd: mkdir -p output/svm/svm && cat output/data/decay/train.fasta output/data/decay/dev.fasta
-      > output/svm/svm/train_dev.fasta && sed -i 's/U/T/g' output/svm/svm/train_dev.fasta
-      && awk '/^>/ {print substr($0,2)}' output/svm/svm/train_dev.fasta | cut -d'
-      ' -f1 > output/svm/svm.seqlabels.txt && lsgkm-svr/src/gkmtrain -y 3 -m 16000
-      -T 4 output/svm/svm/train_dev.fasta output/svm/svm.seqlabels.txt output/svm/svm
+    cmd: bash scripts/train_svm.sh output/svm/svm 16000 4
     deps:
     - path: lsgkm-svr/src/gkmtrain
       hash: md5
-      md5: 295f819b1995a278f9781094eeb027ff
-      size: 169136
+      md5: f9df170d58b2a1da4385462112cea576
+      size: 225080
       isexec: true
     - path: output/data/decay
       hash: md5
       md5: b20ee60bfc13a9c94438f227943ad9b9.dir
       size: 4345349
       nfiles: 3
+    - path: output/svm/svm/covariates.tsv
+      hash: md5
+      md5: fe840a36ea0bbcf6755a8fd8d23bdf11
+      size: 11103
+    - path: scripts/detect_cuda.sh
+      hash: md5
+      md5: 234b06e005e23c84c36930fa731af147
+      size: 1342
+      isexec: true
+    - path: scripts/train_svm.sh
+      hash: md5
+      md5: f601b0690a369a7a2ed0fc69eff47fa4
+      size: 2057
+      isexec: true
     params:
       params.yaml:
         trainSVM:
@@ -1448,8 +1471,8 @@ stages:
     outs:
     - path: output/svm/svm.model.txt
       hash: md5
-      md5: 40b6eaaa23e654a0cd27152a78d9cae3
-      size: 2097852
+      md5: 0461e7d30f7e1abbe20eb5f4fe4dec9f
+      size: 3271
   SVMpredict:
     cmd: sed 's/U/T/g' output/data/decay/test.fasta > output/svm/svm/test.fasta &&
       lsgkm-svr/src/gkmpredict -T 4 output/svm/svm/test.fasta output/svm/svm.model.txt
@@ -1471,8 +1494,10 @@ stages:
   prepCovariates:
     cmd: mkdir -p output/svm/svm && cat output/data/decay/train.fasta output/data/decay/dev.fasta
       > output/svm/svm/train_dev.fasta && sed -i 's/U/T/g' output/svm/svm/train_dev.fasta
-      && awk '/^>/ {print substr($0,2)}' output/svm/svm/train_dev.fasta | cut -d'
-      ' -f1 > output/svm/svm.seqlabels.txt && python scripts/prepCovariates.py --data_dir
+      && head -n 200 output/svm/svm/train_dev.fasta > output/svm/svm/train_dev.fasta.tmp
+      && mv output/svm/svm/train_dev.fasta.tmp output/svm/svm/train_dev.fasta && awk
+      '/^>/ {print substr($0,2)}' output/svm/svm/train_dev.fasta | cut -d' ' -f1 >
+      output/svm/svm.seqlabels.txt && python scripts/prepCovariates.py --data_dir
       output/svm/svm/train_dev.fasta --covariates output/data/codons/extraFeatures.csv
       --output_file output/svm/svm/covariates.tsv
     deps:
@@ -1491,5 +1516,5 @@ stages:
     outs:
     - path: output/svm/svm/covariates.tsv
       hash: md5
-      md5: d62a29a765fd3fca6a6556a6f07f9087
-      size: 5903026
+      md5: 3e98035d6b6c75ea4682e156f11e2af4
+      size: 114853
