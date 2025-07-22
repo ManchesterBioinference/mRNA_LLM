@@ -770,7 +770,7 @@ def main():
 
     # 2. Load ViennaRNA features (MFE)
     logger.info(f"Attempting to load ViennaRNA features from: {args.mfe}")
-    if os.path.exists(args.mfe):
+    if args.mfe and os.path.exists(args.mfe):
         try:
             vienna_df = pd.read_csv(args.mfe)
             if "id" not in vienna_df.columns:

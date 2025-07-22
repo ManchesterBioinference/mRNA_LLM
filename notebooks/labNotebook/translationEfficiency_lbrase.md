@@ -325,6 +325,38 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
+  <summary><B>2025.07.21 - feature ablation & uORF and poly(A) tail papers</B></summary>
+
+#### Ablation
+
+- I has copilot help me write up a script to remove features from the extraFeatures table and create a couple of new DVC stages that run the script and then fine-tune the model with the different feature sets. I will then compare the results to see which features are most important for the model.
+- Unfortunately, all of the gpu queues on CSF are set to drain, so i can't start the runs.
+
+#### uORF
+
+- I'm looking in the two papers that Hilary sent relating to TE.
+  - [Upstream open reading frames buffer translational variability during Drosophila evolution and development](https://elifesciences.org/articles/104074)
+    - This paper shows that bcd (bicoid) has a uORF in the 5'UTR that buffers its TE, meaning, that region should have a negative impact on the predicted TE value in our model.
+  
+    ![bcd uORF](../../figures/bcd_uORF.png)
+
+    - The uORF is in orange. It actually has a positive SHAP score, but we do see the block of negative SHAP scores right before it. Could the model somehow be recognizing this instead? is it a binding signal for the translation machinery? [SHAP scores](../../output/importance/visualizeImportance.html)
+
+    ![fzy uORF](../../figures/fzy_uORF.png)
+
+    - Everything in fzy has a positive SHAP score
+
+    ![CG13917 uORF](../../figures/CG13917_uORF.png)
+
+    - Everything in CG13917 has a positive SHAP score.
+    - FBtr0080833 (not in data), FBtr0072747, FBtr0088223, FBtr0081931, FBtr0089304, FBtr0113297, FBtr0076372, FBtr0087059
+      - All of these also only have positive SHAP scores.
+
+  - [mRNA poly(A)-tail changes specified by deadenylation broadly reshape translation in Drosophila oocytes and early embryos](https://elifesciences.org/articles/16955)
+
+</details>
+
+<details>
   <summary><B>2025.07.</B></summary>
 
 -

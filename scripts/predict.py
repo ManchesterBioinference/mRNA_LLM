@@ -28,6 +28,7 @@ import seaborn as sns
 from multiprocessing import Pool
 from typing import List
 import pandas as pd
+import joblib
 
 
 import numpy as np
@@ -40,9 +41,8 @@ from tqdm import tqdm, trange
 from data_loaders import load_and_cache_examples_3utr as load_and_cache_examples
 from data_loaders import visualize 
 
-from dvclive import Live
 
-from src.transformers import glue_compute_metrics as compute_metrics
+from __init__ import glue_compute_metrics as compute_metrics
 
 from transformers import (
     AutoTokenizer,
@@ -50,7 +50,6 @@ from transformers import (
 
 from GenaLMWithExtraFeatures import GenaLMWithExtraFeatures
 logger = logging.getLogger(__name__)
-live = Live('dvclive/decayPredict', cache_images=True)
 
 TOKEN_ID_GROUP = ["bert", "3utrlong", "3utrlongcat", "xlnet", "albert"]
 
@@ -61,7 +60,7 @@ def set_seed(args):
     if args.n_gpu > 0:
         torch.cuda.manual_seed_all(args.seed)
 
-def plotPredictions(preds, out_label_ids, results):
+def plotPredictions(preds, out_label_ids, results, label=None, eval_output_dir=None):
     import matplotlib.pyplot as plt
     from scipy.stats import pearsonr, spearmanr
     
@@ -82,15 +81,14 @@ def plotPredictions(preds, out_label_ids, results):
     # Annotate the plot with the correlation coefficients
     plt.annotate(f'Pearson: {pearson_corr:.2f}', xy=(0.05, 0.95), xycoords='axes fraction')
     plt.annotate(f'Spearman: {spearman_corr:.2f}', xy=(0.05, 0.90), xycoords='axes fraction')
-    
-    # Log the image using dvclive
-    live.log_image('predictions_vs_true_labels_pred.png',fig)
+    plt.savefig(os.path.join(eval_output_dir, f'predictions_vs_true_labels{label}.png'))
 
 def load_data(args, tokenizer, test_run=False, split='train.fasta'):
     from Bio import SeqIO
     data = list(SeqIO.parse(os.path.join(args.data_dir, split), 'fasta'))
     labels = []
     seqs = []
+    attention_masks = []
     tr_ids = []
     for record in data:
         utr5, utr3 = record.seq.split(',')
@@ -99,30 +97,45 @@ def load_data(args, tokenizer, test_run=False, split='train.fasta'):
         s = utr5 + utr3[1:]
         if len(s) < 10 or len(s) > args.max_seq_length:
             continue
+        am = [1] * len(s) + [0] * (args.max_seq_length - len(s))  # attention mask
         # pad s to max_seq_length
         s = s + [tokenizer.pad_token_id]*(args.max_seq_length-len(s))
         if s not in seqs: # prevent duplicates
             seqs.append(s)
+            attention_masks.append(am)
             labels.append(float(record.id))
             tr_ids.append(record.description.split(' ')[1])
 
-    return torch.tensor(labels), torch.tensor(seqs), tr_ids
+    return torch.tensor(labels), torch.tensor(seqs), torch.tensor(attention_masks), tr_ids
 
-def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False):
+def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False, extraFeatures=None, scaler=None):
     eval_task = args.task_name
     eval_output_dir = args.output_dir
 
     results = {}
-    labels, seqs, tr_ids = load_data(args, tokenizer, split='test.fasta')
+    labels, seqs, atten_masks, tr_ids = load_data(args, tokenizer, split='test.fasta')
     #train_dataset = mask_tokens(torch.tensor(seqs), labels, tokenizer)
-    if args.extraFeatures is not None:
-        extraFeatures = pd.read_csv(args.extraFeatures, index_col=0)
-        extraFeatures.drop(['Decay Rate', 'Residuals'], axis=1, inplace=True)
+    # Create tr_ids_index for the evaluation dataset
+    if extraFeatures is not None:
+        # Ensure extraFeatures index is string for matching
+        if not pd.api.types.is_string_dtype(extraFeatures.index):
+            extraFeatures.index = extraFeatures.index.astype(str)
+            
+        eval_tr_ids_index_list = []
+        ef_index_list_str = extraFeatures.index.tolist()
+        for tr_id_str_val in tr_ids: # Use stringified tr_ids from current dev split
+            try:
+                eval_tr_ids_index_list.append(ef_index_list_str.index(tr_id_str_val))
+            except ValueError:
+                logger.error(f"Evaluation: Transcript ID '{tr_id_str_val}' from dev split not found in extraFeatures index.")
+                # Handle missing IDs during evaluation, e.g., by skipping or using default features
+                # For now, raising an error to highlight data inconsistency
+                raise ValueError(f"Evaluation: Transcript ID '{tr_id_str_val}' not found in extraFeatures index.")
+        tr_ids_index = torch.tensor(eval_tr_ids_index_list, dtype=torch.long)
     else:
-        extraFeatures = None
-
-    tr_ids_index = torch.tensor([extraFeatures.index.tolist().index(tr_id) for tr_id in tr_ids]) if extraFeatures is not None else torch.zeros_like(seqs)
-    eval_dataset = TensorDataset(seqs, torch.ones_like(seqs),torch.zeros_like(seqs),labels, tr_ids_index) #load_and_cache_examples(args, eval_task, tokenizer, evaluate=evaluate, val=val)
+        tr_ids_index = torch.zeros_like(labels, dtype=torch.long)
+        
+    eval_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs), labels, tr_ids_index)
 
     if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
         os.makedirs(eval_output_dir)
@@ -168,7 +181,7 @@ def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False):
     preds = np.squeeze(preds)
 
     results = compute_metrics('sts-b', preds, out_label_ids)
-    plotPredictions(preds, out_label_ids, results)
+    plotPredictions(preds, out_label_ids, results, args.label, eval_output_dir)
 
     output_eval_file = os.path.join(eval_output_dir, prefix, "test_results.txt")
     with open(output_eval_file, "a") as writer:
@@ -180,9 +193,6 @@ def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False):
             eval_result = eval_result + str(results[key])[:5] + " "
         writer.write(eval_result + "\n")
 
-    for key, value in results.items():
-        live.log_metric(f"test/{key}", value)
-
     return results
 
 def main():
@@ -192,6 +202,9 @@ def main():
     parser.add_argument("--params", default='params.yaml', type=str, help="Path to the YAML file containing parameters.",)
     parser.add_argument("--data_dir", default=None, type=str, help="The input data dir. Should contain the .tsv files (or other data files) for the task.",)
     parser.add_argument("--extraFeatures", default=None, type=str, help="Path the the csv file containing the extra features",)
+    parser.add_argument("--mfe", default=None, type=str, help="Path the the csv file containing the MFE features from ViennaRNA",)
+    parser.add_argument("--scaler", default=None, type=str, help="Path the the joblib file containing the scaler",)
+    parser.add_argument("--label", default='', type=str, help="label for the run",)
     parser.add_argument("--should_continue", action="store_true", help="Whether to continue from latest checkpoint in output_dir")
     parser.add_argument("--config_name", default="", type=str, help="Pretrained config name or path if not the same as model_name",)
     parser.add_argument("--model_name_or_path", default=None, type=str, help="Path to pre-trained model or shortcut name selected in the list",)
@@ -305,33 +318,115 @@ def main():
 
         # EVALUATION ON THE TEST SET-----------------------------------------------------------------------------------------------------
     results = {}
-    args.model_name_or_path = 'output/ftModel'
-    tokenizer = AutoTokenizer.from_pretrained('AIRI-Institute/gena-lm-bert-base-fly')
-    checkpoints = [args.model_name_or_path]
-    # To evaluate all checkpoints in the folder
-    logger.info("Testing the following checkpoints: %s", checkpoints)
-    for checkpoint in checkpoints:
-        global_step = checkpoint.split("-")[-1] if len(checkpoints) > 1 else ""
-        prefix = checkpoint.split("/")[-1] if checkpoint.find("checkpoint") != -1 else ""
+    tokenizer_path = args.tokenizer_name if args.tokenizer_name else 'AIRI-Institute/gena-lm-bert-base-fly'
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+    except Exception as e:
+        logger.error(f"Failed to load tokenizer from {tokenizer_path}: {e}")
+        # Fallback or re-raise, depending on desired behavior
+        logger.info("Falling back to default tokenizer 'AIRI-Institute/gena-lm-bert-base-fly'")
+        tokenizer = AutoTokenizer.from_pretrained('AIRI-Institute/gena-lm-bert-base-fly')
 
-        # # Load the model configuration
-        # config = config_class.from_pretrained(checkpoint)
-        # # Update the configuration for regression
-        # config.id2label = None
-        # config.label2id = None
+    scaler = joblib.load(args.scaler) if os.path.exists(args.scaler) else None  # Initialize scaler
 
-        # model = model_class.from_pretrained(checkpoint,config=config)
-        # cell = MemoryCell(model, num_mem_tokens=args.memory_size, stage='finetune')
-        # model = RecurrentWrapper(cell,segment_size=args.block_size, max_n_segments=args.max_n_segments)
-        model = GenaLMWithExtraFeatures.from_pretrained(args.model_name_or_path)
-        model.eval()
-        model.to(args.device)
-        result = evaluate(args, model, tokenizer, prefix=prefix) # Results saved in file eval_results.txt
-        result = dict((k + "_{}".format(global_step), v) for k, v in result.items())
-        results.update(result)
-    print(results)
+    # 1. Load original extraFeatures from args.extraFeatures CSV
+    if args.extraFeatures is not None:
+        logger.info(f"Loading original extra features from: {args.extraFeatures}")
+        try:
+            extraFeatures_df = pd.read_csv(args.extraFeatures, index_col=0)
+            # Drop specified columns if they exist
+            columns_to_drop = ['Decay Rate', 'Residuals']
+            existing_columns_to_drop = [col for col in columns_to_drop if col in extraFeatures_df.columns]
+            if existing_columns_to_drop:
+                extraFeatures_df.drop(columns=existing_columns_to_drop, inplace=True)
+                logger.info(f"Dropped columns: {existing_columns_to_drop} from original extra features.")
+        except FileNotFoundError:
+            logger.error(f"Original extra features file not found: {args.extraFeatures}")
+            extraFeatures_df = None
+        except Exception as e:
+            logger.error(f"Error loading original extra features from {args.extraFeatures}: {e}")
+            extraFeatures_df = None
+    else:
+        extraFeatures_df = None
+        logger.info("No original extra features CSV provided (args.extraFeatures is None).")
 
-    return results
+    # 2. Load ViennaRNA features (MFE)
+    logger.info(f"Attempting to load ViennaRNA features from: {args.mfe}")
+    if args.mfe and os.path.exists(args.mfe):
+        try:
+            vienna_df = pd.read_csv(args.mfe)
+            if "id" not in vienna_df.columns:
+                logger.warning("ViennaRNA features file found but missing 'id' column. Cannot merge MFE.")
+                vienna_df = None
+            else:
+                vienna_df.set_index("id", inplace=True)
+                if 'mfe' in vienna_df.columns:
+                    logger.info("Found 'mfe' column in ViennaRNA features.")
+                    vienna_df_mfe = vienna_df[['mfe']].copy() # Use .copy() to avoid SettingWithCopyWarning
+                    vienna_df_mfe['mfe'] = pd.to_numeric(vienna_df_mfe['mfe'], errors='coerce').fillna(0)
+                    vienna_df = vienna_df_mfe # Assign back the processed DataFrame
+                else:
+                    logger.warning("'mfe' column not found in ViennaRNA features file. Skipping MFE.")
+                    vienna_df = None
+        except Exception as e:
+            logger.error(f"Error loading or processing ViennaRNA features from {args.mfe}: {e}")
+            vienna_df = None
+    else:
+        logger.warning(f"ViennaRNA features file not found at {args.mfe}. Proceeding without MFE.")
+        vienna_df = None
+
+    # 3. Merge DataFrames
+    if extraFeatures_df is not None and vienna_df is not None:
+        logger.info("Merging original extra features with ViennaRNA MFE features.")
+        # Ensure indices are of the same type for robust merging
+        extraFeatures_df.index = extraFeatures_df.index.astype(str)
+        vienna_df.index = vienna_df.index.astype(str)
+        extraFeatures_df = extraFeatures_df.merge(vienna_df, left_index=True, right_index=True, how='left')
+        if 'mfe' in extraFeatures_df.columns: # MFE column exists due to merge
+             extraFeatures_df['mfe'] = extraFeatures_df['mfe'].fillna(0) # Fill NaNs for IDs in extraFeatures_df but not in vienna_df
+        logger.info("Merge complete.")
+    elif vienna_df is not None and extraFeatures_df is None:
+        logger.info("Using only ViennaRNA MFE features as no original extra features were provided.")
+        extraFeatures_df = vienna_df.copy() # Use a copy
+        extraFeatures_df.index = extraFeatures_df.index.astype(str) # Ensure index is string
+    # If extraFeatures_df is not None and vienna_df is None, extraFeatures_df is used as is (index type already handled or assumed consistent).
+    # If both are None, extraFeatures_df remains None.
+
+    if extraFeatures_df is not None:
+        # Ensure index is string type if it was not already (e.g. if only original extraFeatures_df was used)
+        if not pd.api.types.is_string_dtype(extraFeatures_df.index):
+            extraFeatures_df.index = extraFeatures_df.index.astype(str)
+        logger.info(f"Final extra features DataFrame shape: {extraFeatures_df.shape}")
+        logger.info(f"Final extra features columns: {extraFeatures_df.columns.tolist()}")
+    else:
+        logger.info("No extra features will be used.")
+
+    # 4. Determine num_extra_features for model initialization
+    num_extra_features = extraFeatures_df.shape[1] if extraFeatures_df is not None else 0
+    
+    model = None # Initialize model to None
+    if not args.do_visualize: 
+        model_path = args.model_name_or_path if args.model_name_or_path else 'AIRI-Institute/gena-lm-bert-base-fly'
+        try:
+            model = GenaLMWithExtraFeatures.from_pretrained(model_path)
+            logger.info(f"Model initialized from {model_path} with num_extra_features: {num_extra_features}")
+        except Exception as e:
+            logger.error(f"Failed to initialize model from {model_path}: {e}")
+            # Decide on fallback or re-raise
+            raise
+        logger.info("finish loading model")
+
+        if args.local_rank == 0 and torch.distributed.is_initialized(): # Check if distributed is initialized
+            torch.distributed.barrier()
+
+        if model: model.to(args.device)
+    # else: model remains None if only visualizing.
+
+    model.eval()
+
+    scaledVals = scaler.transform(extraFeatures_df) if extraFeatures_df is not None else extraFeatures_df
+    extraFeatures_df = pd.DataFrame(scaledVals, index=extraFeatures_df.index, columns=extraFeatures_df.columns) if extraFeatures_df is not None else None
+    result = evaluate(args, model, tokenizer, extraFeatures=extraFeatures_df, scaler=scaler) # Results saved in file eval_results.txt
 
 
 if __name__ == "__main__":

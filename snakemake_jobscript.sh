@@ -1,20 +1,35 @@
 #!/bin/bash --login
 
 #SBATCH -p gpuL #multicore #
-#SBATCH -G 2
-#SBATCH -n 8
-#SBATCH -t 72:00:00
+#SBATCH -G 1
+#SBATCH -n 4
+#SBATCH -t 1:00:00
 
 #####################################################
 ### run command
 #####################################################
 source ~/.bashrc
 conda activate inseq
-~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures # visualizeImportance #runViennaRNA #
-#~/.local/share/mamba/bin/dvc repro randomizeSeqsAndExtraFeatures #dvc exp run
-#~/.local/share/mamba/bin/dvc exp run --run-all --jobs 1
-#~/.local/share/mamba/bin/git add -u
-#~/.local/share/mamba/bin/git add dvclive/
-#~/.local/share/mamba/bin/git add data/
-#~/.local/share/mamba/bin/git add output/data/
-#~/.local/share/mamba/bin/git commit -m "1 count in each replicate (mRNA and ribo), double log transform"
+~/.local/share/mamba/bin/dvc repro predict@0 # visualizeImportance #runViennaRNA #
+~/.local/share/mamba/bin/git add -u
+~/.local/share/mamba/bin/git commit -m "no_mfe"
+
+~/.local/share/mamba/bin/dvc repro predict@1 # visualizeImportance #runViennaRNA #
+~/.local/share/mamba/bin/git add -u
+~/.local/share/mamba/bin/git commit -m "no_lengths"
+
+~/.local/share/mamba/bin/dvc repro predict@2 # visualizeImportance #runViennaRNA #
+~/.local/share/mamba/bin/git add -u
+~/.local/share/mamba/bin/git commit -m "no_gc_content"
+
+~/.local/share/mamba/bin/dvc repro predict@3 # visualizeImportance #runViennaRNA #
+~/.local/share/mamba/bin/git add -u
+~/.local/share/mamba/bin/git commit -m "no_codons"
+
+~/.local/share/mamba/bin/dvc repro predict@4 # visualizeImportance #runViennaRNA #
+~/.local/share/mamba/bin/git add -u
+~/.local/share/mamba/bin/git commit -m "seq_only"
+
+~/.local/share/mamba/bin/dvc repro predict@5 # visualizeImportance #runViennaRNA #
+~/.local/share/mamba/bin/git add -u
+~/.local/share/mamba/bin/git commit -m "default - all extra features"

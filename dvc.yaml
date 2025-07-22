@@ -145,18 +145,100 @@ stages:
     - fineTuneModel
     - modelParams
 
-  # predict:
-  #   cmd: python scripts/predict.py --params params.yaml --model_name_or_path ${fineTuneModel.output_dir}/best_spearmanr/
-  #     --data_dir ${preprocessData.output_dir}
-  #   deps:
-  #   - scripts/predict.py
-  #   - ${preprocessData.output_dir}
-  #   - ${fineTuneModel.output_dir}/best_spearmanr
-  #   outs:
-  #   - ${predict.output_dir}
-  #   params:
-  #   - predict
-  #   - modelParams
+  ablate_features:
+    foreach:
+    - lengths
+    - gc_content
+    - codons
+    do:
+      cmd: python scripts/ablate_features.py --input_file ${getDecayResiduals.extraFeatures}
+        --output_file ${ablate_features.output_dir}/no_${item}.csv --ablate_${item}
+      deps:
+      - scripts/ablate_features.py
+      - ${getDecayResiduals.extraFeatures}
+      outs:
+      - ${ablate_features.output_dir}/no_${item}.csv
+      params:
+      - ablate_features
+
+  fineTuneModel_ablations:
+    foreach:
+    - name: no_mfe
+      extra_features: ${getDecayResiduals.extraFeatures}
+      mfe_flag: ''
+    - name: no_lengths
+      extra_features: ${ablate_features.output_dir}/no_lengths.csv
+      mfe_flag: --mfe ${runViennaRNA.output_csv}
+    - name: no_gc_content
+      extra_features: ${ablate_features.output_dir}/no_gc_content.csv
+      mfe_flag: --mfe ${runViennaRNA.output_csv}
+    - name: no_codons
+      extra_features: ${ablate_features.output_dir}/no_codons.csv
+      mfe_flag: --mfe ${runViennaRNA.output_csv}
+    - name: seq_only
+      extra_features: ''
+      mfe_flag: ''
+    do:
+      cmd: >
+        python scripts/train.py --params params.yaml  --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
+        --max_seq_length 512 --data_dir ${preprocessData.output_dir}  --output_dir
+        ${fineTuneModel.output_dir}_${item.name}
+        $(if [ -n "${item.extra_features}" ]; then echo "--extraFeatures ${item.extra_features}";
+        fi)
+        ${item.mfe_flag}
+      deps:
+      - scripts/train.py
+      - scripts/GenaLMWithExtraFeatures.py
+      - ${preprocessData.output_dir}
+      - ${trainToFlyUTRs.output_dir}/best_checkpoint
+      - ${getDecayResiduals.extraFeatures}
+      - ${runViennaRNA.output_csv}
+      - ${ablate_features.output_dir}/no_lengths.csv
+      - ${ablate_features.output_dir}/no_gc_content.csv
+      - ${ablate_features.output_dir}/no_codons.csv
+      outs:
+      - ${fineTuneModel.output_dir}_${item.name}:
+          persist: true
+      params:
+      - fineTuneModel
+      - modelParams
+
+  predict:
+    foreach:
+    - name: _no_mfe
+      extra_features: ${getDecayResiduals.extraFeatures}
+      mfe_flag: ''
+    - name: _no_lengths
+      extra_features: ${ablate_features.output_dir}/no_lengths.csv
+      mfe_flag: --mfe ${runViennaRNA.output_csv}
+    - name: _no_gc_content
+      extra_features: ${ablate_features.output_dir}/no_gc_content.csv
+      mfe_flag: --mfe ${runViennaRNA.output_csv}
+    - name: _no_codons
+      extra_features: ${ablate_features.output_dir}/no_codons.csv
+      mfe_flag: --mfe ${runViennaRNA.output_csv}
+    - name: _seq_only
+      extra_features: ''
+      mfe_flag: ''
+    - name: ''
+      extra_features: ${getDecayResiduals.extraFeatures}
+      mfe_flag: --mfe ${runViennaRNA.output_csv}
+    do:
+      cmd: python scripts/predict.py --params params.yaml --model_name_or_path ${fineTuneModel.output_dir}${item.name}/best_spearmanr/
+        --data_dir ${preprocessData.output_dir} --output_dir ${predict.output_dir}${item.name}
+        --scaler ${fineTuneModel.output_dir}${item.name}/best_spearmanr/scaler.joblib
+        $( if [ -n "${item.name}" ]; then echo "--label ${item.name}"; fi) $(if [
+        -n "${item.extra_features}" ]; then echo "--extraFeatures ${item.extra_features}";
+        fi) ${item.mfe_flag}
+      deps:
+      - scripts/predict.py
+      - ${preprocessData.output_dir}
+      - ${fineTuneModel.output_dir}${item.name}/best_spearmanr
+      outs:
+      - ${predict.output_dir}${item.name}
+      params:
+      - predict
+      - modelParams
 
   importanceAnalysis:
     cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
@@ -249,10 +331,10 @@ stages:
       - runAME
 
   downloadMicroRNAData:
-    cmd: 
-      mkdir -p data/microRNA && 
-      wget -P data/microRNA https://www.targetscan.org/fly_72/fly_72_data_download/Predicted_Targets_Info.default_predictions.txt.zip && 
-      unzip data/microRNA/Predicted_Targets_Info.default_predictions.txt.zip -d data/microRNA
+    cmd: mkdir -p data/microRNA && wget -P data/microRNA 
+      https://www.targetscan.org/fly_72/fly_72_data_download/Predicted_Targets_Info.default_predictions.txt.zip
+      && unzip data/microRNA/Predicted_Targets_Info.default_predictions.txt.zip -d
+      data/microRNA
     outs:
     - data/microRNA/Predicted_Targets_Info.default_predictions.txt
 
@@ -261,9 +343,10 @@ stages:
     - positive
     - negative
     do:
-      cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file ${findMotifs.output_dir}/${item}/${findMotifs.control_positions}
-        --interest_file ${findMotifs.output_dir}/${item}/${findMotifs.motif_positions} --output_dir ${microRNABindingEnrichment.output_dir}/${item}
-        --mirna_file ${microRNABindingEnrichment.mirna_file}
+      cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file
+        ${findMotifs.output_dir}/${item}/${findMotifs.control_positions} --interest_file
+        ${findMotifs.output_dir}/${item}/${findMotifs.motif_positions} --output_dir
+        ${microRNABindingEnrichment.output_dir}/${item} --mirna_file ${microRNABindingEnrichment.mirna_file}
       deps:
       - scripts/microRNABindingEnrichment.py
       - ${findMotifs.output_dir}/${item}/${findMotifs.control_positions}
@@ -276,9 +359,10 @@ stages:
       - microRNABindingEnrichment
 
   microRNABindingEnrichment_posVSneg:
-    cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file ${findMotifs.output_dir}/negative/${findMotifs.motif_positions}
-      --interest_file ${findMotifs.output_dir}/positive/${findMotifs.motif_positions} --output_dir ${microRNABindingEnrichment.output_dir}/positiveVSnegative
-      --mirna_file ${microRNABindingEnrichment.mirna_file}
+    cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file
+      ${findMotifs.output_dir}/negative/${findMotifs.motif_positions} --interest_file
+      ${findMotifs.output_dir}/positive/${findMotifs.motif_positions} --output_dir
+      ${microRNABindingEnrichment.output_dir}/positiveVSnegative --mirna_file ${microRNABindingEnrichment.mirna_file}
     deps:
     - scripts/microRNABindingEnrichment.py
     - ${findMotifs.output_dir}/negative/${findMotifs.motif_positions}
@@ -481,11 +565,15 @@ plots:
 - dvclive/decay/plots/metrics:
     x: step
 - dvclive/decay/plots/images
+- dvclive/findMotifs/plots/images
 - dvclive/TE/plots/metrics:
     x: step
 - dvclive/TE/plots/images
-- dvclive/findMotifs/plots/images
+- dvclive/decayPredict/plots/metrics:
+    x: step
+- dvclive/decayPredict/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
 - dvclive/TE/metrics.json
+- dvclive/decayPredict/metrics.json

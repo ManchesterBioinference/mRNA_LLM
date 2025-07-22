@@ -3,3 +3,13 @@
 /fimo_out
 /mast_out
 /mastFilter_out
+/ftModel_no_lengths
+/ftModel_no_mfe
+/ftModel_seq_only
+/ftModel_no_codons
+/ftModel_no_gc_content
+/predict_no_lengths
+/predict_no_gc_content
+/predict_seq_only
+/predict_no_codons
+/predict_no_mfe

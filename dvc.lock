@@ -207,8 +207,8 @@ stages:
       size: 5583
     - path: scripts/train.py
       hash: md5
-      md5: fc6f137e2f83d37626d0cd2787ae7359
-      size: 47369
+      md5: 72999b1cff0f8782b2c699dbb3393828
+      size: 47382
     params:
       params.yaml:
         fineTuneModel:
@@ -415,8 +415,8 @@ stages:
       size: 7723181
     - path: scripts/visualizeImportance.py
       hash: md5
-      md5: 7a4d5b867f1436ce277bcccc121b5935
-      size: 5881
+      md5: a0c0c1aff1fe371ac073281f7763d4ad
+      size: 5889
     params:
       params.yaml:
         visualizeImportance:
@@ -426,8 +426,8 @@ stages:
     outs:
     - path: output/importance/visualizeImportance.html
       hash: md5
-      md5: f64aafd85c8f3da9575e496e189759a8
-      size: 33517613
+      md5: a5eaef7a003d4528bd1a8de1a1be593c
+      size: 33548214
   findMotifs:
     cmd: python scripts/find_motifs.py --SHAP output/importance/shap.pkl --save_file_dir
       output/motifs
@@ -1412,3 +1412,852 @@ stages:
       hash: md5
       md5: 7636e5efbefdf44b68567c634b36f99c
       size: 7374
+  ablate_features@gc_content:
+    cmd: python scripts/ablate_features.py --input_file output/data/codons/extraFeatures.csv
+      --output_file output/data/ablations/no_gc_content.csv --ablate_gc_content
+    deps:
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: scripts/ablate_features.py
+      hash: md5
+      md5: 66f69c97e770a557616895475c08025f
+      size: 1702
+    params:
+      params.yaml:
+        ablate_features:
+          output_dir: output/data/ablations
+    outs:
+    - path: output/data/ablations/no_gc_content.csv
+      hash: md5
+      md5: c823f0a9ac3db27d2c7981e5f0fa6e9f
+      size: 6920709
+  ablate_features@lengths:
+    cmd: python scripts/ablate_features.py --input_file output/data/codons/extraFeatures.csv
+      --output_file output/data/ablations/no_lengths.csv --ablate_lengths
+    deps:
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: scripts/ablate_features.py
+      hash: md5
+      md5: 66f69c97e770a557616895475c08025f
+      size: 1702
+    params:
+      params.yaml:
+        ablate_features:
+          output_dir: output/data/ablations
+    outs:
+    - path: output/data/ablations/no_lengths.csv
+      hash: md5
+      md5: cf530fc628abf16384485166c9e07c3b
+      size: 7178584
+  ablate_features@codons:
+    cmd: python scripts/ablate_features.py --input_file output/data/codons/extraFeatures.csv
+      --output_file output/data/ablations/no_codons.csv --ablate_codons
+    deps:
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: scripts/ablate_features.py
+      hash: md5
+      md5: 66f69c97e770a557616895475c08025f
+      size: 1702
+    params:
+      params.yaml:
+        ablate_features:
+          output_dir: output/data/ablations
+    outs:
+    - path: output/data/ablations/no_codons.csv
+      hash: md5
+      md5: 2ed34076c992e1108f2a2df24321039a
+      size: 711408
+  fineTuneModel_ablations@3:
+    cmd: "python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
+      --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_codons
+      $(if [ -n \"output/data/ablations/no_codons.csv\" ]; then echo \"--extraFeatures
+      output/data/ablations/no_codons.csv\"; fi) --mfe output/data/codons/vienna_features.csv\n"
+    deps:
+    - path: output/data/ablations/no_codons.csv
+      hash: md5
+      md5: 2ed34076c992e1108f2a2df24321039a
+      size: 711408
+    - path: output/data/ablations/no_gc_content.csv
+      hash: md5
+      md5: c823f0a9ac3db27d2c7981e5f0fa6e9f
+      size: 6920709
+    - path: output/data/ablations/no_lengths.csv
+      hash: md5
+      md5: cf530fc628abf16384485166c9e07c3b
+      size: 7178584
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/codons/vienna_features.csv
+      hash: md5
+      md5: af600d3e3adf97355b18c76bfee40ef4
+      size: 15605730
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/flyTrained/best_checkpoint
+      hash: md5
+      md5: 310c844e079a23d02f04d3597227df06.dir
+      size: 445221454
+      nfiles: 7
+    - path: scripts/GenaLMWithExtraFeatures.py
+      hash: md5
+      md5: 4db4929e37c2bc1d6a15ca483f235640
+      size: 5583
+    - path: scripts/train.py
+      hash: md5
+      md5: 72999b1cff0f8782b2c699dbb3393828
+      size: 47382
+    params:
+      params.yaml:
+        fineTuneModel:
+          output_dir: output/ftModel
+          do_train: true
+          do_eval: false
+          do_predict: false
+          do_visualize: false
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+    outs:
+    - path: output/ftModel_no_codons
+      hash: md5
+      md5: 322b9621ed30a1e4009d85a00a7b0eca.dir
+      size: 1330223410
+      nfiles: 22
+  fineTuneModel_ablations@1:
+    cmd: "python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
+      --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_lengths
+      $(if [ -n \"output/data/ablations/no_lengths.csv\" ]; then echo \"--extraFeatures
+      output/data/ablations/no_lengths.csv\"; fi) --mfe output/data/codons/vienna_features.csv\n"
+    deps:
+    - path: output/data/ablations/no_codons.csv
+      hash: md5
+      md5: 2ed34076c992e1108f2a2df24321039a
+      size: 711408
+    - path: output/data/ablations/no_gc_content.csv
+      hash: md5
+      md5: c823f0a9ac3db27d2c7981e5f0fa6e9f
+      size: 6920709
+    - path: output/data/ablations/no_lengths.csv
+      hash: md5
+      md5: cf530fc628abf16384485166c9e07c3b
+      size: 7178584
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/codons/vienna_features.csv
+      hash: md5
+      md5: af600d3e3adf97355b18c76bfee40ef4
+      size: 15605730
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/flyTrained/best_checkpoint
+      hash: md5
+      md5: 310c844e079a23d02f04d3597227df06.dir
+      size: 445221454
+      nfiles: 7
+    - path: scripts/GenaLMWithExtraFeatures.py
+      hash: md5
+      md5: 4db4929e37c2bc1d6a15ca483f235640
+      size: 5583
+    - path: scripts/train.py
+      hash: md5
+      md5: 72999b1cff0f8782b2c699dbb3393828
+      size: 47382
+    params:
+      params.yaml:
+        fineTuneModel:
+          output_dir: output/ftModel
+          do_train: true
+          do_eval: false
+          do_predict: false
+          do_visualize: false
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+    outs:
+    - path: output/ftModel_no_lengths
+      hash: md5
+      md5: 2d3fe35c84efd9002683f433c02e11ad.dir
+      size: 1330407155
+      nfiles: 22
+  fineTuneModel_ablations@0:
+    cmd: "python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
+      --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_mfe
+      $(if [ -n \"output/data/codons/extraFeatures.csv\" ]; then echo \"--extraFeatures
+      output/data/codons/extraFeatures.csv\"; fi) \n"
+    deps:
+    - path: output/data/ablations/no_codons.csv
+      hash: md5
+      md5: 2ed34076c992e1108f2a2df24321039a
+      size: 711408
+    - path: output/data/ablations/no_gc_content.csv
+      hash: md5
+      md5: c823f0a9ac3db27d2c7981e5f0fa6e9f
+      size: 6920709
+    - path: output/data/ablations/no_lengths.csv
+      hash: md5
+      md5: cf530fc628abf16384485166c9e07c3b
+      size: 7178584
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/codons/vienna_features.csv
+      hash: md5
+      md5: af600d3e3adf97355b18c76bfee40ef4
+      size: 15605730
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/flyTrained/best_checkpoint
+      hash: md5
+      md5: 310c844e079a23d02f04d3597227df06.dir
+      size: 445221454
+      nfiles: 7
+    - path: scripts/GenaLMWithExtraFeatures.py
+      hash: md5
+      md5: 4db4929e37c2bc1d6a15ca483f235640
+      size: 5583
+    - path: scripts/train.py
+      hash: md5
+      md5: 72999b1cff0f8782b2c699dbb3393828
+      size: 47382
+    params:
+      params.yaml:
+        fineTuneModel:
+          output_dir: output/ftModel
+          do_train: true
+          do_eval: false
+          do_predict: false
+          do_visualize: false
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+    outs:
+    - path: output/ftModel_no_mfe
+      hash: md5
+      md5: ad26d701d67ec07773c69275c2c66c8d.dir
+      size: 1330413395
+      nfiles: 22
+  fineTuneModel_ablations@4:
+    cmd: "python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
+      --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_seq_only
+      $(if [ -n \"\" ]; then echo \"--extraFeatures \"; fi) \n"
+    deps:
+    - path: output/data/ablations/no_codons.csv
+      hash: md5
+      md5: 2ed34076c992e1108f2a2df24321039a
+      size: 711408
+    - path: output/data/ablations/no_gc_content.csv
+      hash: md5
+      md5: c823f0a9ac3db27d2c7981e5f0fa6e9f
+      size: 6920709
+    - path: output/data/ablations/no_lengths.csv
+      hash: md5
+      md5: cf530fc628abf16384485166c9e07c3b
+      size: 7178584
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/codons/vienna_features.csv
+      hash: md5
+      md5: af600d3e3adf97355b18c76bfee40ef4
+      size: 15605730
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/flyTrained/best_checkpoint
+      hash: md5
+      md5: 310c844e079a23d02f04d3597227df06.dir
+      size: 445221454
+      nfiles: 7
+    - path: scripts/GenaLMWithExtraFeatures.py
+      hash: md5
+      md5: 4db4929e37c2bc1d6a15ca483f235640
+      size: 5583
+    - path: scripts/train.py
+      hash: md5
+      md5: 72999b1cff0f8782b2c699dbb3393828
+      size: 47382
+    params:
+      params.yaml:
+        fineTuneModel:
+          output_dir: output/ftModel
+          do_train: true
+          do_eval: false
+          do_predict: false
+          do_visualize: false
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+    outs:
+    - path: output/ftModel_seq_only
+      hash: md5
+      md5: 63c0c695f4bffca973d795672bc6ab3b.dir
+      size: 1330197683
+      nfiles: 19
+  fineTuneModel_ablations@2:
+    cmd: "python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
+      --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_gc_content
+      $(if [ -n \"output/data/ablations/no_gc_content.csv\" ]; then echo \"--extraFeatures
+      output/data/ablations/no_gc_content.csv\"; fi) --mfe output/data/codons/vienna_features.csv\n"
+    deps:
+    - path: output/data/ablations/no_codons.csv
+      hash: md5
+      md5: 2ed34076c992e1108f2a2df24321039a
+      size: 711408
+    - path: output/data/ablations/no_gc_content.csv
+      hash: md5
+      md5: c823f0a9ac3db27d2c7981e5f0fa6e9f
+      size: 6920709
+    - path: output/data/ablations/no_lengths.csv
+      hash: md5
+      md5: cf530fc628abf16384485166c9e07c3b
+      size: 7178584
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/codons/vienna_features.csv
+      hash: md5
+      md5: af600d3e3adf97355b18c76bfee40ef4
+      size: 15605730
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/flyTrained/best_checkpoint
+      hash: md5
+      md5: 310c844e079a23d02f04d3597227df06.dir
+      size: 445221454
+      nfiles: 7
+    - path: scripts/GenaLMWithExtraFeatures.py
+      hash: md5
+      md5: 4db4929e37c2bc1d6a15ca483f235640
+      size: 5583
+    - path: scripts/train.py
+      hash: md5
+      md5: 72999b1cff0f8782b2c699dbb3393828
+      size: 47382
+    params:
+      params.yaml:
+        fineTuneModel:
+          output_dir: output/ftModel
+          do_train: true
+          do_eval: false
+          do_predict: false
+          do_visualize: false
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+    outs:
+    - path: output/ftModel_no_gc_content
+      hash: md5
+      md5: 72b4b9ae4c635a0b734f0b8d54b936cb.dir
+      size: 1330407155
+      nfiles: 22
+  predict@1:
+    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_lengths/best_spearmanr/
+      --data_dir output/data/decay --output_dir output/predict_no_lengths --scaler
+      output/ftModel_no_lengths/best_spearmanr/scaler.joblib $( if [ -n "_no_lengths"
+      ]; then echo "--label _no_lengths"; fi) $(if [ -n "output/data/ablations/no_lengths.csv"
+      ]; then echo "--extraFeatures output/data/ablations/no_lengths.csv"; fi) --mfe
+      output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/ftModel_no_lengths/best_spearmanr
+      hash: md5
+      md5: 67895da8e66996c3f32dc7962cd32932.dir
+      size: 443468907
+      nfiles: 7
+    - path: scripts/predict.py
+      hash: md5
+      md5: 22a040ed8c29074fe1073345c157290d
+      size: 23635
+    params:
+      params.yaml:
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+        predict:
+          output_dir: output/predict
+          do_train: false
+          do_eval: false
+          do_predict: true
+          do_visualize: false
+    outs:
+    - path: output/predict_no_lengths
+      hash: md5
+      md5: 920deede9019cd1c37ba58662fca4d52.dir
+      size: 62008
+      nfiles: 2
+  predict@2:
+    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_gc_content/best_spearmanr/
+      --data_dir output/data/decay --output_dir output/predict_no_gc_content --scaler
+      output/ftModel_no_gc_content/best_spearmanr/scaler.joblib $( if [ -n "_no_gc_content"
+      ]; then echo "--label _no_gc_content"; fi) $(if [ -n "output/data/ablations/no_gc_content.csv"
+      ]; then echo "--extraFeatures output/data/ablations/no_gc_content.csv"; fi)
+      --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/ftModel_no_gc_content/best_spearmanr
+      hash: md5
+      md5: 4915f8fd7e3b617ac4abbe90273be63a.dir
+      size: 443468907
+      nfiles: 7
+    - path: scripts/predict.py
+      hash: md5
+      md5: 22a040ed8c29074fe1073345c157290d
+      size: 23635
+    params:
+      params.yaml:
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+        predict:
+          output_dir: output/predict
+          do_train: false
+          do_eval: false
+          do_predict: true
+          do_visualize: false
+    outs:
+    - path: output/predict_no_gc_content
+      hash: md5
+      md5: 4134edf30722382fea20ba51b8832851.dir
+      size: 59956
+      nfiles: 2
+  predict@4:
+    cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_seq_only/best_spearmanr/
+      --data_dir output/data/decay --output_dir output/predict_seq_only --scaler output/ftModel_seq_only/best_spearmanr/scaler.joblib
+      $( if [ -n "_seq_only" ]; then echo "--label _seq_only"; fi) $(if [ -n "" ];
+      then echo "--extraFeatures "; fi) '
+    deps:
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/ftModel_seq_only/best_spearmanr
+      hash: md5
+      md5: 1d0bf6063bef763bad006da6e7c7fc0e.dir
+      size: 443399083
+      nfiles: 6
+    - path: scripts/predict.py
+      hash: md5
+      md5: 22a040ed8c29074fe1073345c157290d
+      size: 23635
+    params:
+      params.yaml:
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+        predict:
+          output_dir: output/predict
+          do_train: false
+          do_eval: false
+          do_predict: true
+          do_visualize: false
+    outs:
+    - path: output/predict_seq_only
+      hash: md5
+      md5: 09f3299389a8e71590aa47010f0dcb89.dir
+      size: 44070
+      nfiles: 2
+  predict@3:
+    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_codons/best_spearmanr/
+      --data_dir output/data/decay --output_dir output/predict_no_codons --scaler
+      output/ftModel_no_codons/best_spearmanr/scaler.joblib $( if [ -n "_no_codons"
+      ]; then echo "--label _no_codons"; fi) $(if [ -n "output/data/ablations/no_codons.csv"
+      ]; then echo "--extraFeatures output/data/ablations/no_codons.csv"; fi) --mfe
+      output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/ftModel_no_codons/best_spearmanr
+      hash: md5
+      md5: ad6c17263c6684c3d0ab82e3872a2b79.dir
+      size: 443407514
+      nfiles: 7
+    - path: scripts/predict.py
+      hash: md5
+      md5: 22a040ed8c29074fe1073345c157290d
+      size: 23635
+    params:
+      params.yaml:
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+        predict:
+          output_dir: output/predict
+          do_train: false
+          do_eval: false
+          do_predict: true
+          do_visualize: false
+    outs:
+    - path: output/predict_no_codons
+      hash: md5
+      md5: 6cb33b639e767cdf81a5f96d47eb30c7.dir
+      size: 48621
+      nfiles: 2
+  predict@0:
+    cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_mfe/best_spearmanr/
+      --data_dir output/data/decay --output_dir output/predict_no_mfe --scaler output/ftModel_no_mfe/best_spearmanr/scaler.joblib
+      $( if [ -n "_no_mfe" ]; then echo "--label _no_mfe"; fi) $(if [ -n "output/data/codons/extraFeatures.csv"
+      ]; then echo "--extraFeatures output/data/codons/extraFeatures.csv"; fi) '
+    deps:
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/ftModel_no_mfe/best_spearmanr
+      hash: md5
+      md5: b571a4eca8e34a12c8bca233ead451b9.dir
+      size: 443470987
+      nfiles: 7
+    - path: scripts/predict.py
+      hash: md5
+      md5: 22a040ed8c29074fe1073345c157290d
+      size: 23635
+    params:
+      params.yaml:
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+        predict:
+          output_dir: output/predict
+          do_train: false
+          do_eval: false
+          do_predict: true
+          do_visualize: false
+    outs:
+    - path: output/predict_no_mfe
+      hash: md5
+      md5: 3518ad0c62475e4d33249bbba892cda9.dir
+      size: 68843
+      nfiles: 2
+  predict@5:
+    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
+      --data_dir output/data/decay --output_dir output/predict --scaler output/ftModel/best_spearmanr/scaler.joblib
+      $( if [ -n "" ]; then echo "--label "; fi) $(if [ -n "output/data/codons/extraFeatures.csv"
+      ]; then echo "--extraFeatures output/data/codons/extraFeatures.csv"; fi) --mfe
+      output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/ftModel/best_spearmanr
+      hash: md5
+      md5: 593bcf0494837c98f4e57d031c8faa65.dir
+      size: 443472067
+      nfiles: 7
+    - path: scripts/predict.py
+      hash: md5
+      md5: 22a040ed8c29074fe1073345c157290d
+      size: 23635
+    params:
+      params.yaml:
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+        predict:
+          output_dir: output/predict
+          do_train: false
+          do_eval: false
+          do_predict: true
+          do_visualize: false
+    outs:
+    - path: output/predict
+      hash: md5
+      md5: 7319524188fbae8bd43353ca3fffe182.dir
+      size: 62796
+      nfiles: 2

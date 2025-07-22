@@ -97,6 +97,9 @@ predict:
   do_predict: true
   do_visualize: false
 
+ablate_features:
+  output_dir: output/data/ablations
+
 modelParams:
   model_type: 3utrfly
   task_name: rnadecay

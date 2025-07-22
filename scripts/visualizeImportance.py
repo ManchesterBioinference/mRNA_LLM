@@ -121,8 +121,8 @@ text = ''
 tokenizedText = ''
 count = 0
 for sample in tqdm(importance, desc='Plotting Colors'):
-    text += '<span style = "font-family: monospace;">' +str(count)+ ': ' + str(sample.actual) + " Pred:" + str(sample.prediction) + ' </span>'
-    tokenizedText += '<span style = "font-family: monospace;">' +str(count)+ ': ' + str(sample.actual) + " Pred:" + str(sample.prediction) + ' </span>'
+    text += '<span style = "font-family: monospace;">' +str(sample.id)+ ': ' + str(sample.actual) + " Pred:" + str(sample.prediction) + ' </span>'
+    tokenizedText += '<span style = "font-family: monospace;">' +str(sample.id)+ ': ' + str(sample.actual) + " Pred:" + str(sample.prediction) + ' </span>'
     text += ''.join([highlighter(k, sample.scores, sample.tokens, max_abs_value) for k in range(len(sample.tokens))]) + '<br>'
     tokenizedText += '|'.join([highlighter(k, sample.scores, sample.tokens, max_abs_value) for k in range(len(sample.tokens))]) + '<br>'
     scores.append(sample.scores)
