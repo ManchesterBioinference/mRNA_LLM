@@ -147,17 +147,24 @@ stages:
 
   ablate_features:
     foreach:
-    - lengths
-    - gc_content
-    - codons
+    - name: lengths
+      ablate_flags: --ablate_lengths
+    - name: gc_content
+      ablate_flags: --ablate_gc_content
+    - name: codons
+      ablate_flags: --ablate_codons
+    - name: lengths_gc
+      ablate_flags: --ablate_lengths --ablate_gc_content
     do:
-      cmd: python scripts/ablate_features.py --input_file ${getDecayResiduals.extraFeatures}
-        --output_file ${ablate_features.output_dir}/no_${item}.csv --ablate_${item}
+      cmd: >
+        python scripts/ablate_features.py --input_file ${getDecayResiduals.extraFeatures}
+        --output_file ${ablate_features.output_dir}/no_${item.name}.csv
+        ${item.ablate_flags}
       deps:
       - scripts/ablate_features.py
       - ${getDecayResiduals.extraFeatures}
       outs:
-      - ${ablate_features.output_dir}/no_${item}.csv
+      - ${ablate_features.output_dir}/no_${item.name}.csv
       params:
       - ablate_features
 
@@ -178,6 +185,9 @@ stages:
     - name: seq_only
       extra_features: ''
       mfe_flag: ''
+    - name: only_codons
+      extra_features: ${ablate_features.output_dir}/no_lengths_gc.csv
+      mfe_flag: ''
     do:
       cmd: >
         python scripts/train.py --params params.yaml  --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
@@ -196,6 +206,7 @@ stages:
       - ${ablate_features.output_dir}/no_lengths.csv
       - ${ablate_features.output_dir}/no_gc_content.csv
       - ${ablate_features.output_dir}/no_codons.csv
+      - ${ablate_features.output_dir}/no_lengths_gc.csv
       outs:
       - ${fineTuneModel.output_dir}_${item.name}:
           persist: true
@@ -217,6 +228,9 @@ stages:
     - name: _no_codons
       extra_features: ${ablate_features.output_dir}/no_codons.csv
       mfe_flag: --mfe ${runViennaRNA.output_csv}
+    - name: _only_codons
+      extra_features: ${ablate_features.output_dir}/no_lengths_gc.csv
+      mfe_flag: ''
     - name: _seq_only
       extra_features: ''
       mfe_flag: ''
@@ -566,14 +580,10 @@ plots:
     x: step
 - dvclive/decay/plots/images
 - dvclive/findMotifs/plots/images
-- dvclive/decayPredict/plots/metrics:
-    x: step
-- dvclive/decayPredict/plots/images
 - dvclive/TE/plots/metrics:
     x: step
 - dvclive/TE/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
-- dvclive/decayPredict/metrics.json
 - dvclive/TE/metrics.json

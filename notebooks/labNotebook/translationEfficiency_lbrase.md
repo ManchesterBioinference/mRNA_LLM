@@ -367,7 +367,19 @@ For now I will use the transcript level expression data that I have from Mike to
 <details>
   <summary><B>2025.07.23 - rerun ablation fine-tuning</B></summary>
 
-- I started the ablation fine-tuning runs again, but am git committing in between each run so I can compare the runs in the dvc plots window. 
+- I started the ablation fine-tuning runs again, but am git committing in between each run so I can compare the runs in the dvc plots window.
+- It looks like the model without GC content performs the best on the validation set.
+  - the best loss for all is step 6, but the best spearman is step 7 for noGC (step 6 for all others)
+  - Its seems that the GC content, MFE, and lengths are not adding anything to the model. 
+  - [ ] I should also run a model that only includes the codons as extra features to see how it compares.
+
+  |Model|Spearman|Loss|
+  |---|---|---|
+  |noGC|0.496|0.040|
+  |all|0.481|0.0411|
+  |noLengths|0.481|0.043|
+  |noMFE|0.479|0.045|
+
 
 </details>
 
