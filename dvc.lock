@@ -1891,8 +1891,8 @@ stages:
     outs:
     - path: output/ftModel_no_gc_content
       hash: md5
-      md5: 72b4b9ae4c635a0b734f0b8d54b936cb.dir
-      size: 1330407155
+      md5: f5b59825aef58ba10198bae7c34997e6.dir
+      size: 1330407589
       nfiles: 22
   predict@1:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_lengths/best_spearmanr/
