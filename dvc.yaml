@@ -566,14 +566,14 @@ plots:
     x: step
 - dvclive/decay/plots/images
 - dvclive/findMotifs/plots/images
-- dvclive/TE/plots/metrics:
-    x: step
-- dvclive/TE/plots/images
 - dvclive/decayPredict/plots/metrics:
     x: step
 - dvclive/decayPredict/plots/images
+- dvclive/TE/plots/metrics:
+    x: step
+- dvclive/TE/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
-- dvclive/TE/metrics.json
 - dvclive/decayPredict/metrics.json
+- dvclive/TE/metrics.json

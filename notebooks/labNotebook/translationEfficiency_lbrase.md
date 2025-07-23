@@ -357,6 +357,21 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
+  <summary><B>2025.07.22 - predict test set with feature ablation models</B></summary>
+
+- I set up the feature ablation models to run on the test set and keep the plots for all instead of being overwritten. Interestingly, removing the lengths and MFE features leads to better performance. Obviously, I can't make this decision based on the test results, because that would be cheating.
+- [ ] I need to rerun the finetuning ablation runs, so that the results on the validation set are preserved and I can see what feature combinations perform the best. 
+
+</details>
+
+<details>
+  <summary><B>2025.07.23 - rerun ablation fine-tuning</B></summary>
+
+- I started the ablation fine-tuning runs again, but am git committing in between each run so I can compare the runs in the dvc plots window. 
+
+</details>
+
+<details>
   <summary><B>2025.07.</B></summary>
 
 -
