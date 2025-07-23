@@ -1640,8 +1640,8 @@ stages:
     outs:
     - path: output/ftModel_no_lengths
       hash: md5
-      md5: 2d3fe35c84efd9002683f433c02e11ad.dir
-      size: 1330407155
+      md5: 8a24271c53de366b75a63826be32d91a.dir
+      size: 1330407589
       nfiles: 22
   fineTuneModel_ablations@0:
     cmd: "python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
