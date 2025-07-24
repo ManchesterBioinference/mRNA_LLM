@@ -340,3 +340,24 @@ For now I will use the transcript level expression data that I have from Mike to
   - [README describing the changes](../../lsgkm-svr/MKL_README.md)
 
 </details>
+
+<details>
+  <summary><B>2025.07.18 - SVR model training</B></summary>
+
+- Apparently, the RBF kernel is very slow to calculate, so I tried to have copilot add in GPU acceleration. I'm not sure it worked. It was taking the same amount of time when using the GPU or the CPU. I tried a run anyway and it was supposed to take around 12-16 hours. The run failed after 12 hours. 
+
+  > INFO 2025-07-19 04:05:00: Large batch (5152), processing in adaptive chunks (optimal: 1000)  
+    INFO 2025-07-19 04:05:00: Kernel matrix computation: 100.0% complete (26543104/26543104)  
+    INFO 2025-07-19 04:05:00: Starting MKL weight optimization...  
+    INFO 2025-07-19 04:05:00: MKL iter 0: obj=0.000517, gkm_weight=0.0000, rbf_weight=1.0000  
+    INFO 2025-07-19 04:05:00: MKL converged at iteration 1  
+    INFO 2025-07-19 04:05:00: MKL optimization finished: gkm_weight=0.0000, rbf_weight=1.0000  
+    INFO 2025-07-19 04:05:00: begin SVM training  
+    INFO 2025-07-19 04:05:00: GPU acceleration enabled for RBF kernel computation  
+    INFO 2025-07-19 04:05:00: GPU acceleration enabled for RBF kernel computation  
+    INFO 2025-07-19 04:05:01: Large batch (5152), processing in adaptive chunks (optimal: 1000)  
+    scripts/train_svm.sh: line 75: 3286282 Segmentation fault      (core dumped) lsgkm-svr/src/gkmtrain -y 3 -m ${MEMORY} -T ${THREADS} -N -t 7 ${TRAIN_DEV_FASTA} ${SEQLABELS} ${OUTPREFIX} ${COVARIATES}  
+
+- I think I will just run the LLM without the additional features [issue5](https://github.com/ManchesterBioinference/mRNA_LLM/issues/5) and compare the SVR run to that model's performance.
+
+</details>
