@@ -371,7 +371,7 @@ For now I will use the transcript level expression data that I have from Mike to
 - It looks like the model without GC content performs the best on the validation set.
   - the best loss for all is step 6, but the best spearman is step 7 for noGC (step 6 for all others)
   - Its seems that the GC content, MFE, and lengths are not adding anything to the model. 
-  - [ ] I should also run a model that only includes the codons as extra features to see how it compares.
+  - [x] I should also run a model that only includes the codons as extra features to see how it compares.
 
   |Model|Spearman|Loss|
   |---|---|---|
@@ -379,7 +379,15 @@ For now I will use the transcript level expression data that I have from Mike to
   |all|0.481|0.0411|
   |noLengths|0.481|0.043|
   |noMFE|0.479|0.045|
+  |CodonsOnly|0.493|0.042|
 
+
+</details>
+
+<details>
+  <summary><B>2025.07.24 - </B></summary>
+
+-
 
 </details>
 

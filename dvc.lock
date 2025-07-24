@@ -1493,6 +1493,10 @@ stages:
       hash: md5
       md5: cf530fc628abf16384485166c9e07c3b
       size: 7178584
+    - path: output/data/ablations/no_lengths_gc.csv
+      hash: md5
+      md5: 56946750d25c2d21a7cb4accf9a8f7a4
+      size: 6846370
     - path: output/data/codons/extraFeatures.csv
       hash: md5
       md5: 553d9c1081f048fe66c15dcb6ffc1f3e
@@ -1577,6 +1581,10 @@ stages:
       hash: md5
       md5: cf530fc628abf16384485166c9e07c3b
       size: 7178584
+    - path: output/data/ablations/no_lengths_gc.csv
+      hash: md5
+      md5: 56946750d25c2d21a7cb4accf9a8f7a4
+      size: 6846370
     - path: output/data/codons/extraFeatures.csv
       hash: md5
       md5: 553d9c1081f048fe66c15dcb6ffc1f3e
@@ -1661,6 +1669,10 @@ stages:
       hash: md5
       md5: cf530fc628abf16384485166c9e07c3b
       size: 7178584
+    - path: output/data/ablations/no_lengths_gc.csv
+      hash: md5
+      md5: 56946750d25c2d21a7cb4accf9a8f7a4
+      size: 6846370
     - path: output/data/codons/extraFeatures.csv
       hash: md5
       md5: 553d9c1081f048fe66c15dcb6ffc1f3e
@@ -1744,6 +1756,10 @@ stages:
       hash: md5
       md5: cf530fc628abf16384485166c9e07c3b
       size: 7178584
+    - path: output/data/ablations/no_lengths_gc.csv
+      hash: md5
+      md5: 56946750d25c2d21a7cb4accf9a8f7a4
+      size: 6846370
     - path: output/data/codons/extraFeatures.csv
       hash: md5
       md5: 553d9c1081f048fe66c15dcb6ffc1f3e
@@ -1828,6 +1844,10 @@ stages:
       hash: md5
       md5: cf530fc628abf16384485166c9e07c3b
       size: 7178584
+    - path: output/data/ablations/no_lengths_gc.csv
+      hash: md5
+      md5: 56946750d25c2d21a7cb4accf9a8f7a4
+      size: 6846370
     - path: output/data/codons/extraFeatures.csv
       hash: md5
       md5: 553d9c1081f048fe66c15dcb6ffc1f3e
@@ -1909,7 +1929,7 @@ stages:
       nfiles: 3
     - path: output/ftModel_no_lengths/best_spearmanr
       hash: md5
-      md5: 67895da8e66996c3f32dc7962cd32932.dir
+      md5: c2e29ebf6b3826a51aca247069ae7940.dir
       size: 443468907
       nfiles: 7
     - path: scripts/predict.py
@@ -1953,8 +1973,8 @@ stages:
     outs:
     - path: output/predict_no_lengths
       hash: md5
-      md5: 920deede9019cd1c37ba58662fca4d52.dir
-      size: 62008
+      md5: 8d2d0a3d9f0374967d7863e5948cdff2.dir
+      size: 62806
       nfiles: 2
   predict@2:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_gc_content/best_spearmanr/
@@ -1971,7 +1991,7 @@ stages:
       nfiles: 3
     - path: output/ftModel_no_gc_content/best_spearmanr
       hash: md5
-      md5: 4915f8fd7e3b617ac4abbe90273be63a.dir
+      md5: 374b64cc5cad93cfcd431320b32373e4.dir
       size: 443468907
       nfiles: 7
     - path: scripts/predict.py
@@ -2015,25 +2035,26 @@ stages:
     outs:
     - path: output/predict_no_gc_content
       hash: md5
-      md5: 4134edf30722382fea20ba51b8832851.dir
-      size: 59956
+      md5: 783c89395b4eb57cc81fe29c99bda576.dir
+      size: 65176
       nfiles: 2
   predict@4:
-    cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_seq_only/best_spearmanr/
-      --data_dir output/data/decay --output_dir output/predict_seq_only --scaler output/ftModel_seq_only/best_spearmanr/scaler.joblib
-      $( if [ -n "_seq_only" ]; then echo "--label _seq_only"; fi) $(if [ -n "" ];
-      then echo "--extraFeatures "; fi) '
+    cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_only_codons/best_spearmanr/
+      --data_dir output/data/decay --output_dir output/predict_only_codons --scaler
+      output/ftModel_only_codons/best_spearmanr/scaler.joblib $( if [ -n "_only_codons"
+      ]; then echo "--label _only_codons"; fi) $(if [ -n "output/data/ablations/no_lengths_gc.csv"
+      ]; then echo "--extraFeatures output/data/ablations/no_lengths_gc.csv"; fi) '
     deps:
     - path: output/data/decay
       hash: md5
       md5: b20ee60bfc13a9c94438f227943ad9b9.dir
       size: 4345349
       nfiles: 3
-    - path: output/ftModel_seq_only/best_spearmanr
+    - path: output/ftModel_only_codons/best_spearmanr
       hash: md5
-      md5: 1d0bf6063bef763bad006da6e7c7fc0e.dir
-      size: 443399083
-      nfiles: 6
+      md5: 58bcae386aa74ed15828d8879ed5a7cd.dir
+      size: 443464587
+      nfiles: 7
     - path: scripts/predict.py
       hash: md5
       md5: 22a040ed8c29074fe1073345c157290d
@@ -2073,10 +2094,10 @@ stages:
           do_predict: true
           do_visualize: false
     outs:
-    - path: output/predict_seq_only
+    - path: output/predict_only_codons
       hash: md5
-      md5: 09f3299389a8e71590aa47010f0dcb89.dir
-      size: 44070
+      md5: 43496caa1d615fc0623b05cb92443ec9.dir
+      size: 64644
       nfiles: 2
   predict@3:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_codons/best_spearmanr/
@@ -2093,7 +2114,7 @@ stages:
       nfiles: 3
     - path: output/ftModel_no_codons/best_spearmanr
       hash: md5
-      md5: ad6c17263c6684c3d0ab82e3872a2b79.dir
+      md5: 54fc2c66d767f4714825471c82c0ed78.dir
       size: 443407514
       nfiles: 7
     - path: scripts/predict.py
@@ -2137,8 +2158,8 @@ stages:
     outs:
     - path: output/predict_no_codons
       hash: md5
-      md5: 6cb33b639e767cdf81a5f96d47eb30c7.dir
-      size: 48621
+      md5: 9c4d8d6dda22e5a947acfb2ba9179411.dir
+      size: 63129
       nfiles: 2
   predict@0:
     cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_mfe/best_spearmanr/
@@ -2153,7 +2174,7 @@ stages:
       nfiles: 3
     - path: output/ftModel_no_mfe/best_spearmanr
       hash: md5
-      md5: b571a4eca8e34a12c8bca233ead451b9.dir
+      md5: e5f2ee55437131629f5ff0ba2d825356.dir
       size: 443470987
       nfiles: 7
     - path: scripts/predict.py
@@ -2197,26 +2218,25 @@ stages:
     outs:
     - path: output/predict_no_mfe
       hash: md5
-      md5: 3518ad0c62475e4d33249bbba892cda9.dir
-      size: 68843
+      md5: fb61977804b63b5161aaf9fecab07198.dir
+      size: 60380
       nfiles: 2
   predict@5:
-    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
-      --data_dir output/data/decay --output_dir output/predict --scaler output/ftModel/best_spearmanr/scaler.joblib
-      $( if [ -n "" ]; then echo "--label "; fi) $(if [ -n "output/data/codons/extraFeatures.csv"
-      ]; then echo "--extraFeatures output/data/codons/extraFeatures.csv"; fi) --mfe
-      output/data/codons/vienna_features.csv
+    cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_seq_only/best_spearmanr/
+      --data_dir output/data/decay --output_dir output/predict_seq_only --scaler output/ftModel_seq_only/best_spearmanr/scaler.joblib
+      $( if [ -n "_seq_only" ]; then echo "--label _seq_only"; fi) $(if [ -n "" ];
+      then echo "--extraFeatures "; fi) '
     deps:
     - path: output/data/decay
       hash: md5
       md5: b20ee60bfc13a9c94438f227943ad9b9.dir
       size: 4345349
       nfiles: 3
-    - path: output/ftModel/best_spearmanr
+    - path: output/ftModel_seq_only/best_spearmanr
       hash: md5
-      md5: 593bcf0494837c98f4e57d031c8faa65.dir
-      size: 443472067
-      nfiles: 7
+      md5: bab1b671717ed3fa72bb0d05a01a0b34.dir
+      size: 443399083
+      nfiles: 6
     - path: scripts/predict.py
       hash: md5
       md5: 22a040ed8c29074fe1073345c157290d
@@ -2256,10 +2276,10 @@ stages:
           do_predict: true
           do_visualize: false
     outs:
-    - path: output/predict
+    - path: output/predict_seq_only
       hash: md5
-      md5: 7319524188fbae8bd43353ca3fffe182.dir
-      size: 62796
+      md5: 95c1d92ac8ecfee13a9138d2d549a177.dir
+      size: 61914
       nfiles: 2
   ablate_features@3:
     cmd: "python scripts/ablate_features.py --input_file output/data/codons/extraFeatures.csv
@@ -2433,3 +2453,64 @@ stages:
       md5: 5d74eeb6bf1fd537a248fefc28561b52.dir
       size: 1330394195
       nfiles: 22
+  predict@6:
+    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
+      --data_dir output/data/decay --output_dir output/predict --scaler output/ftModel/best_spearmanr/scaler.joblib
+      $( if [ -n "" ]; then echo "--label "; fi) $(if [ -n "output/data/codons/extraFeatures.csv"
+      ]; then echo "--extraFeatures output/data/codons/extraFeatures.csv"; fi) --mfe
+      output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/ftModel/best_spearmanr
+      hash: md5
+      md5: 593bcf0494837c98f4e57d031c8faa65.dir
+      size: 443472067
+      nfiles: 7
+    - path: scripts/predict.py
+      hash: md5
+      md5: 22a040ed8c29074fe1073345c157290d
+      size: 23635
+    params:
+      params.yaml:
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          tokenizer_name: rna4
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          learning_rate: 5e-05
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          weight_decay: 0.01
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+          curriculumLearning: false
+        predict:
+          output_dir: output/predict
+          do_train: false
+          do_eval: false
+          do_predict: true
+          do_visualize: false
+    outs:
+    - path: output/predict
+      hash: md5
+      md5: 7319524188fbae8bd43353ca3fffe182.dir
+      size: 62796
+      nfiles: 2
