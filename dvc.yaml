@@ -454,39 +454,43 @@ stages:
         cache: false
 
   compileLSGKM_SVR:
-    cmd: bash scripts/compile_lsgkm_svr.sh ${preprocessData.output_dir}
-    deps:
-    - scripts/detect_cuda.sh
-    - scripts/compile_lsgkm_svr.sh
-    - ${preprocessData.output_dir}/train.fasta
+    cmd:
+      MAX_LEN=$(wc -L ${preprocessData.output_dir}/train.fasta | cut -d' ' -f1) &&
+      sed -i "s/#define MAX_SEQ_LENGTH \d+/#define MAX_SEQ_LENGTH $MAX_LEN/" lsgkm-svr/src/libsvm_gkm.h &&
+      cd lsgkm-svr/src &&
+      make &&
+      cd ../.. 
     outs:
     - lsgkm-svr/src/gkmtrain:
         cache: false
 
-  prepCovariates:
-    cmd:
+#  prepCovariates:
+#    cmd:
+#      mkdir -p ${trainSVM.outprefix} && 
+#      cat ${preprocessData.output_dir}/train.fasta ${preprocessData.output_dir}/dev.fasta > ${trainSVM.outprefix}/train_dev.fasta &&
+#      sed -i 's/U/T/g' ${trainSVM.outprefix}/train_dev.fasta &&
+#      awk '/^>/ {print substr($0,2)}' ${trainSVM.outprefix}/train_dev.fasta | cut -d' ' -f1 > ${trainSVM.outprefix}.seqlabels.txt &&
+#      python scripts/prepCovariates.py 
+#        --data_dir ${trainSVM.outprefix}/train_dev.fasta
+#        --covariates ${getDecayResiduals.extraFeatures} 
+#        --output_file ${trainSVM.outprefix}/covariates.tsv
+#    deps:
+#    - scripts/prepCovariates.py
+#    - ${getDecayResiduals.extraFeatures}
+#    - ${preprocessData.output_dir}/train.fasta
+#    outs:
+#    - ${trainSVM.outprefix}/covariates.tsv
+
+  trainSVM:
+    #NOTE - all the ',' will be converted to 'A' by lsgkm-svr
+    cmd: 
       mkdir -p ${trainSVM.outprefix} && 
       cat ${preprocessData.output_dir}/train.fasta ${preprocessData.output_dir}/dev.fasta > ${trainSVM.outprefix}/train_dev.fasta &&
       sed -i 's/U/T/g' ${trainSVM.outprefix}/train_dev.fasta &&
-      head -n 400 ${trainSVM.outprefix}/train_dev.fasta > ${trainSVM.outprefix}/train_dev.fasta.tmp && mv ${trainSVM.outprefix}/train_dev.fasta.tmp ${trainSVM.outprefix}/train_dev.fasta &&
       awk '/^>/ {print substr($0,2)}' ${trainSVM.outprefix}/train_dev.fasta | cut -d' ' -f1 > ${trainSVM.outprefix}.seqlabels.txt &&
-      python scripts/prepCovariates.py 
-        --data_dir ${trainSVM.outprefix}/train_dev.fasta
-        --covariates ${getDecayResiduals.extraFeatures} 
-        --output_file ${trainSVM.outprefix}/covariates.tsv
+      lsgkm-svr/src/gkmtrain -y 3 -m ${trainSVM.mem} -T ${trainSVM.threads} ${trainSVM.outprefix}/train_dev.fasta ${trainSVM.outprefix}.seqlabels.txt ${trainSVM.outprefix}
+      #&& lsgkm-svr/src/gkmtrain -y 3 -x ${trainSVM.x_foldCV} -m ${trainSVM.mem} -T ${trainSVM.threads} ${trainSVM.outprefix}/train_dev.fasta ${trainSVM.outprefix}.seqlabels.txt ${trainSVM.outprefix}
     deps:
-    - scripts/prepCovariates.py
-    - ${getDecayResiduals.extraFeatures}
-    - ${preprocessData.output_dir}/train.fasta
-    outs:
-    - ${trainSVM.outprefix}/covariates.tsv
-
-  trainSVM:
-    cmd: bash scripts/train_svm.sh ${trainSVM.outprefix} ${trainSVM.mem} ${trainSVM.threads}
-    deps:
-    - scripts/detect_cuda.sh
-    - scripts/train_svm.sh
-    - ${trainSVM.outprefix}/covariates.tsv
     - ${preprocessData.output_dir}
     - lsgkm-svr/src/gkmtrain
     outs:
@@ -495,23 +499,33 @@ stages:
     - trainSVM
 
   SVMpredict:
-    cmd: bash scripts/predict_svm.sh ${preprocessData.output_dir}/test.fasta ${trainSVM.outprefix}.model.txt ${trainSVM.outprefix} ${trainSVM.threads} ${SVMpredict.output_file}
-    deps:
-    - scripts/detect_cuda.sh
-    - scripts/predict_svm.sh
-    - ${trainSVM.outprefix}.model.txt
-    outs:
-    - ${trainSVM.outprefix}_predictions.tsv
-    params:
-    - SVMpredict
+    foreach:
+    - train_dev
+    - test
+    do:
+    #NOTE - all the ',' will be converted to 'A' by lsgkm-svr
+      cmd: 
+        if [ '${item}' == 'test' ]; then sed 's/U/T/g' ${preprocessData.output_dir}/test.fasta > ${trainSVM.outprefix}/test.fasta; fi &&
+        lsgkm-svr/src/gkmpredict -T ${trainSVM.threads} ${trainSVM.outprefix}/${item}.fasta ${trainSVM.outprefix}.model.txt ${trainSVM.outprefix}_${item}_${SVMpredict.output_file}
+      deps:
+      - ${trainSVM.outprefix}.model.txt
+      outs:
+      - ${trainSVM.outprefix}_${item}_${SVMpredict.output_file}
+      params:
+      - SVMpredict
 
   SVMmetrics:
-    cmd: python scripts/calculateMetrics.py ${trainSVM.outprefix}_predictions.tsv
-      ${trainSVM.outprefix}_predictions_metrics.txt
-    deps:
-    - ${trainSVM.outprefix}_predictions.tsv
-    outs:
-    - ${trainSVM.outprefix}_predictions_metrics.txt
+    foreach:
+    - train_dev
+    - test
+    do:
+      cmd: python scripts/calculateMetrics.py ${trainSVM.outprefix}_${item}_${SVMpredict.output_file}
+        ${trainSVM.outprefix}_${item}_predictions_metrics.txt
+      deps:
+      - ${trainSVM.outprefix}_${item}_${SVMpredict.output_file}
+      outs:
+      - ${trainSVM.outprefix}_${item}_predictions_metrics.txt
+      - ${trainSVM.outprefix}_${item}_scatter_plot.png
 
 plots:
 - dvclive/decayPrediction/plots/images

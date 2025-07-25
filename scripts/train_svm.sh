@@ -19,7 +19,7 @@ THREADS="$3"
 # Required files
 TRAIN_DEV_FASTA="${OUTPREFIX}/train_dev.fasta"
 SEQLABELS="${OUTPREFIX}.seqlabels.txt"
-COVARIATES="${OUTPREFIX}/covariates.tsv"
+#COVARIATES="${OUTPREFIX}/covariates.tsv"
 
 # Check if required files exist
 if [ ! -f "$TRAIN_DEV_FASTA" ]; then
@@ -32,10 +32,10 @@ if [ ! -f "$SEQLABELS" ]; then
     exit 1
 fi
 
-if [ ! -f "$COVARIATES" ]; then
-    echo "Error: covariates.tsv not found at $COVARIATES"
-    exit 1
-fi
+#if [ ! -f "$COVARIATES" ]; then
+#    echo "Error: covariates.tsv not found at $COVARIATES"
+#    exit 1
+#fi
 
 if [ ! -f "lsgkm-svr/src/gkmtrain" ]; then
     echo "Error: gkmtrain executable not found. Please run compileLSGKM_SVR stage first."
@@ -60,19 +60,19 @@ echo "  - Memory: ${MEMORY}GB"
 echo "  - Threads: ${THREADS}"
 echo "  - Input FASTA: ${TRAIN_DEV_FASTA}"
 echo "  - Labels: ${SEQLABELS}"
-echo "  - Covariates: ${COVARIATES}"
+#echo "  - Covariates: ${COVARIATES}"
 echo "  - Output prefix: ${OUTPREFIX}"
 
 lsgkm-svr/src/gkmtrain \
     -y 3 \
     -m ${MEMORY} \
     -T ${THREADS} \
-    -N \
-    -t 7 \
+    #-N \
+    #-t 7 \
     ${TRAIN_DEV_FASTA} \
     ${SEQLABELS} \
     ${OUTPREFIX} \
-    ${COVARIATES}
+    #${COVARIATES}
 
 # Verify the model was created
 if [ -f "${OUTPREFIX}.model.txt" ]; then
