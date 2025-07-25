@@ -1,0 +1,3 @@
+[submodule "lsgkm-svr"]
+	path = lsgkm-svr
+	url = https://github.com/braselog/lsgkm-svr.git

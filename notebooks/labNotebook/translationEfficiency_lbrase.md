@@ -163,7 +163,7 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
-  <summary><B>2025.07.07 - </B></summary>
+  <summary><B>2025.07.07 - 5v3 UTR variability analysis, motif hits (RNP4F, MOD), RBP co-occurrence study</B></summary>
 
 - Look at the variability in each of the components to determine which one has the most impact on the prediction.
   - sequence: 0.1201
@@ -250,7 +250,7 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
-  <summary><B>2025.07.10 - </B></summary>
+  <summary><B>2025.07.10 - thoughts on what to do next</B></summary>
 
 - What to do next:
   - [ ] review the motif hits
@@ -262,7 +262,7 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
-  <summary><B>2025.07.11 - </B></summary>
+  <summary><B>2025.07.11 - motif co-occurrence analysis using FIMO, comparing highLow vs LLM_SHAP methods</B></summary>
 
 - I have been attempting to run a co-occurrence analysis on the predicted motifs, but was running into issues. I ended up running the data through a FIMO analysis to get the exact locations of the motifs that way i could exclude instances where the secondary motif was competing for the same location. [exploreRNP4F.ipynb](../../notebooks/explorativeJupyterNotebooks/exploreRNP4F.ipynb)
 
@@ -321,6 +321,44 @@ For now I will use the transcript level expression data that I have from Mike to
 
 - Look into SVR (SVM regression) as the non neural network model to compare results to. 
   - I previously used [lsgkm](https://github.com/Dongwon-Lee/lsgkm) for the RBP binding site prediction, but because TE is a regression task I will use [lsgkm-SVR](https://github.com/kundajelab/lsgkm-svr) as it is the SVR extension of the lsgkm package. 
+
+</details>
+
+<details>
+  <summary><B>2025.07.17 - SVR</B></summary>
+
+- I got the SVR model working, but I realize that I need to use the same features as the LLM model to make a fair comparison. This means I need to include the extra features (GC content, MFE, UTR length, codon frequencies) in the SVR model. This will unfortunately mean that i will than have hyper parameters to tune, so a cross-validation will be required. Once I have the code working, it shouldn't take too long to run, but it is much more complicated that I was originally hoping for.
+  - Fork the [lsgkm-SVR](https://github.com/kundajelab/lsgkm-svr) repository 
+  - add my forked repository as the submodule to the project instead of the original.
+    - ```git submodule set-url lsgkm-svr https://github.com/braselog/lsgkm-svr.git```
+  - modify the code to include the additional features.
+  - commit and push the changes to my forked repository.
+  - update the submodule in the main project to point to my forked repository.
+    - ```git add lsgkm-svr```
+- I used copilot to help with the code modifications. I gave this instruction:
+  - > I need to extend this lsgkm-svr tool to accept covariates. We should use the gkm kernel to process the sequences, but add in an rbf kernel to handle the covariates. We will then use multiple kernel learning (MKL) to optimize the weights used for combinding the kernels during training. 
+  - [README describing the changes](../../lsgkm-svr/MKL_README.md)
+
+</details>
+
+<details>
+  <summary><B>2025.07.18 - SVR model training</B></summary>
+
+- Apparently, the RBF kernel is very slow to calculate, so I tried to have copilot add in GPU acceleration. I'm not sure it worked. It was taking the same amount of time when using the GPU or the CPU. I tried a run anyway and it was supposed to take around 12-16 hours. The run failed after 12 hours. 
+
+  > INFO 2025-07-19 04:05:00: Large batch (5152), processing in adaptive chunks (optimal: 1000)  
+    INFO 2025-07-19 04:05:00: Kernel matrix computation: 100.0% complete (26543104/26543104)  
+    INFO 2025-07-19 04:05:00: Starting MKL weight optimization...  
+    INFO 2025-07-19 04:05:00: MKL iter 0: obj=0.000517, gkm_weight=0.0000, rbf_weight=1.0000  
+    INFO 2025-07-19 04:05:00: MKL converged at iteration 1  
+    INFO 2025-07-19 04:05:00: MKL optimization finished: gkm_weight=0.0000, rbf_weight=1.0000  
+    INFO 2025-07-19 04:05:00: begin SVM training  
+    INFO 2025-07-19 04:05:00: GPU acceleration enabled for RBF kernel computation  
+    INFO 2025-07-19 04:05:00: GPU acceleration enabled for RBF kernel computation  
+    INFO 2025-07-19 04:05:01: Large batch (5152), processing in adaptive chunks (optimal: 1000)  
+    scripts/train_svm.sh: line 75: 3286282 Segmentation fault      (core dumped) lsgkm-svr/src/gkmtrain -y 3 -m ${MEMORY} -T ${THREADS} -N -t 7 ${TRAIN_DEV_FASTA} ${SEQLABELS} ${OUTPREFIX} ${COVARIATES}  
+
+- I think I will just run the LLM without the additional features [issue5](https://github.com/ManchesterBioinference/mRNA_LLM/issues/5) and compare the SVR run to that model's performance.
 
 </details>
 
@@ -393,7 +431,3 @@ For now I will use the transcript level expression data that I have from Mike to
 
 <details>
   <summary><B>2025.07.</B></summary>
-
--
-
-</details>

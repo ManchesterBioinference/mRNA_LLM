@@ -182,7 +182,10 @@ runAME_highLowDecay:
   output_dir: ame_output
 
 trainSVM:
-  outprefix: output/svm
+  outprefix: output/svm/svm
+  mem: 20000 #in MB = 20 GB
+  x_foldCV: 5
+  threads: 5
 
 SVMpredict:
   output_file: predictions.tsv
