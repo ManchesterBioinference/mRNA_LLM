@@ -423,11 +423,22 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
-  <summary><B>2025.07.24 - </B></summary>
+  <summary><B>2025.07.25 - codons only MLP classifier</B></summary>
 
--
+- I ran just the codons in the MLP classifier and it performs barely worse than the full LLM model.... Not what we were hoping.
+
+</details>
+
+<details>
+  <summary><B>2025.07.28 - all feature run in MLP classifier</B></summary>
+
+- After seeing how well the codons only model performed, I decided to run the full feature set in the MLP classifier to see if those few extra features would bring the MLP up to the full LLM model performance. If so, then the sequences are not adding much to the accuracy of the model. Interesting that changing up the sequences can have such a big impact on the model performance then. Maybe the full model is using the sequences for prediction, but they are not necessary. That the high level sequence features are sufficient. That would imply that the sequences are redundant. they do contain information, but nothing new compared to the extra features. 
 
 </details>
 
 <details>
   <summary><B>2025.07.</B></summary>
+
+-
+
+</details>

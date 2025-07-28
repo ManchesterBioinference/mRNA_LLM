@@ -10,7 +10,7 @@
 #####################################################
 source ~/.bashrc
 conda activate inseq
-~/.local/share/mamba/bin/dvc repro predict # visualizeImportance #runViennaRNA #
+~/.local/share/mamba/bin/dvc repro -s -f codonOnlyClassificationMLP # visualizeImportance #runViennaRNA #
 # ~/.local/share/mamba/bin/dvc repro fineTuneModel # visualizeImportance #runViennaRNA #
 # ~/.local/share/mamba/bin/git add -u
 # ~/.local/share/mamba/bin/git commit -m "(ablations) default - all extra features included"

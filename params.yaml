@@ -208,3 +208,19 @@ runMAST:
 runTOMTOM:
   output_dir: output/tomtom_out
   motif_file: data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+
+codonOnlyClassificationMLP:
+  output_dir: output/codonOnlyClassificationMLP
+  item: codonOnly
+  patience: 3
+  per_device_batch_size: 48
+  num_train_epochs: 100
+  learning_rate: 1e-5
+
+allExtraFeaturesClassificationMLP:
+  output_dir: output/codonOnlyClassificationMLP
+  item: allExtraFeatures
+  patience: 3
+  per_device_batch_size: 48
+  num_train_epochs: 100
+  learning_rate: 5e-6

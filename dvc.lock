@@ -2683,3 +2683,100 @@ stages:
       hash: md5
       md5: 123ec61e2e69814d90775bb379feb3cb
       size: 334540
+  codonOnlyClassificationMLP:
+    cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
+      output/data/decay --output_dir output/codonOnlyClassificationMLP/codonOnly --extraFeatures
+      output/data/codons/extraFeatures.csv --label codonOnly
+    deps:
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: scripts/codonOnlyClassificationMLP.py
+      hash: md5
+      md5: d9cebb1fec3138c43d40501fcc53472c
+      size: 16574
+    params:
+      params.yaml:
+        codonOnlyClassificationMLP:
+          output_dir: output/codonOnlyClassificationMLP
+          item: codonOnly
+          patience: 3
+          per_device_batch_size: 48
+          num_train_epochs: 100
+          learning_rate: 1e-05
+    outs:
+    - path: output/codonOnlyClassificationMLP/codonOnly/best_spearmanr
+      hash: md5
+      md5: 66f635ca3962f7dfd2ab3bf7beb31cdf.dir
+      size: 71117
+      nfiles: 4
+  codonOnlyClassificationMLP@codonOnly:
+    cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
+      output/data/decay --output_dir output/codonOnlyClassificationMLP/codonOnly --extraFeatures
+      output/data/codons/extraFeatures.csv --label codonOnly
+    deps:
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: scripts/codonOnlyClassificationMLP.py
+      hash: md5
+      md5: 441e192c3b9b2c1f2e8cf68c9eb976c3
+      size: 16166
+    params:
+      params.yaml:
+        codonOnlyClassificationMLP:
+          output_dir: output/codonOnlyClassificationMLP
+          patience: 3
+          per_device_batch_size: 48
+          num_train_epochs: 100
+          learning_rate: 1e-05
+    outs:
+    - path: output/codonOnlyClassificationMLP/codonOnly/best_spearmanr
+      hash: md5
+      md5: a1c7e25f0d19d8720518a873707a9e1a.dir
+      size: 71053
+      nfiles: 4
+  codonOnlyClassificationMLP@allExtraFeatures:
+    cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
+      output/data/decay --output_dir output/codonOnlyClassificationMLP/allExtraFeatures
+      --extraFeatures output/data/codons/extraFeatures.csv --label allExtraFeatures
+    deps:
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: scripts/codonOnlyClassificationMLP.py
+      hash: md5
+      md5: 441e192c3b9b2c1f2e8cf68c9eb976c3
+      size: 16166
+    params:
+      params.yaml:
+        codonOnlyClassificationMLP:
+          output_dir: output/codonOnlyClassificationMLP
+          patience: 3
+          per_device_batch_size: 48
+          num_train_epochs: 100
+          learning_rate: 1e-05
+    outs:
+    - path: output/codonOnlyClassificationMLP/allExtraFeatures/best_spearmanr
+      hash: md5
+      md5: 84bc935cfc82bfb4cec55b439c4f63ed.dir
+      size: 77517
+      nfiles: 4
