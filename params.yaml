@@ -225,7 +225,7 @@ allExtraFeaturesClassificationMLP:
   patience: 7
   per_device_batch_size: 48
   num_train_epochs: 100
-  learning_rate: 1e-4
+  learning_rate: 5e-4
   weight_decay: 0.03
-  dropout_percent: 0.3
+  dropout_percent: 0.8
   #seed: 41

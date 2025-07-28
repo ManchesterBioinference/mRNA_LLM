@@ -662,16 +662,16 @@ plots:
 - dvclive/codonOnlyClassificationMLP/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/plots/images
-- dvclive/codonOnlyClassificationMLP/allExtraFeatures/plots/metrics:
-    x: step
-- dvclive/codonOnlyClassificationMLP/allExtraFeatures/plots/images
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/images
+- dvclive/codonOnlyClassificationMLP/allExtraFeatures/plots/metrics:
+    x: step
+- dvclive/codonOnlyClassificationMLP/allExtraFeatures/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
 - dvclive/TE/metrics.json
 - dvclive/codonOnlyClassificationMLP/metrics.json
-- dvclive/codonOnlyClassificationMLP/allExtraFeatures/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly/metrics.json
+- dvclive/codonOnlyClassificationMLP/allExtraFeatures/metrics.json

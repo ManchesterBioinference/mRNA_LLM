@@ -2808,12 +2808,12 @@ stages:
           patience: 7
           per_device_batch_size: 48
           num_train_epochs: 100
-          learning_rate: 0.0001
+          learning_rate: 0.0005
           weight_decay: 0.03
-          dropout_percent: 0.3
+          dropout_percent: 0.8
     outs:
     - path: output/codonOnlyClassificationMLP/allExtraFeatures/best_spearmanr
       hash: md5
-      md5: 1c85342d164fe9de71cd1f4108ddc6be.dir
+      md5: f1e15b29ca7b64e01fcc5a5cbb95cf5f.dir
       size: 77581
       nfiles: 4
