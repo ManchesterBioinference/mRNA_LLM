@@ -297,6 +297,7 @@ def main():
         model.eval()
         val_preds = None
         val_labels = None
+        val_loss = 0.0
         val_batches = len(extraFeatures['dev']) // batch_size + (1 if len(extraFeatures['dev']) % batch_size > 0 else 0)
         with torch.no_grad():
             for batch_idx in range(val_batches):
@@ -307,7 +308,8 @@ def main():
 
                 outputs = model(batch_features, labels=batch_labels)
                 val_logits = outputs.logits
-                val_loss = outputs.loss
+                loss = outputs.loss
+                val_loss += loss.item()
 
                 if val_preds is None:
                     val_preds = val_logits.detach().cpu().numpy()
@@ -316,6 +318,8 @@ def main():
                     val_preds = np.append(val_preds, val_logits.detach().cpu().numpy(), axis=0)
                     val_labels = np.append(val_labels, batch_labels.detach().cpu().numpy(), axis=0)
 
+        val_loss /= val_batches
+        live.log_metric('val/loss', val_loss)
         val_preds = np.squeeze(val_preds)
         val_results = compute_metrics('sts-b', val_preds, val_labels)
         for key, value in val_results.items():
