@@ -2709,11 +2709,11 @@ stages:
           patience: 3
           per_device_batch_size: 48
           num_train_epochs: 100
-          learning_rate: 1e-05
+          learning_rate: 5e-05
     outs:
     - path: output/codonOnlyClassificationMLP/codonOnly/best_spearmanr
       hash: md5
-      md5: 66f635ca3962f7dfd2ab3bf7beb31cdf.dir
+      md5: 43c55d6139be5cac5c07812e4cbd5e79.dir
       size: 71117
       nfiles: 4
   codonOnlyClassificationMLP@codonOnly:

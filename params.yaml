@@ -215,7 +215,7 @@ codonOnlyClassificationMLP:
   patience: 3
   per_device_batch_size: 48
   num_train_epochs: 100
-  learning_rate: 1e-5
+  learning_rate: 5e-5
 
 allExtraFeaturesClassificationMLP:
   output_dir: output/codonOnlyClassificationMLP
