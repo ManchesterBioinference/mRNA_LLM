@@ -2709,14 +2709,14 @@ stages:
           patience: 7
           per_device_batch_size: 48
           num_train_epochs: 100
-          learning_rate: 0.0001
+          learning_rate: 0.0005
           weight_decay: 0.03
-          dropout_percent: 0.7
+          dropout_percent: 0.75
     outs:
     - path: output/codonOnlyClassificationMLP/codonOnly/best_spearmanr
       hash: md5
-      md5: c2f0751ca58476f8b0398c1c4a23dba6.dir
-      size: 71181
+      md5: 2757c50418c14f103fca830d15dfc2ee.dir
+      size: 71182
       nfiles: 4
   codonOnlyClassificationMLP@codonOnly:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
