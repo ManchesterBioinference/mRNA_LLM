@@ -212,10 +212,12 @@ runTOMTOM:
 codonOnlyClassificationMLP:
   output_dir: output/codonOnlyClassificationMLP
   item: codonOnly
-  patience: 3
+  patience: 7
   per_device_batch_size: 48
   num_train_epochs: 100
-  learning_rate: 5e-5
+  learning_rate: 1e-4
+  weight_decay: 0.03
+  dropout_percent: 0.7
 
 allExtraFeaturesClassificationMLP:
   output_dir: output/codonOnlyClassificationMLP
