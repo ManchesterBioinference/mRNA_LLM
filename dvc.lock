@@ -2780,3 +2780,36 @@ stages:
       md5: 84bc935cfc82bfb4cec55b439c4f63ed.dir
       size: 77517
       nfiles: 4
+  allExtraFeaturesClassificationMLP:
+    cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
+      output/data/decay --output_dir output/codonOnlyClassificationMLP/allExtraFeatures
+      --extraFeatures output/data/codons/extraFeatures.csv --label allExtraFeatures
+    deps:
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: scripts/codonOnlyClassificationMLP.py
+      hash: md5
+      md5: d9cebb1fec3138c43d40501fcc53472c
+      size: 16574
+    params:
+      params.yaml:
+        allExtraFeaturesClassificationMLP:
+          output_dir: output/codonOnlyClassificationMLP
+          item: allExtraFeatures
+          patience: 3
+          per_device_batch_size: 48
+          num_train_epochs: 100
+          learning_rate: 5e-06
+    outs:
+    - path: output/codonOnlyClassificationMLP/allExtraFeatures/best_spearmanr
+      hash: md5
+      md5: 7a618b3e2fa29b709cd8c25e36e8b54d.dir
+      size: 77517
+      nfiles: 4
