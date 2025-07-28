@@ -144,6 +144,8 @@ parser.add_argument("--num_train_epochs", type=int, default=50, help="Number of 
 parser.add_argument("--per_device_batch_size", type=int, default=48, help="Batch size for training")
 parser.add_argument("--learning_rate", type=float, default=5e-5, help="Learning rate for the optimizer")
 parser.add_argument("--patience", type=int, default=5, help="Patience for early stopping")
+parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay for the optimizer")
+parser.add_argument("--dropout_percent", type=float, default=0.01, help="Dropout percentage for the model")
 parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
 
 args = parser.parse_known_args()[0]
@@ -152,7 +154,7 @@ args = parser.parse_known_args()[0]
 if args.params:
     with open(args.params, 'r') as file:
         yaml_params = yaml.safe_load(file)
-        for key, value in yaml_params['codonOnlyClassificationMLP'].items():
+        for key, value in yaml_params[args.label+'ClassificationMLP'].items():
             parser.set_defaults(**{key: value})
 
 args = parser.parse_args()
@@ -231,10 +233,11 @@ def main():
     model = myClassifier(
         num_extra_features=extraFeatures['train'].shape[1],
         num_labels=1,  # Assuming regression task
+        dropout_percent=args.dropout_percent,
     )
 
     # set up optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
 
     # set up training loop
     num_epochs = args.num_train_epochs
