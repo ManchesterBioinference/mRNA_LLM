@@ -223,4 +223,5 @@ allExtraFeaturesClassificationMLP:
   patience: 3
   per_device_batch_size: 48
   num_train_epochs: 100
-  learning_rate: 5e-6
+  learning_rate: 1e-6
+  seed: 41
