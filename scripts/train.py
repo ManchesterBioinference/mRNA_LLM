@@ -192,11 +192,42 @@ def train(args, train_dataset, model, tokenizer, extraFeatures=None, scaler=None
 
     no_decay = ["bias", "LayerNorm.weight"]
     optimizer_grouped_parameters = [
+        # Non-classifier parameters with weight decay (e.g., BERT layers)
         {
-            "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+            "params": [
+                p for n, p in model.named_parameters() 
+                if not any(nd in n for nd in no_decay) and not (n.startswith("classifier") or n.startswith("extraFeaturesProjector"))
+            ],
             "weight_decay": args.weight_decay,
+            "lr": args.learning_rate,  # Slower LR for BERT (e.g., 2e-5)
         },
-        {"params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], "weight_decay": 0.0},
+        # Non-classifier parameters without weight decay (e.g., biases, layer norm)
+        {
+            "params": [
+                p for n, p in model.named_parameters() 
+                if any(nd in n for nd in no_decay) and not (n.startswith("classifier") or n.startswith("extraFeaturesProjector"))
+            ],
+            "weight_decay": 0.0,
+            "lr": args.learning_rate,  # Slower LR for BERT
+        },
+        # Classifier parameters with weight decay
+        {
+            "params": [
+                p for n, p in model.named_parameters() 
+                if not any(nd in n for nd in no_decay) and (n.startswith("classifier") or n.startswith("extraFeaturesProjector"))
+            ],
+            "weight_decay": args.classifier_decay,  # From your tested classifier setup
+            "lr": args.classifier_lr,  # Faster LR for classifier
+        },
+        # Classifier parameters without weight decay (e.g., biases)
+        {
+            "params": [
+                p for n, p in model.named_parameters() 
+                if any(nd in n for nd in no_decay) and (n.startswith("classifier") or n.startswith("extraFeaturesProjector"))
+            ],
+            "weight_decay": 0.0,
+            "lr": args.classifier_lr,  # Faster LR for classifier
+        },
     ]
 
     warmup_steps = args.warmup_steps if args.warmup_percent == 0 else int(args.warmup_percent * t_total)
@@ -609,14 +640,17 @@ def main():
     parser.add_argument("--numEpochsBeforeEarlyStopping", default=10, type=int, help="Number of epochs to wait before tracking validation early stopping.",)
     parser.add_argument("--patience", default=5, type=int, help="Number of epochs to wait before validation early stopping is triggered.",)
     parser.add_argument("--learning_rate", default=5e-5, type=float, help="The initial learning rate for Adam.")
+    parser.add_argument("--classifier_lr", default=5e-4, type=float, help="The initial classifier learning rate for Adam.")
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1, help="Number of updates steps to accumulate before performing a backward/update pass.",)
     parser.add_argument("--weight_decay", default=0.0, type=float, help="Weight decay if we apply some.")
+    parser.add_argument("--classifier_weight_decay", default=0.1, type=float, help="Weight decay for classifier.")
     parser.add_argument("--adam_epsilon", default=1e-8, type=float, help="Epsilon for Adam optimizer.")
     parser.add_argument("--beta1", default=0.9, type=float, help="Beta1 for Adam optimizer.")
     parser.add_argument("--beta2", default=0.999, type=float, help="Beta2 for Adam optimizer.")
     parser.add_argument("--max_grad_norm", default=1.0, type=float, help="Max gradient norm.")
     parser.add_argument("--attention_probs_dropout_prob", default=0.1, type=float, help="Dropout rate of attention.")
     parser.add_argument("--hidden_dropout_prob", default=0.1, type=float, help="Dropout rate of intermediate layer.")
+    parser.add_argument("--projector_dropout", default=0.1, type=float, help="Dropout rate of extra features projector.")
     parser.add_argument("--classifier_dropout_prob", default=0.1, type=float, help="Dropout rate of classification head.")
     parser.add_argument("--num_train_epochs", default=3.0, type=float, help="Total number of training epochs to perform.",)
     parser.add_argument("--max_steps", default=-1, type=int, help="If > 0: set total number of training steps to perform. Override num_train_epochs.",)
@@ -827,7 +861,7 @@ def main():
     if not args.do_visualize: 
         model_path = args.model_name_or_path if args.model_name_or_path else 'AIRI-Institute/gena-lm-bert-base-fly'
         try:
-            model = GenaLMWithExtraFeatures(model_path, num_extra_features=num_extra_features,classifier_dropout_prob=args.classifier_dropout_prob)
+            model = GenaLMWithExtraFeatures(model_path, num_extra_features=num_extra_features,projector_dropout=args.projector_dropout, classifier_dropout_prob=args.classifier_dropout_prob)
             logger.info(f"Model initialized from {model_path} with num_extra_features: {num_extra_features}")
         except Exception as e:
             logger.error(f"Failed to initialize model from {model_path}: {e}")

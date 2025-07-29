@@ -9,18 +9,27 @@ import os
 import json
 
 class GenaLMWithExtraFeatures(nn.Module):
-    def __init__(self, base_model_name, num_extra_features=0, num_labels=1, dropout_percent=0.1, max_length=512, classifier_dropout_prob=0.1):
+    def __init__(self, base_model_name, num_extra_features=0, num_labels=1, dropout_percent=0.1, max_length=512, projector_dropout = None, classifier_dropout_prob=None):
         super(GenaLMWithExtraFeatures, self).__init__()
         self.model = AutoModel.from_pretrained(base_model_name, trust_remote_code=True).bert
         self.num_extra_features = num_extra_features # This will now include MFE
         self.num_labels = num_labels
         self.dropout_percent = dropout_percent
+        self.projector_dropout = projector_dropout
+        if classifier_dropout_prob is None:
+            classifier_dropout_prob = dropout_percent
         self.classifier_dropout_prob = classifier_dropout_prob
         self.device = next(self.parameters()).device
         self.max_length = max_length
 
         self.dropout = nn.Dropout(self.dropout_percent)
-        # self.classifier = nn.Linear(self.model.config.hidden_size + self.num_extra_features, self.num_labels) #regression
+        if self.projector_dropout is not None:
+            self.extraFeaturesProjector = nn.Sequential(
+                nn.Linear(self.num_extra_features, self.num_extra_features),
+                nn.ReLU(),
+                nn.Dropout(self.projector_dropout),
+                nn.Linear(self.num_extra_features, self.num_extra_features)
+            )
         self.classifier = nn.Sequential(
             nn.Linear(self.model.config.hidden_size + self.num_extra_features, 256),
             nn.ReLU(),
@@ -55,6 +64,8 @@ class GenaLMWithExtraFeatures(nn.Module):
             # Ensure extra_features is 2D: [batch_size, num_extra_features]
             if extra_features.ndim == 1:
                 extra_features = extra_features.unsqueeze(1)
+            if self.projector_dropout is not None:
+                extra_features = self.extraFeaturesProjector(extra_features)
             pooled_output = torch.cat((pooled_output, extra_features), dim=1)
 
         logits = self.classifier(pooled_output)
@@ -97,6 +108,7 @@ class GenaLMWithExtraFeatures(nn.Module):
             "num_labels": self.num_labels,
             "num_extra_features": self.num_extra_features, # Ensure this is saved correctly
             "dropout_percent": self.dropout_percent,
+            "projector_dropout": self.projector_dropout,
             "classifier_dropout_prob": self.classifier_dropout_prob,
             "max_length": self.max_length
         }
@@ -127,7 +139,8 @@ class GenaLMWithExtraFeatures(nn.Module):
             num_extra_features=config["num_extra_features"], # Ensure this is loaded correctly
             num_labels=config["num_labels"],
             dropout_percent=config["dropout_percent"],
-            classifier_dropout_prob=config["classifier_dropout_prob"],
+            projector_dropout=config["projector_dropout"] if "projector_dropout" in config else None,
+            classifier_dropout_prob=config["classifier_dropout_prob"] if "classifier_dropout_prob" in config else None,
             max_length=config["max_length"]
         )
         
