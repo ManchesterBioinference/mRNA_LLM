@@ -224,7 +224,7 @@ stages:
           tokenizer_name: rna4
           evaluate_during_training: true
           do_visualize_during_training: false
-          projector_dropout: 0.7
+          projector_dropout: 0.6
           classifier_dropout_prob: 0.1
           learning_rate: 5e-05
           classifier_lr: 0.0005
@@ -233,7 +233,7 @@ stages:
           per_gpu_eval_batch_size: 48
           num_train_epochs: 50
           weight_decay: 0.01
-          classifier_decay: 0.03
+          classifier_decay: 0.02
           warmup_percent: 0.1
           seed: 6
           eval_all_checkpoints: false
@@ -250,8 +250,8 @@ stages:
     outs:
     - path: output/ftModel
       hash: md5
-      md5: d5efac51c2c779c635f77670ea605392.dir
-      size: 2216450893
+      md5: d5956dd65be67dc0bb6301c23c5f44bd.dir
+      size: 2216451327
       nfiles: 24
   predict:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
