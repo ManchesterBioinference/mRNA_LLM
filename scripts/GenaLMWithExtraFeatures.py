@@ -9,12 +9,13 @@ import os
 import json
 
 class GenaLMWithExtraFeatures(nn.Module):
-    def __init__(self, base_model_name, num_extra_features=0, num_labels=1, dropout_percent=0.1, max_length=512):
+    def __init__(self, base_model_name, num_extra_features=0, num_labels=1, dropout_percent=0.1, max_length=512, classifier_dropout_prob=0.1):
         super(GenaLMWithExtraFeatures, self).__init__()
         self.model = AutoModel.from_pretrained(base_model_name, trust_remote_code=True).bert
         self.num_extra_features = num_extra_features # This will now include MFE
         self.num_labels = num_labels
         self.dropout_percent = dropout_percent
+        self.classifier_dropout_prob = classifier_dropout_prob
         self.device = next(self.parameters()).device
         self.max_length = max_length
 
@@ -23,7 +24,7 @@ class GenaLMWithExtraFeatures(nn.Module):
         self.classifier = nn.Sequential(
             nn.Linear(self.model.config.hidden_size + self.num_extra_features, 256),
             nn.ReLU(),
-            nn.Dropout(self.dropout_percent),
+            nn.Dropout(self.classifier_dropout_prob),
             nn.Linear(256, self.num_labels)
         )
 
@@ -96,6 +97,7 @@ class GenaLMWithExtraFeatures(nn.Module):
             "num_labels": self.num_labels,
             "num_extra_features": self.num_extra_features, # Ensure this is saved correctly
             "dropout_percent": self.dropout_percent,
+            "classifier_dropout_prob": self.classifier_dropout_prob,
             "max_length": self.max_length
         }
         
@@ -125,6 +127,7 @@ class GenaLMWithExtraFeatures(nn.Module):
             num_extra_features=config["num_extra_features"], # Ensure this is loaded correctly
             num_labels=config["num_labels"],
             dropout_percent=config["dropout_percent"],
+            classifier_dropout_prob=config["classifier_dropout_prob"],
             max_length=config["max_length"]
         )
         

@@ -1,16 +1,16 @@
 #!/bin/bash --login
 
 #SBATCH -p gpuL #multicore #
-#SBATCH -G 1
+#SBATCH -G 2
 #SBATCH -n 4
-#SBATCH -t 1:00:00
+#SBATCH -t 2:00:00
 
 #####################################################
 ### run command
 #####################################################
 source ~/.bashrc
 conda activate inseq
-~/.local/share/mamba/bin/dvc repro -s -f codonOnlyClassificationMLP # visualizeImportance #runViennaRNA #
+~/.local/share/mamba/bin/dvc repro -s fineTuneModel # visualizeImportance #runViennaRNA #
 # ~/.local/share/mamba/bin/dvc repro fineTuneModel # visualizeImportance #runViennaRNA #
 # ~/.local/share/mamba/bin/git add -u
 # ~/.local/share/mamba/bin/git commit -m "(ablations) default - all extra features included"

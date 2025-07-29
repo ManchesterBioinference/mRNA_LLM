@@ -616,7 +616,8 @@ def main():
     parser.add_argument("--beta2", default=0.999, type=float, help="Beta2 for Adam optimizer.")
     parser.add_argument("--max_grad_norm", default=1.0, type=float, help="Max gradient norm.")
     parser.add_argument("--attention_probs_dropout_prob", default=0.1, type=float, help="Dropout rate of attention.")
-    parser.add_argument("--hidden_dropout_prob", default=0.1, type=float, help="Dropout rate of intermidiete layer.")
+    parser.add_argument("--hidden_dropout_prob", default=0.1, type=float, help="Dropout rate of intermediate layer.")
+    parser.add_argument("--classifier_dropout_prob", default=0.1, type=float, help="Dropout rate of classification head.")
     parser.add_argument("--num_train_epochs", default=3.0, type=float, help="Total number of training epochs to perform.",)
     parser.add_argument("--max_steps", default=-1, type=int, help="If > 0: set total number of training steps to perform. Override num_train_epochs.",)
     parser.add_argument("--warmup_steps", default=0, type=int, help="Linear warmup over warmup_steps.")
@@ -826,7 +827,7 @@ def main():
     if not args.do_visualize: 
         model_path = args.model_name_or_path if args.model_name_or_path else 'AIRI-Institute/gena-lm-bert-base-fly'
         try:
-            model = GenaLMWithExtraFeatures(model_path, num_extra_features=num_extra_features)
+            model = GenaLMWithExtraFeatures(model_path, num_extra_features=num_extra_features,classifier_dropout_prob=args.classifier_dropout_prob)
             logger.info(f"Model initialized from {model_path} with num_extra_features: {num_extra_features}")
         except Exception as e:
             logger.error(f"Failed to initialize model from {model_path}: {e}")

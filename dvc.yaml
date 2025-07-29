@@ -656,9 +656,6 @@ plots:
     x: step
 - dvclive/decay/plots/images
 - dvclive/findMotifs/plots/images
-- dvclive/TE/plots/metrics:
-    x: step
-- dvclive/TE/plots/images
 - dvclive/codonOnlyClassificationMLP/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/plots/images
@@ -668,10 +665,13 @@ plots:
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/images
+- dvclive/TE/plots/metrics:
+    x: step
+- dvclive/TE/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
-- dvclive/TE/metrics.json
 - dvclive/codonOnlyClassificationMLP/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly/metrics.json
+- dvclive/TE/metrics.json
