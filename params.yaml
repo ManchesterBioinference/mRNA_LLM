@@ -140,7 +140,7 @@ rayTune:
   ray_tune_reduction_factor: 2
   ray_tune_cpu_per_trial: 2
   ray_tune_gpu_per_trial: 1.0
-  ray_tune_local_dir: ./ray_results
+  ray_tune_local_dir: output/ray_results
   train_final_model: true
 
 importanceAnalysis:

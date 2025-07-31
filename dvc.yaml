@@ -141,10 +141,13 @@ stages:
     outs:
     - ${fineTuneModel.output_dir}:
         persist: true
+    - ${rayTune.ray_tune_local_dir}:
+        persist: true
     # - ${preprocessData.output_dir}_cache
     params:
     - fineTuneModel
     - modelParams
+    - rayTune
 
   ablate_features:
     foreach:

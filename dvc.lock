@@ -247,7 +247,22 @@ stages:
           overwrite_cache: false
           do_lower_case: false
           curriculumLearning: false
+        rayTune:
+          use_ray_tune: true
+          ray_tune_samples: 50
+          ray_tune_max_epochs: 50
+          ray_tune_grace_period: 3
+          ray_tune_reduction_factor: 2
+          ray_tune_cpu_per_trial: 2
+          ray_tune_gpu_per_trial: 1.0
+          ray_tune_local_dir: ./output/ray_results
+          train_final_model: true
     outs:
+    - path: ./output/ray_results
+      hash: md5
+      md5: 81f23469dc44a98100c977b9d285013e.dir
+      size: 3672473
+      nfiles: 676
     - path: output/ftModel
       hash: md5
       md5: f02a9f8ecd0c13fef5c8dc009637ef0c.dir
