@@ -37,6 +37,14 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, Tenso
 from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
 
+# Ray Tune imports
+import ray
+import ray.air
+from ray import tune
+from ray.tune.schedulers import ASHAScheduler
+from ray.tune.search.hyperopt import HyperOptSearch
+from hyperopt import hp
+
 from data_loaders import load_and_cache_examples_3utr as load_and_cache_examples
 from data_loaders import visualize 
 
@@ -602,6 +610,8 @@ def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False, extraF
 
     return results
 
+
+
 def main():
 # %%
     parser = argparse.ArgumentParser()
@@ -616,7 +626,7 @@ def main():
     parser.add_argument("--model_name_or_path", default=None, type=str, help="Path to pre-trained model or shortcut name selected in the list",)
     parser.add_argument("--task_name", default='rnaprom', type=str, help="Script only prepared for promoter task" )
     parser.add_argument("--output_dir", default=None, type=str, help="The output directory where the model predictions and checkpoints will be written.",)
-    parser.add_argument("--tokenizer_name",default="rna3",type=str, help="Pretrained tokenizer name or path if not the same as model_name",)
+    parser.add_argument("--tokenizer_name",default=None,type=str, help="Pretrained tokenizer name or path if not the same as model_name",)
 
     # OBJECTIVE
     parser.add_argument("--do_train", action="store_true", help="Whether to run training.")
@@ -675,7 +685,17 @@ def main():
     parser.add_argument("--max_n_segments", type=int, default=None, help="Maximun number of segments to include from long input.",)
     parser.add_argument("--curriculumLearning", default=False,  help="Whether or not to apply curriculum training.",)
     
-
+    # Ray Tune arguments
+    parser.add_argument("--use_ray_tune", action="store_true", help="Use Ray Tune for hyperparameter optimization.")
+    parser.add_argument("--ray_tune_samples", type=int, default=20, help="Number of Ray Tune trials to run.")
+    parser.add_argument("--ray_tune_max_epochs", type=int, default=10, help="Maximum epochs for Ray Tune ASHA scheduler.")
+    parser.add_argument("--ray_tune_grace_period", type=int, default=1, help="Minimum epochs before early stopping in ASHA.")
+    parser.add_argument("--ray_tune_reduction_factor", type=int, default=2, help="Reduction factor for ASHA scheduler.")
+    parser.add_argument("--ray_tune_cpu_per_trial", type=int, default=2, help="Number of CPUs per Ray Tune trial.")
+    parser.add_argument("--ray_tune_gpu_per_trial", type=float, default=1.0, help="Number of GPUs per Ray Tune trial.")
+    parser.add_argument("--ray_tune_local_dir", type=str, default="./ray_results", help="Local directory for Ray Tune results.")
+    parser.add_argument("--train_final_model", action="store_true", help="Train a final model with the best Ray Tune configuration.")
+    
 
     # OTHER
     parser.add_argument("--cache_dir", default="", type=str, help="Where do you want to store the pre-trained models downloaded from s3",)
@@ -694,7 +714,7 @@ def main():
                 parser.set_defaults(**{key: value})
             for key, value in yaml_params['modelParams'].items():
                 parser.set_defaults(**{key: value})
-            for key, value in yaml_params['RMT'].items():
+            for key, value in yaml_params['rayTune'].items():
                 parser.set_defaults(**{key: value})
 
     args = parser.parse_args()
@@ -880,50 +900,648 @@ def main():
 
     # TRAIN  -----------------------------------------------------------------------------------------------------
     if args.do_train:
-        if model is None: 
-            raise ValueError("Model not initialized. Cannot proceed with training. Check --do_visualize flag or model loading steps.")
-
-        labels, seqs, atten_masks, tr_ids = load_data(args, tokenizer)
-        tr_ids_str = [str(tid) for tid in tr_ids] # Ensure tr_ids from load_data are strings for matching
-
-        if extraFeatures_df is not None:
-            # Ensure extraFeatures_df index is string type for matching
-            if not pd.api.types.is_string_dtype(extraFeatures_df.index):
-                 extraFeatures_df.index = extraFeatures_df.index.astype(str)
-
-            # Filter extraFeatures_df to include only rows relevant to the current tr_ids for fitting the scaler
-            extraFeatures_train_subset = extraFeatures_df[extraFeatures_df.index.isin(tr_ids_str)]
+        if args.use_ray_tune:
+            # Ray Tune hyperparameter optimization
+            logger.info("Starting Ray Tune hyperparameter optimization...")
             
-            if not extraFeatures_train_subset.empty:
-                logger.info(f"Fitting scaler on training subset of extra features (shape: {extraFeatures_train_subset.shape}).")
-                scaler = StandardScaler()
-                scaler.fit(extraFeatures_train_subset)
-                # Transform the entire extraFeatures_df using the fitted scaler
-                logger.info("Applying scaler to the entire extra features DataFrame.")
-                scaled_values = scaler.transform(extraFeatures_df) # transform expects numpy array or df with same columns
-                extraFeatures_df = pd.DataFrame(scaled_values, columns=extraFeatures_df.columns, index=extraFeatures_df.index)
-            else:
-                logger.warning("No overlapping transcript IDs found between loaded training data and extra features for scaling. Scaler not fitted. Extra features might not be scaled or used effectively.")
-        
-        # Create tr_ids_index for the TensorDataset
-        current_split_ef_indices = []
-        if extraFeatures_df is not None:
-            ef_index_list_str = extraFeatures_df.index.tolist() # Already ensured to be string
-
-            for tr_id_str_val in tr_ids_str: # Use stringified tr_ids from current split
+            # Initialize Ray
+            ray.init(ignore_reinit_error=True)
+            
+            # Define the trainable function locally to avoid serialization issues
+            def ray_tune_trainable(config, base_args_dict=None, extraFeatures_dict=None, num_extra_features=0):
+                """
+                Ray Tune trainable function that will be optimized.
+                All inputs are now basic Python types for serialization.
+                """
+                # Import required libraries inside the function to avoid issues with multiprocessing
+                import torch
+                import logging
+                import pandas as pd
+                import argparse
+                import os
+                import random
+                from transformers import AutoTokenizer, AdamW, get_linear_schedule_with_warmup
+                from GenaLMWithExtraFeatures import GenaLMWithExtraFeatures
+                from sklearn.preprocessing import StandardScaler
+                from torch.utils.data import DataLoader, RandomSampler, TensorDataset
+                from data_loaders import load_and_cache_examples_3utr as load_and_cache_examples
+                from __init__ import glue_compute_metrics as compute_metrics
+                import numpy as np
+                from tqdm import tqdm
+                from ray import tune
+                
+                # Create a NEW logger instance inside the function to avoid serialization issues
                 try:
-                    current_split_ef_indices.append(ef_index_list_str.index(tr_id_str_val))
-                except ValueError:
-                    logger.error(f"Training: Transcript ID '{tr_id_str_val}' from training data not found in extraFeatures_df index. This sample will be problematic.")
-                    raise ValueError(f"Transcript ID '{tr_id_str_val}' not found in extraFeatures_df index during training data preparation.")
-            tr_ids_index = torch.tensor(current_split_ef_indices, dtype=torch.long)
-        else: 
-            tr_ids_index = torch.zeros_like(labels, dtype=torch.long) 
-        
-        train_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs), labels, tr_ids_index)
-        global_step, tr_loss = train(args, train_dataset, model, tokenizer, extraFeatures=extraFeatures_df, scaler=scaler)
-        logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
-        live.end()
+                    trial_id = tune.get_trial_id()
+                except:
+                    trial_id = f"trial_{random.randint(1000, 9999)}"
+                
+                logger = logging.getLogger(f"ray_tune_{trial_id}")
+                logger.setLevel(logging.INFO)
+                
+                # Remove any existing handlers to avoid conflicts
+                for handler in logger.handlers[:]:
+                    logger.removeHandler(handler)
+                
+                # Add a simple console handler (no file handles)
+                console_handler = logging.StreamHandler()
+                console_handler.setLevel(logging.INFO)
+                formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                console_handler.setFormatter(formatter)
+                logger.addHandler(console_handler)
+
+                # Reconstruct args from dictionary
+                args = argparse.Namespace(**base_args_dict)
+
+                # Reconstruct extraFeatures_df from dictionary
+                if extraFeatures_dict is not None:
+                    data_dict = extraFeatures_dict['data']
+                    index = extraFeatures_dict['index']
+                    columns = extraFeatures_dict['columns']
+                    
+                    # Reconstruct DataFrame from split format
+                    extraFeatures_df = pd.DataFrame(
+                        data=data_dict['data'], 
+                        index=data_dict['index'], 
+                        columns=data_dict['columns']
+                    )
+                    
+                    # Ensure index and columns match what we expect
+                    extraFeatures_df.index = index
+                    extraFeatures_df.columns = columns
+                else:
+                    extraFeatures_df = None
+                
+                # Update args with hyperparameters from Ray Tune
+                args.learning_rate = config["bert_lr"]
+                args.classifier_lr = config["classifier_lr"]
+                args.weight_decay = config["bert_weight_decay"]
+                args.classifier_weight_decay = config["classifier_weight_decay"]
+                args.hidden_dropout_prob = config.get("bert_dropout", 0.1)
+                args.attention_probs_dropout_prob = config.get("bert_dropout", 0.1)
+                args.classifier_dropout_prob = config["classifier_dropout"]
+                args.projector_dropout = config.get("projector_dropout", 0.1)
+                args.adam_epsilon = config.get("adam_epsilon", 1e-8)
+                args.beta1 = config.get("adam_beta1", 0.9)
+                args.beta2 = config.get("adam_beta2", 0.999)
+                args.num_train_epochs = config.get("num_epochs", 3)
+                
+                # Create unique output directory for this trial
+                try:
+                    trial_name = tune.get_trial_id()
+                except:
+                    trial_name = f"trial_{random.randint(1000, 9999)}"
+                args.output_dir = os.path.join(base_args_dict['output_dir'], "ray_tune_trials", trial_name)
+                
+                # Disable visualization and some logging for faster training
+                args.do_visualize_during_training = False
+                args.save_steps = -1  # Disable checkpoint saving during tuning
+                args.logging_steps = 1000
+                args.evaluate_during_training = True
+                
+                # Set device
+                device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
+                args.device = device
+                args.n_gpu = torch.cuda.device_count() if torch.cuda.is_available() else 0
+                
+                # Load tokenizer
+                tokenizer_path = args.tokenizer_name if args.tokenizer_name else 'AIRI-Institute/gena-lm-bert-base-fly'
+                try:
+                    tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
+                except Exception as e:
+                    logger.error(f"Failed to load tokenizer from {tokenizer_path}: {e}")
+                    tokenizer = AutoTokenizer.from_pretrained('AIRI-Institute/gena-lm-bert-base-fly')
+                
+                # Initialize model
+                model_path = args.model_name_or_path if args.model_name_or_path else 'AIRI-Institute/gena-lm-bert-base-fly'
+                model = GenaLMWithExtraFeatures(
+                    model_path, 
+                    num_extra_features=num_extra_features,
+                    projector_dropout=args.projector_dropout, 
+                    classifier_dropout_prob=args.classifier_dropout_prob
+                )
+                model.to(args.device)
+                
+                # Prepare data - need to redefine load_data here to avoid global scope issues
+                def load_data_local(args, tokenizer, test_run=False, split='train.fasta'):
+                    from Bio import SeqIO
+                    data = list(SeqIO.parse(os.path.join(args.data_dir, split), 'fasta'))
+                    labels = []
+                    seqs = []
+                    attention_masks = []
+                    tr_ids = []
+                    for record in data:
+                        utr5, utr3 = record.seq.split(',')
+                        utr5 = tokenizer.encode(str(utr5).replace('U',"T"), add_special_tokens=True)
+                        utr3 = tokenizer.encode(str(utr3).replace('U',"T"), add_special_tokens=True) #, max_length=args.max_seq_length-len(utr5)+1, pad_to_max_length=False, truncation=True)
+                        s = utr5 + utr3[1:]
+                        if len(s) < 10 or len(s) > args.max_seq_length:
+                            continue
+                        am = [1] * len(s) + [0] * (args.max_seq_length - len(s))
+                        # pad s to max_seq_length
+                        s = s + [tokenizer.pad_token_id]*(args.max_seq_length-len(s))
+                        if s not in seqs: # prevent duplicates
+                            seqs.append(s)
+                            attention_masks.append(am)
+                            labels.append(float(record.id))
+                            tr_ids.append(record.description.split(' ')[1])
+
+                    return torch.tensor(labels), torch.tensor(seqs), torch.tensor(attention_masks), tr_ids
+                
+                labels, seqs, atten_masks, tr_ids = load_data_local(args, tokenizer)
+                tr_ids_str = [str(tid) for tid in tr_ids]
+                
+                scaler = None
+                if extraFeatures_df is not None:
+                    # Ensure extraFeatures_df index is string type for matching
+                    if not pd.api.types.is_string_dtype(extraFeatures_df.index):
+                        extraFeatures_df.index = extraFeatures_df.index.astype(str)
+
+                    # Filter extraFeatures_df to include only rows relevant to the current tr_ids for fitting the scaler
+                    extraFeatures_train_subset = extraFeatures_df[extraFeatures_df.index.isin(tr_ids_str)]
+                    
+                    if not extraFeatures_train_subset.empty:
+                        scaler = StandardScaler()
+                        scaler.fit(extraFeatures_train_subset)
+                        # Transform the entire extraFeatures_df using the fitted scaler
+                        scaled_values = scaler.transform(extraFeatures_df)
+                        extraFeatures_df = pd.DataFrame(scaled_values, columns=extraFeatures_df.columns, index=extraFeatures_df.index)
+                
+                # Create tr_ids_index for the TensorDataset
+                current_split_ef_indices = []
+                if extraFeatures_df is not None:
+                    ef_index_list_str = extraFeatures_df.index.tolist()
+                    for tr_id_str_val in tr_ids_str:
+                        try:
+                            current_split_ef_indices.append(ef_index_list_str.index(tr_id_str_val))
+                        except ValueError:
+                            logger.error(f"Training: Transcript ID '{tr_id_str_val}' from training data not found in extraFeatures_df index.")
+                            raise ValueError(f"Transcript ID '{tr_id_str_val}' not found in extraFeatures_df index during training data preparation.")
+                    tr_ids_index = torch.tensor(current_split_ef_indices, dtype=torch.long)
+                else: 
+                    tr_ids_index = torch.zeros_like(labels, dtype=torch.long)
+                
+                train_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs), labels, tr_ids_index)
+                
+                # Local evaluate function to avoid global scope issues
+                def evaluate_local(args, model, tokenizer, evaluate=True, val=False, extraFeatures=None):
+                    results = {}
+                    # Load validation data
+                    labels, seqs, atten_masks, tr_ids_raw = load_data_local(args, tokenizer, split='dev.fasta')
+                    tr_ids = [str(tid) for tid in tr_ids_raw]
+
+                    # Create tr_ids_index for the evaluation dataset
+                    if extraFeatures is not None:
+                        # Ensure extraFeatures index is string for matching
+                        if not pd.api.types.is_string_dtype(extraFeatures.index):
+                            extraFeatures.index = extraFeatures.index.astype(str)
+                            
+                        eval_tr_ids_index_list = []
+                        ef_index_list_str = extraFeatures.index.tolist()
+                        for tr_id_str_val in tr_ids:
+                            try:
+                                eval_tr_ids_index_list.append(ef_index_list_str.index(tr_id_str_val))
+                            except ValueError:
+                                logger.error(f"Evaluation: Transcript ID '{tr_id_str_val}' from dev split not found in extraFeatures index.")
+                                raise ValueError(f"Evaluation: Transcript ID '{tr_id_str_val}' not found in extraFeatures index.")
+                        tr_ids_index = torch.tensor(eval_tr_ids_index_list, dtype=torch.long)
+                    else:
+                        tr_ids_index = torch.zeros_like(labels, dtype=torch.long)
+                        
+                    eval_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs), labels, tr_ids_index)
+
+                    args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
+                    from torch.utils.data import SequentialSampler
+                    eval_sampler = SequentialSampler(eval_dataset)
+                    eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size)
+
+                    eval_loss = 0.0
+                    nb_eval_steps = 0
+                    preds = None
+                    out_label_ids = None
+                    
+                    for batch in eval_dataloader:
+                        model.eval()
+                        if extraFeatures is not None:
+                            tmp_extraFeatures = extraFeatures.iloc[[int(x) for x in list(batch[4])]].to_numpy()
+                            tmp_extraFeatures = torch.tensor(tmp_extraFeatures, dtype=torch.float32).to(args.device)
+                        else:
+                            tmp_extraFeatures = None
+
+                        inputs = {"input_ids": batch[0].to(args.device), "attention_mask": batch[1].to(args.device), "labels": batch[3].to(args.device), "extra_features": tmp_extraFeatures}
+
+                        with torch.no_grad():
+                            outputs = model(**inputs)
+                            tmp_eval_loss = outputs['loss']
+                            logits = outputs['logits']
+
+                            eval_loss += tmp_eval_loss.mean().item()
+                        nb_eval_steps += 1
+                        if preds is None:
+                            preds = logits.detach().cpu().numpy()
+                            out_label_ids = inputs["labels"].detach().cpu().numpy()
+                        else:
+                            preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
+                            out_label_ids = np.append(out_label_ids, inputs["labels"].detach().cpu().numpy(), axis=0)
+
+                    preds = np.squeeze(preds)
+                    results = compute_metrics('sts-b', preds, out_label_ids)
+                    results['loss'] = eval_loss / nb_eval_steps
+                    return results
+                
+                # Training function
+                def train_for_tune(args, train_dataset, model, tokenizer, extraFeatures=None, scaler=None):
+                    args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
+                    from torch.utils.data.distributed import DistributedSampler
+                    train_sampler = RandomSampler(train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
+                    train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=args.train_batch_size)
+
+                    if args.max_steps > 0:
+                        t_total = args.max_steps
+                        args.num_train_epochs = args.max_steps // (len(train_dataloader) // args.gradient_accumulation_steps) + 1
+                    else:
+                        t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
+
+                    # Optimizer setup with different learning rates
+                    no_decay = ["bias", "LayerNorm.weight"]
+                    optimizer_grouped_parameters = [
+                        {
+                            "params": [
+                                p for n, p in model.named_parameters() 
+                                if not any(nd in n for nd in no_decay) and not (n.startswith("classifier") or n.startswith("extraFeaturesProjector"))
+                            ],
+                            "weight_decay": args.weight_decay,
+                            "lr": args.learning_rate,
+                        },
+                        {
+                            "params": [
+                                p for n, p in model.named_parameters() 
+                                if any(nd in n for nd in no_decay) and not (n.startswith("classifier") or n.startswith("extraFeaturesProjector"))
+                            ],
+                            "weight_decay": 0.0,
+                            "lr": args.learning_rate,
+                        },
+                        {
+                            "params": [
+                                p for n, p in model.named_parameters() 
+                                if not any(nd in n for nd in no_decay) and (n.startswith("classifier") or n.startswith("extraFeaturesProjector"))
+                            ],
+                            "weight_decay": args.classifier_weight_decay,
+                            "lr": args.classifier_lr,
+                        },
+                        {
+                            "params": [
+                                p for n, p in model.named_parameters() 
+                                if any(nd in n for nd in no_decay) and (n.startswith("classifier") or n.startswith("extraFeaturesProjector"))
+                            ],
+                            "weight_decay": 0.0,
+                            "lr": args.classifier_lr,
+                        },
+                    ]
+
+                    warmup_steps = args.warmup_steps if args.warmup_percent == 0 else int(args.warmup_percent * t_total)
+                    
+                    optimizer = AdamW(
+                        optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon, betas=(args.beta1, args.beta2)
+                    )
+                    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=t_total)
+
+                    # Training loop
+                    model.zero_grad()
+                    best_val_loss = float('inf')
+                    best_val_spearmanr = float('-inf')
+                    
+                    for epoch in range(int(args.num_train_epochs)):
+                        model.train()
+                        epoch_loss = 0.0
+                        num_batches = 0
+                        
+                        for step, batch in enumerate(train_dataloader):
+                            if extraFeatures is not None:
+                                tmp_extraFeatures = extraFeatures.iloc[[int(x) for x in list(batch[4])]].to_numpy()
+                                tmp_extraFeatures = torch.tensor(tmp_extraFeatures, dtype=torch.float32).to(args.device)
+                            else:
+                                tmp_extraFeatures = None
+
+                            inputs = {
+                                "input_ids": batch[0].to(args.device), 
+                                "attention_mask": batch[1].to(args.device), 
+                                "labels": batch[3].to(args.device), 
+                                "extra_features": tmp_extraFeatures
+                            }
+                            outputs = model(**inputs)
+                            loss = outputs['loss']
+
+                            if args.n_gpu > 1:
+                                loss = loss.mean()
+
+                            if args.gradient_accumulation_steps > 1:
+                                loss = loss / args.gradient_accumulation_steps
+
+                            loss.backward()
+                            epoch_loss += loss.item()
+                            num_batches += 1
+
+                            if (step + 1) % args.gradient_accumulation_steps == 0:
+                                torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_norm)
+                                optimizer.step()
+                                scheduler.step()
+                                model.zero_grad()
+
+                        # Evaluate at the end of each epoch
+                        val_results = evaluate_local(args, model, tokenizer, evaluate=False, val=True, extraFeatures=extraFeatures)
+                        val_loss = val_results['loss']
+                        val_spearmanr = val_results['spearmanr']
+                        
+                        # Report metrics to Ray Tune
+                        tune.report({
+                            "loss": val_loss,
+                            "val_spearmanr": val_spearmanr,
+                            "val_pearson": val_results.get('pearson', 0.0),
+                            "train_loss": epoch_loss / num_batches,
+                            "epoch": epoch
+                        })
+                        
+                        # Update best metrics
+                        if val_loss < best_val_loss:
+                            best_val_loss = val_loss
+                        if val_spearmanr > best_val_spearmanr:
+                            best_val_spearmanr = val_spearmanr
+
+                    return best_val_loss, best_val_spearmanr
+
+                # Run training
+                try:
+                    best_loss, best_spearmanr = train_for_tune(args, train_dataset, model, tokenizer, extraFeatures=extraFeatures_df, scaler=scaler)
+                    
+                    # Final report
+                    tune.report({
+                        "loss": best_loss,
+                        "val_spearmanr": best_spearmanr
+                    })
+                except Exception as e:
+                    logger.error(f"Training failed: {e}")
+                    tune.report({
+                        "loss": float('inf'), 
+                        "val_spearmanr": float('-inf')
+                    })
+            
+            # Define search space using Ray Tune syntax for modern API
+            # Ensure all fixed values are properly converted to avoid placeholder issues
+            num_epochs_value = int(float(args.num_train_epochs))  # Ensure it's an integer
+            
+            search_space = {
+                "bert_lr": tune.loguniform(1e-6, 1e-4),  # 1e-6 to 1e-4
+                "classifier_lr": tune.loguniform(1e-5, 1e-3),  # 1e-5 to 1e-3
+                "bert_weight_decay": tune.uniform(0.0, 0.1),  # 0.0 to 0.1
+                "classifier_weight_decay": tune.uniform(0.0, 0.1),  # 0.0 to 0.1
+                "bert_dropout": tune.uniform(0.1, 0.5),  # 0.1 to 0.5
+                "classifier_dropout": tune.uniform(0.1, 0.5),  # 0.1 to 0.5
+                "projector_dropout": tune.uniform(0.1, 0.5),  # 0.1 to 0.5
+                "adam_epsilon": tune.choice([1e-8]),  # Fixed value using tune.choice
+                "adam_beta1": tune.choice([0.9]),  # Fixed value using tune.choice
+                "adam_beta2": tune.choice([0.999]),  # Fixed value using tune.choice
+                "num_epochs": tune.choice([num_epochs_value]),  # Fixed value using tune.choice
+            }
+            
+            # Define ASHA scheduler for early stopping
+            scheduler = ASHAScheduler(
+                max_t=args.ray_tune_max_epochs,
+                grace_period=args.ray_tune_grace_period,
+                reduction_factor=args.ray_tune_reduction_factor
+            )
+            
+            # Define HyperOpt search algorithm for Bayesian optimization
+            search_alg = HyperOptSearch(
+                n_initial_points=3,  # Number of random points before Bayesian optimization starts
+            )
+
+            # Convert non-serializable objects to serializable forms
+            # Only include the specific args we need to avoid serialization issues
+            
+            # Convert relative paths to absolute paths for Ray Tune workers
+            model_path_absolute = args.model_name_or_path
+            if model_path_absolute and not model_path_absolute.startswith(('/', 'AIRI-Institute/', 'microsoft/', 'google/', 'facebook/', 'bert-', 'gpt-', 'openai/')):
+                # Convert relative path to absolute path
+                model_path_absolute = os.path.abspath(model_path_absolute)
+                logger.info(f"Converting relative model path '{args.model_name_or_path}' to absolute path '{model_path_absolute}'")
+            
+            data_dir_absolute = os.path.abspath(args.data_dir) if args.data_dir else args.data_dir
+            output_dir_absolute = os.path.abspath(args.output_dir) if args.output_dir else args.output_dir
+            
+            base_args_dict = {
+                'data_dir': data_dir_absolute,
+                'output_dir': output_dir_absolute,
+                'tokenizer_name': args.tokenizer_name,
+                'model_name_or_path': model_path_absolute,
+                'no_cuda': args.no_cuda,
+                'max_seq_length': args.max_seq_length,
+                'per_gpu_train_batch_size': args.per_gpu_train_batch_size,
+                'per_gpu_eval_batch_size': args.per_gpu_eval_batch_size,
+                'gradient_accumulation_steps': args.gradient_accumulation_steps,
+                'max_grad_norm': args.max_grad_norm,
+                'max_steps': args.max_steps,
+                'warmup_steps': args.warmup_steps,
+                'warmup_percent': args.warmup_percent,
+                'local_rank': args.local_rank,
+                'logging_steps': args.logging_steps,
+                'save_steps': args.save_steps,
+                'train_batch_size': getattr(args, 'train_batch_size', args.per_gpu_train_batch_size),
+                'eval_batch_size': getattr(args, 'eval_batch_size', args.per_gpu_eval_batch_size),
+                'device': getattr(args, 'device', None),
+                'n_gpu': getattr(args, 'n_gpu', 0),
+                # Training parameters that will be overridden by Ray Tune config
+                'learning_rate': args.learning_rate,
+                'classifier_lr': args.classifier_lr,
+                'weight_decay': args.weight_decay,
+                'classifier_weight_decay': args.classifier_weight_decay,
+                'hidden_dropout_prob': args.hidden_dropout_prob,
+                'attention_probs_dropout_prob': args.attention_probs_dropout_prob,
+                'classifier_dropout_prob': args.classifier_dropout_prob,
+                'projector_dropout': args.projector_dropout,
+                'adam_epsilon': args.adam_epsilon,
+                'beta1': args.beta1,
+                'beta2': args.beta2,
+                'num_train_epochs': args.num_train_epochs,
+                'do_visualize_during_training': args.do_visualize_during_training,
+                'evaluate_during_training': args.evaluate_during_training,
+            }
+            
+            # Convert DataFrame to dict if it exists
+            extraFeatures_dict = None
+            if extraFeatures_df is not None:
+                extraFeatures_dict = {
+                    'data': extraFeatures_df.to_dict('split'),  # More robust than default to_dict()
+                    'index': extraFeatures_df.index.tolist(),
+                    'columns': extraFeatures_df.columns.tolist()
+                }
+            
+            # Create the trainable function with serializable parameters
+            trainable_with_data = tune.with_parameters(
+                ray_tune_trainable,
+                base_args_dict=base_args_dict, 
+                extraFeatures_dict=extraFeatures_dict, 
+                num_extra_features=num_extra_features
+            )
+            
+            # Wrap with resource specification
+            trainable_with_resources = tune.with_resources(
+                trainable_with_data,
+                resources={
+                    "cpu": args.ray_tune_cpu_per_trial,
+                    "gpu": args.ray_tune_gpu_per_trial
+                }
+            )
+            
+            # Convert relative path to absolute path for Ray Tune storage
+            ray_tune_storage_path = os.path.abspath(args.ray_tune_local_dir)
+            
+            # Create Tuner with modern API
+            tuner = tune.Tuner(
+                trainable_with_resources,
+                tune_config=tune.TuneConfig(
+                    metric="val_spearmanr",
+                    mode="max",
+                    num_samples=args.ray_tune_samples,
+                    scheduler=scheduler,
+                    search_alg=search_alg,
+                ),
+                param_space=search_space,
+                run_config=ray.air.RunConfig(
+                    name="gena_lm_tune",
+                    storage_path=ray_tune_storage_path,
+                    verbose=1,
+                ),
+            )
+            
+            # Run the hyperparameter search
+            results = tuner.fit()
+            
+            # Get best result from the new API
+            best_result = results.get_best_result(metric="val_spearmanr", mode="max")
+            best_config = best_result.config
+            best_metrics = best_result.metrics
+            
+            logger.info("=" * 50)
+            logger.info("RAY TUNE OPTIMIZATION COMPLETE")
+            logger.info("=" * 50)
+            logger.info(f"Best config: {best_config}")
+            logger.info(f"Best validation Spearman correlation: {best_metrics['val_spearmanr']:.4f}")
+            logger.info(f"Best validation loss: {best_metrics.get('loss', 'N/A')}")
+            
+            # Save results to CSV
+            results_df = results.get_dataframe()
+            results_csv_path = os.path.join(args.output_dir, "ray_tune_results.csv")
+            results_df.to_csv(results_csv_path, index=False)
+            logger.info(f"Ray Tune results saved to: {results_csv_path}")
+            
+            # Save best config to JSON
+            best_config_path = os.path.join(args.output_dir, "best_ray_tune_config.json")
+            with open(best_config_path, 'w') as f:
+                json.dump(best_config, f, indent=2)
+            logger.info(f"Best config saved to: {best_config_path}")
+            
+            # Optionally train a final model with the best configuration
+            if hasattr(args, 'train_final_model') and args.train_final_model:
+                logger.info("Training final model with best configuration...")
+                # Update args with best config
+                args.learning_rate = best_config["bert_lr"]
+                args.classifier_lr = best_config["classifier_lr"]
+                args.weight_decay = best_config["bert_weight_decay"]
+                args.classifier_weight_decay = best_config["classifier_weight_decay"]
+                args.hidden_dropout_prob = best_config.get("bert_dropout", 0.1)
+                args.attention_probs_dropout_prob = best_config.get("bert_dropout", 0.1)
+                args.classifier_dropout_prob = best_config["classifier_dropout"]
+                args.projector_dropout = best_config.get("projector_dropout", 0.1)
+                
+                # Re-initialize model with best config
+                model = GenaLMWithExtraFeatures(
+                    model_path if model_path else 'AIRI-Institute/gena-lm-bert-base-fly', 
+                    num_extra_features=num_extra_features,
+                    projector_dropout=args.projector_dropout, 
+                    classifier_dropout_prob=args.classifier_dropout_prob
+                )
+                model.to(args.device)
+                
+                # Prepare data and train final model
+                labels, seqs, atten_masks, tr_ids = load_data(args, tokenizer)
+                tr_ids_str = [str(tid) for tid in tr_ids]
+                
+                # Prepare extra features and scaler
+                scaler = None
+                if extraFeatures_df is not None:
+                    extraFeatures_train_subset = extraFeatures_df[extraFeatures_df.index.isin(tr_ids_str)]
+                    if not extraFeatures_train_subset.empty:
+                        scaler = StandardScaler()
+                        scaler.fit(extraFeatures_train_subset)
+                        scaled_values = scaler.transform(extraFeatures_df)
+                        extraFeatures_df = pd.DataFrame(scaled_values, columns=extraFeatures_df.columns, index=extraFeatures_df.index)
+                
+                # Create tr_ids_index
+                current_split_ef_indices = []
+                if extraFeatures_df is not None:
+                    ef_index_list_str = extraFeatures_df.index.tolist()
+                    for tr_id_str_val in tr_ids_str:
+                        try:
+                            current_split_ef_indices.append(ef_index_list_str.index(tr_id_str_val))
+                        except ValueError:
+                            raise ValueError(f"Transcript ID '{tr_id_str_val}' not found in extraFeatures_df index during training data preparation.")
+                    tr_ids_index = torch.tensor(current_split_ef_indices, dtype=torch.long)
+                else: 
+                    tr_ids_index = torch.zeros_like(labels, dtype=torch.long)
+                
+                train_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs), labels, tr_ids_index)
+                global_step, tr_loss = train(args, train_dataset, model, tokenizer, extraFeatures=extraFeatures_df, scaler=scaler)
+                logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
+            
+            ray.shutdown()
+            
+        else:
+            # Regular training without Ray Tune
+            if model is None: 
+                raise ValueError("Model not initialized. Cannot proceed with training. Check --do_visualize flag or model loading steps.")
+
+            labels, seqs, atten_masks, tr_ids = load_data(args, tokenizer)
+            tr_ids_str = [str(tid) for tid in tr_ids] # Ensure tr_ids from load_data are strings for matching
+
+            if extraFeatures_df is not None:
+                # Ensure extraFeatures_df index is string type for matching
+                if not pd.api.types.is_string_dtype(extraFeatures_df.index):
+                     extraFeatures_df.index = extraFeatures_df.index.astype(str)
+
+                # Filter extraFeatures_df to include only rows relevant to the current tr_ids for fitting the scaler
+                extraFeatures_train_subset = extraFeatures_df[extraFeatures_df.index.isin(tr_ids_str)]
+                
+                if not extraFeatures_train_subset.empty:
+                    logger.info(f"Fitting scaler on training subset of extra features (shape: {extraFeatures_train_subset.shape}).")
+                    scaler = StandardScaler()
+                    scaler.fit(extraFeatures_train_subset)
+                    # Transform the entire extraFeatures_df using the fitted scaler
+                    logger.info("Applying scaler to the entire extra features DataFrame.")
+                    scaled_values = scaler.transform(extraFeatures_df) # transform expects numpy array or df with same columns
+                    extraFeatures_df = pd.DataFrame(scaled_values, columns=extraFeatures_df.columns, index=extraFeatures_df.index)
+                else:
+                    logger.warning("No overlapping transcript IDs found between loaded training data and extra features for scaling. Scaler not fitted. Extra features might not be scaled or used effectively.")
+            
+            # Create tr_ids_index for the TensorDataset
+            current_split_ef_indices = []
+            if extraFeatures_df is not None:
+                ef_index_list_str = extraFeatures_df.index.tolist() # Already ensured to be string
+
+                for tr_id_str_val in tr_ids_str: # Use stringified tr_ids from current split
+                    try:
+                        current_split_ef_indices.append(ef_index_list_str.index(tr_id_str_val))
+                    except ValueError:
+                        logger.error(f"Training: Transcript ID '{tr_id_str_val}' from training data not found in extraFeatures_df index. This sample will be problematic.")
+                        raise ValueError(f"Transcript ID '{tr_id_str_val}' not found in extraFeatures_df index during training data preparation.")
+                tr_ids_index = torch.tensor(current_split_ef_indices, dtype=torch.long)
+            else: 
+                tr_ids_index = torch.zeros_like(labels, dtype=torch.long) 
+            
+            train_dataset = TensorDataset(seqs, atten_masks, torch.zeros_like(seqs), labels, tr_ids_index)
+            global_step, tr_loss = train(args, train_dataset, model, tokenizer, extraFeatures=extraFeatures_df, scaler=scaler)
+            logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
+            live.end()
     
 
     # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()

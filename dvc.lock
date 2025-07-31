@@ -179,8 +179,9 @@ stages:
       md5: 0a188a05e2bb1b9188ec3258f1e3142c
       size: 442812226
   fineTuneModel:
-    cmd: python scripts/train.py --params params.yaml --model_name_or_path output/flyTrained/best_checkpoint/
-      --max_seq_length 512 --data_dir output/data/decay --extraFeatures output/data/codons/extraFeatures.csv
+    cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && python scripts/train.py --params params.yaml
+      --model_name_or_path output/flyTrained/best_checkpoint/ --max_seq_length 512
+      --data_dir output/data/decay --extraFeatures output/data/codons/extraFeatures.csv
       --mfe output/data/codons/vienna_features.csv
     deps:
     - path: output/data/codons/extraFeatures.csv
@@ -207,8 +208,8 @@ stages:
       size: 6561
     - path: scripts/train.py
       hash: md5
-      md5: 86fc83b0c106abda73119ff584de6e78
-      size: 49398
+      md5: 743275604730294030adc28543050024
+      size: 84046
     params:
       params.yaml:
         fineTuneModel:
@@ -221,7 +222,6 @@ stages:
           model_type: 3utrfly
           task_name: rnadecay
           should_continue: false
-          tokenizer_name: rna4
           evaluate_during_training: true
           do_visualize_during_training: false
           projector_dropout: 0.4
@@ -250,9 +250,9 @@ stages:
     outs:
     - path: output/ftModel
       hash: md5
-      md5: 8d1cbba8f4e697e771082a1d42da451a.dir
-      size: 2216454861
-      nfiles: 24
+      md5: f02a9f8ecd0c13fef5c8dc009637ef0c.dir
+      size: 2216478154
+      nfiles: 26
   predict:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
       --data_dir output/data/decay

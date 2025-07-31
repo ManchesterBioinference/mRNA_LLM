@@ -127,9 +127,10 @@ stages:
     - preprocessFlyUTRs
 
   fineTuneModel:
-    cmd: python scripts/train.py --params params.yaml --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
-      --max_seq_length 512 --data_dir ${preprocessData.output_dir} --extraFeatures
-      ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv}
+    cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && python scripts/train.py --params params.yaml
+      --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/ --max_seq_length
+      512 --data_dir ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
+      --mfe ${runViennaRNA.output_csv}
     deps:
     - scripts/train.py
     - scripts/GenaLMWithExtraFeatures.py

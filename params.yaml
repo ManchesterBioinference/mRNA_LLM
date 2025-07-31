@@ -104,7 +104,6 @@ modelParams:
   model_type: 3utrfly
   task_name: rnadecay
   should_continue: false
-  tokenizer_name: rna4
   evaluate_during_training: true
   do_visualize_during_training: false
   projector_dropout: 0.4
@@ -132,6 +131,17 @@ modelParams:
   overwrite_cache: false
   do_lower_case: false
   curriculumLearning: false
+
+rayTune:
+  use_ray_tune: true
+  ray_tune_samples: 50
+  ray_tune_max_epochs: 50
+  ray_tune_grace_period: 3
+  ray_tune_reduction_factor: 2
+  ray_tune_cpu_per_trial: 2
+  ray_tune_gpu_per_trial: 1.0
+  ray_tune_local_dir: ./ray_results
+  train_final_model: true
 
 importanceAnalysis:
   output_dir: output/importance
