@@ -136,7 +136,7 @@ rayTune:
   use_ray_tune: true
   ray_tune_samples: 50
   ray_tune_max_epochs: 50
-  ray_tune_grace_period: 3
+  ray_tune_grace_period: 4
   ray_tune_reduction_factor: 2
   ray_tune_cpu_per_trial: 2
   ray_tune_gpu_per_trial: 1.0
@@ -225,21 +225,42 @@ runTOMTOM:
 
 codonOnlyClassificationMLP:
   output_dir: output/codonOnlyClassificationMLP
-  item: codonOnly
+  label: codonOnly
   patience: 7
   per_device_batch_size: 48
   num_train_epochs: 100
-  learning_rate: 5e-4
-  weight_decay: 0.03
-  dropout_percent: 0.75
+  #learning_rate: 5e-4
+  #weight_decay: 0.03
+  #dropout_percent: 0.75
 
 allExtraFeaturesClassificationMLP:
   output_dir: output/codonOnlyClassificationMLP
-  item: allExtraFeatures
+  label: allExtraFeatures
   patience: 7
   per_device_batch_size: 48
   num_train_epochs: 100
-  learning_rate: 5e-4
-  weight_decay: 0.03
-  dropout_percent: 0.8
+  #learning_rate: 5e-4
+  #weight_decay: 0.03
+  #dropout_percent: 0.8
   #seed: 41
+
+extraFeaturesAndMotifCountsClassificationMLP:
+  output_dir: output/extraFeaturesAndMotifCountsMLP
+  label: extraFeaturesAndMotifCounts
+  patience: 7
+  per_device_batch_size: 48
+  num_train_epochs: 100
+  #learning_rate: 5e-4
+  #weight_decay: 0.03
+  #dropout_percent: 0.8
+
+rayTuneClassificationMLP:
+  # Ray Tune specific parameters
+  ray_tune_samples: 50           # Number of hyperparameter combinations to try
+  ray_tune_max_epochs: 100        # Maximum epochs per trial
+  ray_tune_grace_period: 5       # Minimum epochs before early stopping
+  ray_tune_reduction_factor: 2   # ASHA scheduler reduction factor
+  ray_tune_cpu_per_trial: 1      # CPUs allocated per trial
+  ray_tune_gpu_per_trial: 0    # GPUs allocated per trial
+  ray_tune_local_dir: "output/ray_results_MLP"  # Directory for Ray Tune results
+  train_final_model: true        # Whether to train final model with best hyperparameters

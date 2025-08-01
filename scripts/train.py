@@ -981,10 +981,10 @@ def main():
                 args.attention_probs_dropout_prob = config.get("bert_dropout", 0.1)
                 args.classifier_dropout_prob = config["classifier_dropout"]
                 args.projector_dropout = config.get("projector_dropout", 0.1)
-                args.adam_epsilon = config.get("adam_epsilon", 1e-8)
-                args.beta1 = config.get("adam_beta1", 0.9)
-                args.beta2 = config.get("adam_beta2", 0.999)
-                args.num_train_epochs = config.get("num_epochs", 3)
+                # args.adam_epsilon = config.get("adam_epsilon", 1e-8)
+                # args.beta1 = config.get("adam_beta1", 0.9)
+                # args.beta2 = config.get("adam_beta2", 0.999)
+                # args.num_train_epochs = config.get("num_epochs", 3)
                 
                 # Create unique output directory for this trial
                 try:
@@ -1253,20 +1253,29 @@ def main():
                         val_loss = val_results['loss']
                         val_spearmanr = val_results['spearmanr']
                         
+                        # Update best metrics
+                        if val_loss < best_val_loss:
+                            best_val_loss = val_loss
+                        if val_spearmanr > best_val_spearmanr:
+                            best_val_spearmanr = val_spearmanr
+                            patience_counter = 0  # Reset patience counter if we improve
+                        else:
+                            patience_counter += 1
+
                         # Report metrics to Ray Tune
                         tune.report({
+                            "best_loss": best_val_loss,
+                            "best_val_spearmanr": best_val_spearmanr,
                             "loss": val_loss,
                             "val_spearmanr": val_spearmanr,
                             "val_pearson": val_results.get('pearson', 0.0),
                             "train_loss": epoch_loss / num_batches,
                             "epoch": epoch
                         })
-                        
-                        # Update best metrics
-                        if val_loss < best_val_loss:
-                            best_val_loss = val_loss
-                        if val_spearmanr > best_val_spearmanr:
-                            best_val_spearmanr = val_spearmanr
+
+                        if patience_counter >= args.patience:
+                            logger.info(f"Early stopping triggered after {patience_counter} epochs without improvement.")
+                            break
 
                     return best_val_loss, best_val_spearmanr
 
@@ -1276,13 +1285,13 @@ def main():
                     
                     # Final report
                     tune.report({
-                        "loss": best_loss,
-                        "val_spearmanr": best_spearmanr
+                        "best_val_loss": best_loss,
+                        "best_val_spearmanr": best_spearmanr
                     })
                 except Exception as e:
                     logger.error(f"Training failed: {e}")
                     tune.report({
-                        "loss": float('inf'), 
+                        "best_val_loss": float('inf'), 
                         "val_spearmanr": float('-inf')
                     })
             
@@ -1297,11 +1306,11 @@ def main():
                 "classifier_weight_decay": tune.uniform(0.0, 0.1),  # 0.0 to 0.1
                 "bert_dropout": tune.uniform(0.1, 0.5),  # 0.1 to 0.5
                 "classifier_dropout": tune.uniform(0.1, 0.5),  # 0.1 to 0.5
-                "projector_dropout": tune.uniform(0.1, 0.5),  # 0.1 to 0.5
-                "adam_epsilon": tune.choice([1e-8]),  # Fixed value using tune.choice
-                "adam_beta1": tune.choice([0.9]),  # Fixed value using tune.choice
-                "adam_beta2": tune.choice([0.999]),  # Fixed value using tune.choice
-                "num_epochs": tune.choice([num_epochs_value]),  # Fixed value using tune.choice
+                "projector_dropout": tune.uniform(0.1, 0.7),  # 0.1 to 0.7
+                # "adam_epsilon": tune.choice([1e-8]),  # Fixed value using tune.choice
+                # "adam_beta1": tune.choice([0.9]),  # Fixed value using tune.choice
+                # "adam_beta2": tune.choice([0.999]),  # Fixed value using tune.choice
+                # "num_epochs": tune.choice([num_epochs_value]),  # Fixed value using tune.choice
             }
             
             # Define ASHA scheduler for early stopping
@@ -1338,6 +1347,7 @@ def main():
                 'max_seq_length': args.max_seq_length,
                 'per_gpu_train_batch_size': args.per_gpu_train_batch_size,
                 'per_gpu_eval_batch_size': args.per_gpu_eval_batch_size,
+                'patience': args.patience,
                 'gradient_accumulation_steps': args.gradient_accumulation_steps,
                 'max_grad_norm': args.max_grad_norm,
                 'max_steps': args.max_steps,
@@ -1400,7 +1410,7 @@ def main():
             tuner = tune.Tuner(
                 trainable_with_resources,
                 tune_config=tune.TuneConfig(
-                    metric="val_spearmanr",
+                    metric="best_val_spearmanr",
                     mode="max",
                     num_samples=args.ray_tune_samples,
                     scheduler=scheduler,
@@ -1418,7 +1428,7 @@ def main():
             results = tuner.fit()
             
             # Get best result from the new API
-            best_result = results.get_best_result(metric="val_spearmanr", mode="max")
+            best_result = results.get_best_result(metric="best_val_spearmanr", mode="max")
             best_config = best_result.config
             best_metrics = best_result.metrics
             
@@ -1426,7 +1436,7 @@ def main():
             logger.info("RAY TUNE OPTIMIZATION COMPLETE")
             logger.info("=" * 50)
             logger.info(f"Best config: {best_config}")
-            logger.info(f"Best validation Spearman correlation: {best_metrics['val_spearmanr']:.4f}")
+            logger.info(f"Best validation Spearman correlation: {best_metrics['best_val_spearmanr']:.4f}")
             logger.info(f"Best validation loss: {best_metrics.get('loss', 'N/A')}")
             
             # Save results to CSV

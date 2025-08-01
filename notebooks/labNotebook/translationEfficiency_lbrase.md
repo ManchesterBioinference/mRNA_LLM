@@ -437,6 +437,37 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
+  <summary><B>2025.07.31 - MLP classifier fine-tuning, full LLM model fine-tuning with ray tune</B></summary>
+
+- The other day, I continued to play with the hyperparameters for the MLP classifier and managed to get them to perform on par with the full LLM model. The biggest trick was to drastically increase the dropout rate (~0.8). 
+
+  ## Train
+  #### Full LLM Model
+  ![Full LLM model](../../dvclive/TE/plots/images/val_predictions_vs_true_labels_4.png)
+  #### All Extra Features
+  ![MLP all extra features](../../dvclive/codonOnlyClassificationMLP/allExtraFeatures/plots/images/val/predictions_vs_true_labels_55.png)
+  #### Codons Only
+  ![MLP codons only](../../dvclive/codonOnlyClassificationMLP/codonOnly/plots/images/val/predictions_vs_true_labels_28.png)
+
+  ## Test
+  #### Full LLM Model
+  ![Full LLM model](../../output/predict/predictions_vs_true_labels.png)
+  #### All Extra Features
+  ![MLP all extra features](../../dvclive/codonOnlyClassificationMLP/allExtraFeatures/plots/images/test/predictions_vs_true_labels_63.png)
+  #### Codons Only
+  ![MLP codons only](../../dvclive/codonOnlyClassificationMLP/codonOnly/plots/images/test/predictions_vs_true_labels_36.png)
+
+- This made me wonder if the LLM model would also benefit from a higher dropout rate in just the classifier portion of the model.
+- Changes to the full LLM model:
+  - I added a projection layer between the extra features and the classifier to ensure that the extra features are the same distribution as the sequence features.
+  - I also added flags to change the learning rate, dropout rate, and linear decay rate for the classifier separately from the rest of the model.
+    - this drastically increased the number of hyperparameters to tune, so I used [Ray Tune](https://docs.ray.io/en/latest/tune/index.html) to help with the hyperparameter tuning. It took a long time to get working, but it is now in place.
+- Ray Tune
+  - I got the first run completed, but i noticed after some investigation that it was looking at the val_spearmanr of the very last epoch instead of the best epoch. This is not what I want and could have influenced the selection of the best hyperparameters. I set up a new run using the 'best_val_spearmanr' metric to guide the selection of the best hyperparameters.
+
+</details>
+
+<details>
   <summary><B>2025.07.</B></summary>
 
 -

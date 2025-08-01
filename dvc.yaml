@@ -627,30 +627,52 @@ stages:
 
   codonOnlyClassificationMLP:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
-      ${preprocessData.output_dir} --output_dir ${codonOnlyClassificationMLP.output_dir}/${codonOnlyClassificationMLP.item}
-      --extraFeatures ${getDecayResiduals.extraFeatures} --label ${codonOnlyClassificationMLP.item}
+      ${preprocessData.output_dir} --output_dir ${codonOnlyClassificationMLP.output_dir}/${codonOnlyClassificationMLP.label}
+      --extraFeatures ${getDecayResiduals.extraFeatures} --label ${codonOnlyClassificationMLP.label}
     deps:
     - scripts/codonOnlyClassificationMLP.py
     - ${preprocessData.output_dir}
     - ${getDecayResiduals.extraFeatures}
     outs:
-    - ${codonOnlyClassificationMLP.output_dir}/${codonOnlyClassificationMLP.item}/best_spearmanr
+    - ${codonOnlyClassificationMLP.output_dir}/${codonOnlyClassificationMLP.label}/best_spearmanr
+    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${codonOnlyClassificationMLP.label}:
+        persist: true
     params:
     - codonOnlyClassificationMLP
 
   allExtraFeaturesClassificationMLP:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
       ${preprocessData.output_dir} --output_dir 
-      ${codonOnlyClassificationMLP.output_dir}/${allExtraFeaturesClassificationMLP.item}
-      --extraFeatures ${getDecayResiduals.extraFeatures} --label ${allExtraFeaturesClassificationMLP.item}
+      ${codonOnlyClassificationMLP.output_dir}/${allExtraFeaturesClassificationMLP.label}
+      --extraFeatures ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv} --label ${allExtraFeaturesClassificationMLP.label}
     deps:
     - scripts/codonOnlyClassificationMLP.py
     - ${preprocessData.output_dir}
     - ${getDecayResiduals.extraFeatures}
+    - ${runViennaRNA.output_csv}
     outs:
-    - ${codonOnlyClassificationMLP.output_dir}/${allExtraFeaturesClassificationMLP.item}/best_spearmanr
+    - ${codonOnlyClassificationMLP.output_dir}/${allExtraFeaturesClassificationMLP.label}/best_spearmanr
+    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${allExtraFeaturesClassificationMLP.label}:
+        persist: true
     params:
     - allExtraFeaturesClassificationMLP
+
+  extraFeaturesAndMotifCountsClassificationMLP:
+    cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml
+      --data_dir ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
+      --mfe ${runViennaRNA.output_csv} --mastResults ${runMAST.output_dir}/${runMAST.output_file}
+      --output_dir ${extraFeaturesAndMotifCountsClassificationMLP.output_dir} --label ${extraFeaturesAndMotifCountsClassificationMLP.label}
+    deps:
+    - scripts/codonOnlyClassificationMLP.py
+    - ${preprocessData.output_dir}
+    - ${getDecayResiduals.extraFeatures}
+    - ${runViennaRNA.output_csv}
+    outs:
+    - ${extraFeaturesAndMotifCountsClassificationMLP.output_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}/best_spearmanr
+    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}:
+        persist: true
+    params:
+    - extraFeaturesAndMotifCountsClassificationMLP
 
 plots:
 - dvclive/decayPrediction/plots/images
