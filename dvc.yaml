@@ -635,8 +635,7 @@ stages:
     - ${getDecayResiduals.extraFeatures}
     outs:
     - ${codonOnlyClassificationMLP.output_dir}/${codonOnlyClassificationMLP.label}/best_spearmanr
-    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${codonOnlyClassificationMLP.label}:
-        persist: true
+    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${codonOnlyClassificationMLP.label}
     params:
     - codonOnlyClassificationMLP
 
@@ -644,7 +643,8 @@ stages:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
       ${preprocessData.output_dir} --output_dir 
       ${codonOnlyClassificationMLP.output_dir}/${allExtraFeaturesClassificationMLP.label}
-      --extraFeatures ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv} --label ${allExtraFeaturesClassificationMLP.label}
+      --extraFeatures ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv}
+      --label ${allExtraFeaturesClassificationMLP.label}
     deps:
     - scripts/codonOnlyClassificationMLP.py
     - ${preprocessData.output_dir}
@@ -652,25 +652,25 @@ stages:
     - ${runViennaRNA.output_csv}
     outs:
     - ${codonOnlyClassificationMLP.output_dir}/${allExtraFeaturesClassificationMLP.label}/best_spearmanr
-    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${allExtraFeaturesClassificationMLP.label}:
-        persist: true
+    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${allExtraFeaturesClassificationMLP.label}
     params:
     - allExtraFeaturesClassificationMLP
 
   extraFeaturesAndMotifCountsClassificationMLP:
-    cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml
-      --data_dir ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
+    cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
+      ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
       --mfe ${runViennaRNA.output_csv} --mastResults ${runMAST.output_dir}/${runMAST.output_file}
-      --output_dir ${extraFeaturesAndMotifCountsClassificationMLP.output_dir} --label ${extraFeaturesAndMotifCountsClassificationMLP.label}
+      --output_dir 
+      ${codonOnlyClassificationMLP.output_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}
+      --label ${extraFeaturesAndMotifCountsClassificationMLP.label}
     deps:
     - scripts/codonOnlyClassificationMLP.py
     - ${preprocessData.output_dir}
     - ${getDecayResiduals.extraFeatures}
     - ${runViennaRNA.output_csv}
     outs:
-    - ${extraFeaturesAndMotifCountsClassificationMLP.output_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}/best_spearmanr
-    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}:
-        persist: true
+    - ${codonOnlyClassificationMLP.output_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}/best_spearmanr
+    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}
     params:
     - extraFeaturesAndMotifCountsClassificationMLP
 
@@ -694,6 +694,15 @@ plots:
 - dvclive/TE/plots/metrics:
     x: step
 - dvclive/TE/plots/images
+- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/metrics:
+    x: step
+- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/images
+- dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/metrics:
+    x: step
+- dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/images
+- dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/plots/metrics:
+    x: step
+- dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
@@ -701,3 +710,6 @@ metrics:
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly/metrics.json
 - dvclive/TE/metrics.json
+- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/metrics.json
+- dvclive/codonOnlyClassificationMLP/codonOnly_final/metrics.json
+- dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/metrics.json

@@ -126,7 +126,7 @@ import yaml
 import pandas as pd
 from Bio import SeqIO
 import numpy as np
-
+import psutil
 
 from __init__ import glue_compute_metrics as compute_metrics
 from dvclive import Live
@@ -145,6 +145,8 @@ parser = argparse.ArgumentParser(description="Train a myClassifier model")
 parser.add_argument("--params", type=str, required=True, help="Path to the extra features .csv file")
 parser.add_argument("--label", type=str, required=True, help="Label the defines the extra features to use")
 parser.add_argument("--extraFeatures", type=str, required=True, help="Path to the extra features .csv file")
+parser.add_argument("--mfe", type=str, default=None, help="Path to the mfe .csv file")
+parser.add_argument("--mastResults", type=str, default=None, help="Path to the mast results .txt file")
 parser.add_argument("--data_dir", type=str, required=True, help="Path to the data directory")
 parser.add_argument("--output_dir", type=str, required=True, help="Directory to save the model checkpoints")
 parser.add_argument("--num_train_epochs", type=int, default=50, help="Number of training epochs")
@@ -154,11 +156,13 @@ parser.add_argument("--patience", type=int, default=5, help="Patience for early 
 #parser.add_argument("--weight_decay", type=float, default=0.01, help="Weight decay for the optimizer")
 #parser.add_argument("--dropout_percent", type=float, default=0.01, help="Dropout percentage for the model")
 parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
+parser.add_argument("--n_gpu", type=int, default=None, help="Number of GPUs available")
 
 # Ray Tune arguments
 parser.add_argument("--ray_tune_samples", type=int, default=20, help="Number of Ray Tune trials to run.")
 parser.add_argument("--ray_tune_max_epochs", type=int, default=10, help="Maximum epochs for Ray Tune ASHA scheduler.")
 parser.add_argument("--ray_tune_grace_period", type=int, default=1, help="Minimum epochs before early stopping in ASHA.")
+parser.add_argument("--ray_tune_initial_points", type=int, default=10, help="Minimum epochs before early stopping in ASHA.")
 parser.add_argument("--ray_tune_reduction_factor", type=int, default=2, help="Reduction factor for ASHA scheduler.")
 parser.add_argument("--ray_tune_cpu_per_trial", type=int, default=2, help="Number of CPUs per Ray Tune trial.")
 parser.add_argument("--ray_tune_gpu_per_trial", type=float, default=1.0, help="Number of GPUs per Ray Tune trial.")
@@ -202,7 +206,7 @@ def set_seed(args):
     #random.seed(args.seed)
     np.random.seed(args.seed)
     torch.manual_seed(args.seed)
-    if args.n_gpu > 0:
+    if args.n_gpu and args.n_gpu > 0:
         torch.cuda.manual_seed_all(args.seed)
 
 def plotPredictions(preds, out_label_ids, results, stage='train', live_logger=None):
@@ -251,6 +255,7 @@ def prepMotifCounts(mastResultsPath):
 
 def train_model(config, data_dict=None, args=None):
     """Training function for Ray Tune"""
+    set_seed(args)
     # Ensure args paths are absolute (in case they weren't converted properly)
     if not os.path.isabs(args.data_dir):
         args.data_dir = os.path.abspath(args.data_dir)
@@ -371,14 +376,13 @@ def train_model(config, data_dict=None, args=None):
             best_val_spearmanr = val_results['spearmanr']
         
         # Report metrics to Ray Tune
-        tune.report(
-            best_loss=best_val_loss,
-            best_val_spearmanr=best_val_spearmanr,
-            loss=val_loss,
-            spearmanr=val_results['spearmanr'],
-            pearson=val_results['pearson'],
-            mse=val_results['mse']
-        )
+        tune.report({
+            "best_val_loss": best_val_loss,
+            "best_val_spearmanr": best_val_spearmanr,
+            "loss": val_loss,
+            "spearmanr": val_results['spearmanr'],
+            "pearson": val_results['pearson'],
+        })
         if patience_counter >= args.patience:
             logger.info(f"Early stopping triggered after {patience_counter} epochs without improvement.")
             break
@@ -424,16 +428,17 @@ def main():
         # get mfe
         vienna_df = pd.read_csv(args.mfe)
         vienna_df['mfe'] = pd.to_numeric(vienna_df['mfe'], errors='coerce').fillna(0)
-        extraFeaturesDF = extraFeaturesDF.merge(vienna_df[['trID', 'mfe']], left_index=True, right_on='trID', how='left').set_index('trID')
+        extraFeaturesDF = extraFeaturesDF.merge(vienna_df, left_index=True, right_index=True, how='left')
     if args.label == 'extraFeaturesAndMotifCounts':
         # get motif counts
         motifCountsDF = prepMotifCounts(args.mastResults)
         extraFeaturesDF = extraFeaturesDF.merge(motifCountsDF, left_index=True, right_index=True, how='left')
+    extraFeaturesDF = extraFeaturesDF.fillna(0)
     extraFeatures = {item: extraFeaturesDF[extraFeaturesDF.index.isin(trIDs[item])] for item in ['train', 'dev', 'test']}
     labels = {item: extraFeaturesDF[extraFeaturesDF.index.isin(trIDs[item])]['Decay Rate'] for item in ['train', 'dev', 'test']}
     if args.label == 'codonOnly':
         colFilt = [col for col in extraFeaturesDF.columns if len(col) == 3]
-    elif args.label == 'allExtraFeatures':
+    else:
         colFilt = [col for col in extraFeaturesDF.columns if col not in ['Decay Rate','Residuals']]
 
     extraFeatures = {item: extraFeatures[item][colFilt] for item in ['train', 'dev', 'test']}
@@ -469,8 +474,32 @@ def main():
         'num_features': extraFeatures['train'].shape[1]
     }
 
-    # Initialize Ray
-    ray.init(ignore_reinit_error=True)
+    # Initialize Ray with explicit CPU count
+    import psutil
+    
+    # Get available CPUs (either from SLURM or system)
+    if 'SLURM_CPUS_PER_TASK' in os.environ:
+        num_cpus = int(os.environ['SLURM_CPUS_PER_TASK'])
+        logger.info(f"Using SLURM_CPUS_PER_TASK: {num_cpus}")
+    elif 'SLURM_CPUS_ON_NODE' in os.environ:
+        num_cpus = int(os.environ['SLURM_CPUS_ON_NODE'])
+        logger.info(f"Using SLURM_CPUS_ON_NODE: {num_cpus}")
+    else:
+        num_cpus = psutil.cpu_count(logical=True)
+        logger.info(f"Using system CPU count: {num_cpus}")
+    
+    # Calculate max concurrent trials
+    max_concurrent_trials = num_cpus // args.ray_tune_cpu_per_trial
+    logger.info(f"CPU allocation: {num_cpus} total CPUs, {args.ray_tune_cpu_per_trial} CPU per trial")
+    logger.info(f"Max concurrent trials: {max_concurrent_trials}")
+    
+    # Initialize Ray with explicit resource specification
+    ray.init(
+        ignore_reinit_error=True,
+        num_cpus=num_cpus,
+        num_gpus=0,  # Since you're using CPU-only trials
+        include_dashboard=False  # Disable dashboard to save resources
+    )
 
     # Define hyperparameter search space
     config = {
@@ -487,7 +516,7 @@ def main():
     )
 
     # Set up HyperOpt search algorithm
-    search_alg = HyperOptSearch(n_initial_points=4)
+    search_alg = HyperOptSearch(n_initial_points=args.ray_tune_initial_points)
 
     # Run hyperparameter tuning
     logger.info("Starting Ray Tune hyperparameter optimization...")
@@ -497,8 +526,9 @@ def main():
             scheduler=scheduler,
             search_alg=search_alg,
             num_samples=args.ray_tune_samples,
-            metric="best_val_spearmanr",
-            mode="max"
+            metric="best_val_loss",
+            mode="min",
+            max_concurrent_trials=max_concurrent_trials  # Explicitly set max concurrent trials
         ),
         param_space=config,
         run_config=ray.air.RunConfig(
@@ -509,10 +539,10 @@ def main():
     )
 
     results = tuner.fit()
-    best_result = results.get_best_result("spearmanr", "max")
+    best_result = results.get_best_result("best_val_spearmanr", "max")
     
     logger.info(f"Best hyperparameters found: {best_result.config}")
-    logger.info(f"Best validation spearmanr: {best_result.metrics['spearmanr']}")
+    logger.info(f"Best validation spearmanr: {best_result.metrics['best_val_spearmanr']}")
 
     # Save best hyperparameters
     best_config_path = os.path.join(args.output_dir, "best_hyperparameters.json")

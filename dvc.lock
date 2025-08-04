@@ -2718,25 +2718,27 @@ stages:
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: eba26dbefb9714220e842634644c0158
-      size: 17002
+      md5: 26e2681f39fe258a119d0db71d7d39af
+      size: 32174
     params:
       params.yaml:
         codonOnlyClassificationMLP:
           output_dir: output/codonOnlyClassificationMLP
-          item: codonOnly
+          label: codonOnly
           patience: 7
           per_device_batch_size: 48
           num_train_epochs: 100
-          learning_rate: 0.0005
-          weight_decay: 0.03
-          dropout_percent: 0.75
     outs:
     - path: output/codonOnlyClassificationMLP/codonOnly/best_spearmanr
       hash: md5
-      md5: 2757c50418c14f103fca830d15dfc2ee.dir
-      size: 71182
+      md5: f854d32361334bae7b54f7491f991ec8.dir
+      size: 71900
       nfiles: 4
+    - path: output/ray_results_MLP/codonOnly
+      hash: md5
+      md5: 665fe06de8924b733b665621dcc4b35c.dir
+      size: 11600500
+      nfiles: 1505
   codonOnlyClassificationMLP@codonOnly:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
       output/data/decay --output_dir output/codonOnlyClassificationMLP/codonOnly --extraFeatures
@@ -2804,12 +2806,17 @@ stages:
   allExtraFeaturesClassificationMLP:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
       output/data/decay --output_dir output/codonOnlyClassificationMLP/allExtraFeatures
-      --extraFeatures output/data/codons/extraFeatures.csv --label allExtraFeatures
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+      --label allExtraFeatures
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
       md5: 553d9c1081f048fe66c15dcb6ffc1f3e
       size: 7894810
+    - path: output/data/codons/vienna_features.csv
+      hash: md5
+      md5: af600d3e3adf97355b18c76bfee40ef4
+      size: 15605730
     - path: output/data/decay
       hash: md5
       md5: b20ee60bfc13a9c94438f227943ad9b9.dir
@@ -2817,22 +2824,59 @@ stages:
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: eba26dbefb9714220e842634644c0158
-      size: 17002
+      md5: 26e2681f39fe258a119d0db71d7d39af
+      size: 32174
     params:
       params.yaml:
         allExtraFeaturesClassificationMLP:
-          output_dir: output/codonOnlyClassificationMLP
-          item: allExtraFeatures
-          patience: 7
-          per_device_batch_size: 48
-          num_train_epochs: 100
-          learning_rate: 0.0005
-          weight_decay: 0.03
-          dropout_percent: 0.8
+          label: allExtraFeatures
     outs:
     - path: output/codonOnlyClassificationMLP/allExtraFeatures/best_spearmanr
       hash: md5
-      md5: f1e15b29ca7b64e01fcc5a5cbb95cf5f.dir
-      size: 77581
+      md5: 86d0605f8fcb94d3973bf41763ba3050.dir
+      size: 82684
       nfiles: 4
+    - path: output/ray_results_MLP/allExtraFeatures
+      hash: md5
+      md5: c5e780951526ea2ae4868bcae0e72aa8.dir
+      size: 12286542
+      nfiles: 1505
+  extraFeaturesAndMotifCountsClassificationMLP:
+    cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
+      output/data/decay --extraFeatures output/data/codons/extraFeatures.csv --mfe
+      output/data/codons/vienna_features.csv --mastResults output/mast_out/mast_results.txt
+      --output_dir output/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts --label
+      extraFeaturesAndMotifCounts
+    deps:
+    - path: output/data/codons/extraFeatures.csv
+      hash: md5
+      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
+      size: 7894810
+    - path: output/data/codons/vienna_features.csv
+      hash: md5
+      md5: af600d3e3adf97355b18c76bfee40ef4
+      size: 15605730
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: scripts/codonOnlyClassificationMLP.py
+      hash: md5
+      md5: 26e2681f39fe258a119d0db71d7d39af
+      size: 32174
+    params:
+      params.yaml:
+        extraFeaturesAndMotifCountsClassificationMLP:
+          label: extraFeaturesAndMotifCounts
+    outs:
+    - path: output/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts/best_spearmanr
+      hash: md5
+      md5: 304b0098530bf7e0c5396e644aabc959.dir
+      size: 114749
+      nfiles: 4
+    - path: output/ray_results_MLP/extraFeaturesAndMotifCounts
+      hash: md5
+      md5: 070fcf65f9d52ddd9127b0aa9d29e4b3.dir
+      size: 10219023
+      nfiles: 1505

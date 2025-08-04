@@ -234,30 +234,16 @@ codonOnlyClassificationMLP:
   #dropout_percent: 0.75
 
 allExtraFeaturesClassificationMLP:
-  output_dir: output/codonOnlyClassificationMLP
   label: allExtraFeatures
-  patience: 7
-  per_device_batch_size: 48
-  num_train_epochs: 100
-  #learning_rate: 5e-4
-  #weight_decay: 0.03
-  #dropout_percent: 0.8
-  #seed: 41
 
 extraFeaturesAndMotifCountsClassificationMLP:
-  output_dir: output/extraFeaturesAndMotifCountsMLP
   label: extraFeaturesAndMotifCounts
-  patience: 7
-  per_device_batch_size: 48
-  num_train_epochs: 100
-  #learning_rate: 5e-4
-  #weight_decay: 0.03
-  #dropout_percent: 0.8
 
 rayTuneClassificationMLP:
   # Ray Tune specific parameters
-  ray_tune_samples: 50           # Number of hyperparameter combinations to try
+  ray_tune_samples: 300           # Number of hyperparameter combinations to try
   ray_tune_max_epochs: 100        # Maximum epochs per trial
+  ray_tune_initial_points: 30        # Maximum epochs per trial
   ray_tune_grace_period: 5       # Minimum epochs before early stopping
   ray_tune_reduction_factor: 2   # ASHA scheduler reduction factor
   ray_tune_cpu_per_trial: 1      # CPUs allocated per trial
