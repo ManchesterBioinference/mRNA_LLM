@@ -468,6 +468,24 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
+  <summary><B>2025.08.04</B></summary>
+
+- after performing hyperparameter tuning with Ray Tune on all extra features, codons only, all extra features plus motif counts, and the full LLM model, I found that the full LLM model did perform the best, but not by much. 
+
+### Validation Results
+|Model|Spearman|Loss|
+|---|---|---|
+|Full LLM Model|0.529|0.040|
+|All Extra Features|0.507|0.042|
+|Codons Only|0.489|0.042|
+|All Extra Features + Motif Counts|0.458|0.044|
+
+- now that i have the hyperparameters set for the full LLM model, I should rerun the feature/sequence shuffle to confirm the amount that each element is adding to the prediction. 
+  - I'm not certain how to reconcile the results from these two analyses. The element shuffle showed that the sequence is the most important feature, yet the MLP classifier with just the codons performed almost as well as the full LLM model. 
+
+</details>
+
+<details>
   <summary><B>2025.07.</B></summary>
 
 -

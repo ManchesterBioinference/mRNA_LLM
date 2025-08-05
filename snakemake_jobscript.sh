@@ -1,9 +1,9 @@
 #!/bin/bash --login
 
-#SBATCH -p multicore #gpuL # #SBATCH -G 2
-#SBATCH --cpus-per-task=10  # Use this instead of -n for Ray Tune
-#SBATCH --ntasks=1          # Single task (Ray will handle parallelization)
-#SBATCH -t 2:00:00
+#SBATCH -p gpuL # multicore #
+#SBATCH -G 2
+#SBATCH -n 4 #--cpus-per-task=10  # Use this instead of -n for Ray Tune #SBATCH --ntasks=1          # Single task (Ray will handle parallelization)
+#SBATCH -t 10:00:00
 
 #####################################################
 ### run command
@@ -12,8 +12,8 @@ source ~/.bashrc
 conda activate rayTune
 #~/.local/share/mamba/bin/dvc repro -s -f codonOnlyClassificationMLP # visualizeImportance #runViennaRNA #
 #~/.local/share/mamba/bin/dvc repro -s -f allExtraFeaturesClassificationMLP # visualizeImportance #runViennaRNA #
-~/.local/share/mamba/bin/dvc repro -s -f extraFeaturesAndMotifCountsClassificationMLP # visualizeImportance #runViennaRNA #
-# ~/.local/share/mamba/bin/dvc repro fineTuneModel # visualizeImportance #runViennaRNA #
+#~/.local/share/mamba/bin/dvc repro -s -f extraFeaturesAndMotifCountsClassificationMLP # visualizeImportance #runViennaRNA #
+ ~/.local/share/mamba/bin/dvc repro -s fineTuneModel # visualizeImportance #runViennaRNA #
 # ~/.local/share/mamba/bin/git add -u
 # ~/.local/share/mamba/bin/git commit -m "(ablations) default - all extra features included"
 # 

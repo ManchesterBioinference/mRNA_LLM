@@ -106,17 +106,19 @@ modelParams:
   should_continue: false
   evaluate_during_training: true
   do_visualize_during_training: false
-  projector_dropout: 0.4
-  classifier_dropout_prob: 0.1
-  learning_rate: 5e-5
-  classifier_lr: 5e-3
+  hidden_dropout_prob: 0.45255999948991715
+  attention_probs_dropout_prob: 0.45255999948991715
+  projector_dropout: 0.24955501667701577
+  classifier_dropout_prob: 0.2836668357639133
+  learning_rate: 2.7197500975257185e-06
+  classifier_lr: 0.0003087317652943953
   #numEpochsBeforeEarlyStopping: 20
   patience: 5
   per_gpu_train_batch_size: 48
   per_gpu_eval_batch_size: 48
   num_train_epochs: 50
-  weight_decay: 0.01
-  classifier_decay: 0.02
+  weight_decay: 0.06577969639864487
+  classifier_decay: 0.02952629653430042
   warmup_percent: 0.1
   #warmup_steps: 7
   seed: 6
@@ -134,8 +136,9 @@ modelParams:
 
 rayTune:
   use_ray_tune: true
-  ray_tune_samples: 50
+  ray_tune_samples: 100
   ray_tune_max_epochs: 50
+  ray_tune_initial_points: 5
   ray_tune_grace_period: 4
   ray_tune_reduction_factor: 2
   ray_tune_cpu_per_trial: 2

@@ -691,9 +691,6 @@ plots:
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/images
-- dvclive/TE/plots/metrics:
-    x: step
-- dvclive/TE/plots/images
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/images
@@ -703,13 +700,16 @@ plots:
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/plots/images
+- dvclive/TE/plots/metrics:
+    x: step
+- dvclive/TE/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
 - dvclive/codonOnlyClassificationMLP/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly/metrics.json
-- dvclive/TE/metrics.json
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/metrics.json
+- dvclive/TE/metrics.json

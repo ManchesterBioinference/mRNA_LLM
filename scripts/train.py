@@ -296,7 +296,6 @@ def train(args, train_dataset, model, tokenizer, extraFeatures=None, scaler=None
     train_iterator = trange(
         epochs_trained, int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0],
     )
-    set_seed(args)
 
     best_auc = 0
     last_auc = 0
@@ -689,6 +688,7 @@ def main():
     parser.add_argument("--use_ray_tune", action="store_true", help="Use Ray Tune for hyperparameter optimization.")
     parser.add_argument("--ray_tune_samples", type=int, default=20, help="Number of Ray Tune trials to run.")
     parser.add_argument("--ray_tune_max_epochs", type=int, default=10, help="Maximum epochs for Ray Tune ASHA scheduler.")
+    parser.add_argument("--ray_tune_initial_points", type=int, default=1, help="Number of initial random points for Ray Tune HyperOpt.")
     parser.add_argument("--ray_tune_grace_period", type=int, default=1, help="Minimum epochs before early stopping in ASHA.")
     parser.add_argument("--ray_tune_reduction_factor", type=int, default=2, help="Reduction factor for ASHA scheduler.")
     parser.add_argument("--ray_tune_cpu_per_trial", type=int, default=2, help="Number of CPUs per Ray Tune trial.")
@@ -742,7 +742,6 @@ def main():
 
 
     # Setup CUDA, GPU & distributed training
-    # Segons els que he entès, local_rank és per si utilitzes més d'una màquina. Pot ser que utilitzis 1+ gpu però totes a la mateixa màquina
     if args.local_rank == -1 or args.no_cuda:
         device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
         args.n_gpu = torch.cuda.device_count()
@@ -754,6 +753,9 @@ def main():
         torch.distributed.init_process_group(backend="nccl")
         args.n_gpu = 1
     args.device = device
+
+    # Set seed
+    set_seed(args)
 
     # Setup logging
     logging.basicConfig(
@@ -769,8 +771,6 @@ def main():
         bool(args.local_rank != -1),
     )
 
-    # Set seed
-    set_seed(args)
 
     # Prepare task
     #args.task_name = args.task_name.lower()
@@ -953,6 +953,8 @@ def main():
                 # Reconstruct args from dictionary
                 args = argparse.Namespace(**base_args_dict)
 
+                set_seed(args)
+
                 # Reconstruct extraFeatures_df from dictionary
                 if extraFeatures_dict is not None:
                     data_dict = extraFeatures_dict['data']
@@ -977,8 +979,8 @@ def main():
                 args.classifier_lr = config["classifier_lr"]
                 args.weight_decay = config["bert_weight_decay"]
                 args.classifier_weight_decay = config["classifier_weight_decay"]
-                args.hidden_dropout_prob = config.get("bert_dropout", 0.1)
-                args.attention_probs_dropout_prob = config.get("bert_dropout", 0.1)
+                args.hidden_dropout_prob = config.get("bert_hidden_dropout", 0.1)
+                args.attention_probs_dropout_prob = config.get("bert_atten_dropout", 0.1)
                 args.classifier_dropout_prob = config["classifier_dropout"]
                 args.projector_dropout = config.get("projector_dropout", 0.1)
                 # args.adam_epsilon = config.get("adam_epsilon", 1e-8)
@@ -1304,7 +1306,8 @@ def main():
                 "classifier_lr": tune.loguniform(1e-5, 1e-3),  # 1e-5 to 1e-3
                 "bert_weight_decay": tune.uniform(0.0, 0.1),  # 0.0 to 0.1
                 "classifier_weight_decay": tune.uniform(0.0, 0.1),  # 0.0 to 0.1
-                "bert_dropout": tune.uniform(0.1, 0.5),  # 0.1 to 0.5
+                "bert_hidden_dropout": tune.uniform(0.1, 0.5),  # 0.1 to 0.5
+                "bert_atten_dropout": tune.uniform(0.1, 0.5),  # 0.1 to 0.5
                 "classifier_dropout": tune.uniform(0.1, 0.5),  # 0.1 to 0.5
                 "projector_dropout": tune.uniform(0.1, 0.7),  # 0.1 to 0.7
                 # "adam_epsilon": tune.choice([1e-8]),  # Fixed value using tune.choice
@@ -1322,7 +1325,7 @@ def main():
             
             # Define HyperOpt search algorithm for Bayesian optimization
             search_alg = HyperOptSearch(
-                n_initial_points=3,  # Number of random points before Bayesian optimization starts
+                n_initial_points=args.ray_tune_initial_points,  # Number of random points before Bayesian optimization starts
             )
 
             # Convert non-serializable objects to serializable forms
@@ -1353,6 +1356,7 @@ def main():
                 'max_steps': args.max_steps,
                 'warmup_steps': args.warmup_steps,
                 'warmup_percent': args.warmup_percent,
+                'seed': args.seed,
                 'local_rank': args.local_rank,
                 'logging_steps': args.logging_steps,
                 'save_steps': args.save_steps,
@@ -1459,8 +1463,8 @@ def main():
                 args.classifier_lr = best_config["classifier_lr"]
                 args.weight_decay = best_config["bert_weight_decay"]
                 args.classifier_weight_decay = best_config["classifier_weight_decay"]
-                args.hidden_dropout_prob = best_config.get("bert_dropout", 0.1)
-                args.attention_probs_dropout_prob = best_config.get("bert_dropout", 0.1)
+                args.hidden_dropout_prob = best_config.get("bert_hidden_dropout", 0.1)
+                args.attention_probs_dropout_prob = best_config.get("bert_atten_dropout", 0.1)
                 args.classifier_dropout_prob = best_config["classifier_dropout"]
                 args.projector_dropout = best_config.get("projector_dropout", 0.1)
                 
