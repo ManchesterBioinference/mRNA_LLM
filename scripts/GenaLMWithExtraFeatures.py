@@ -23,7 +23,7 @@ class GenaLMWithExtraFeatures(nn.Module):
         self.max_length = max_length
 
         self.dropout = nn.Dropout(self.dropout_percent)
-        if self.projector_dropout is not None:
+        if self.projector_dropout is not None and self.num_extra_features > 0:
             self.extraFeaturesProjector = nn.Sequential(
                 nn.Linear(self.num_extra_features, self.num_extra_features),
                 nn.ReLU(),
@@ -64,7 +64,7 @@ class GenaLMWithExtraFeatures(nn.Module):
             # Ensure extra_features is 2D: [batch_size, num_extra_features]
             if extra_features.ndim == 1:
                 extra_features = extra_features.unsqueeze(1)
-            if self.projector_dropout is not None:
+            if self.projector_dropout is not None and self.num_extra_features > 0:
                 extra_features = self.extraFeaturesProjector(extra_features)
             pooled_output = torch.cat((pooled_output, extra_features), dim=1)
 

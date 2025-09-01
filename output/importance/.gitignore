@@ -1,2 +1,8 @@
 /shap.pkl
 /visualizeImportance.html
+/dev_shap.pkl
+/dev_visualizeImportance.html
+/test_shap.pkl
+/test_visualizeImportance.html
+/train_shap.pkl
+/train_visualizeImportance.html

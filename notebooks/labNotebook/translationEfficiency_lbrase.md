@@ -468,7 +468,7 @@ For now I will use the transcript level expression data that I have from Mike to
 </details>
 
 <details>
-  <summary><B>2025.08.04</B></summary>
+  <summary><B>2025.08.04 - comparing MLP models to full LLM</B></summary>
 
 - after performing hyperparameter tuning with Ray Tune on all extra features, codons only, all extra features plus motif counts, and the full LLM model, I found that the full LLM model did perform the best, but not by much. 
 
@@ -482,6 +482,27 @@ For now I will use the transcript level expression data that I have from Mike to
 
 - now that i have the hyperparameters set for the full LLM model, I should rerun the feature/sequence shuffle to confirm the amount that each element is adding to the prediction. 
   - I'm not certain how to reconcile the results from these two analyses. The element shuffle showed that the sequence is the most important feature, yet the MLP classifier with just the codons performed almost as well as the full LLM model. 
+
+</details>
+
+<details>
+  <summary><B>2025.08.05 - dive into the shuffle analysis (sanity check)</B></summary>
+
+- I specifically looked at the seqImpact results. I looked to see if there were sequences that the shuffle was producing 
+  1. values very different from the original prediction (suggests the original sequence is critica for proper prediction)
+  2. values with a very large standard deviation (suggests the sequences have a large impact on the prediction)
+- this was difficult because the larger the TE value, the larger the standard deviation just by nature of the data.
+- In the end all the sequences that were outliers were also outliers in the original TE space, so the model wasn't good as predicting those sequences anyway.
+- I noticed that the seqs with really high TE values would consistently increase the TE value with whatever extraFeatures they were shuffled with. This suggests that the model could have been memorizing these sequences as having high TE values, because it doesn't seem the importance analysis was picking out any specific features. 
+  - [ ] I want to run this on the dev set to see if that trend still holds even when the model could not have memorized the sequences.
+
+</details>
+
+<details>
+  <summary><B>2025.08.06 - run the shuffle using the dev set. </B></summary>
+
+- To make this easier, I updated the importance analysis script to run on both the train and dev (validation) set individually. I also pulled the ferret classes I had modified into a separate script that I added to the mySHAP package for easier tracking and reproducibility.
+- I also updated the prepRandomize... script to include both the actual TE and the original prediction for easier grouping and comparison.
 
 </details>
 

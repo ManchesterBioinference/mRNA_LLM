@@ -135,7 +135,6 @@ modelParams:
   curriculumLearning: false
 
 rayTune:
-  use_ray_tune: true
   ray_tune_samples: 100
   ray_tune_max_epochs: 50
   ray_tune_initial_points: 5
@@ -144,7 +143,6 @@ rayTune:
   ray_tune_cpu_per_trial: 2
   ray_tune_gpu_per_trial: 1.0
   ray_tune_local_dir: output/ray_results
-  train_final_model: true
 
 importanceAnalysis:
   output_dir: output/importance
@@ -186,6 +184,7 @@ microRNABindingEnrichment:
 
 prepRandomizeSeqsAndExtraFeatures:
   sequence_dir: output/data/sanityCheck
+  seq_file: dev
 
 randomizeSeqsAndExtraFeatures:
   per_gpu_pred_batch_size: 128
@@ -213,7 +212,8 @@ runFIMO:
   fimo_pvalue_threshold: 0.05
 
 prepForMAST:
-  output_fasta: output/data/MEME_suite/TEseqs_split_by_utr.fasta
+  output_dir: output/data/MEME_suite
+  output_fasta: TEseqs_split_by_utr.fasta
 
 runMAST:
   output_dir: output/mast_out

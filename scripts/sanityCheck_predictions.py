@@ -245,9 +245,11 @@ else:
 # 'model' should be on 'device' and already wrapped with torch.nn.DataParallel if args.n_gpu > 1.
 
 # Lists to store results
-decay = []  # Stores actual decay rates
-predDecay = []  # Stores predicted decay rates
+actualRate = []  # Stores actual decay rates
+origPred = []  # Stores original predicted decay rates
+predRate = []  # Stores predicted decay rates
 seqCount = []  # Stores a counter or ID for each sequence processed
+trIDs = []  # Stores the IDs from the FASTA header for each sequence
 
 processed_sequence_counter = 0  # Overall counter for sequences from the input file
 
@@ -255,7 +257,9 @@ processed_sequence_counter = 0  # Overall counter for sequences from the input f
 current_batch_input_ids = []
 current_batch_attention_masks = []
 current_batch_extra_features = [] # Will store numpy arrays (if features are used) or None
-current_batch_actual_decay_rates = []
+current_batch_actual_rates = []
+current_batch_origPred_rates = []
+current_batch_trIDs = [] 
 current_batch_sequence_counters = [] # Stores the 'processed_sequence_counter' for items in batch
 
 # Determine effective batch size for model input.
@@ -268,7 +272,7 @@ else: # CPU
 print(f"Effective batch size for prediction: {effective_batch_size}")
 
 # Helper function to process a collected batch
-def process_filled_batch(ids_list, masks_list, extras_list, actuals_list, counters_list):
+def process_filled_batch(ids_list, masks_list, extras_list, actuals_list, pred_list, tr_id_list, counters_list):
     if not ids_list:
         return
 
@@ -297,8 +301,10 @@ def process_filled_batch(ids_list, masks_list, extras_list, actuals_list, counte
     current_predictions = [round(logit.item(), 2) for logit in logits]
     
     # Extend the main result lists
-    predDecay.extend(current_predictions)
-    decay.extend(actuals_list)
+    predRate.extend(current_predictions)
+    actualRate.extend(actuals_list)
+    origPred.extend(pred_list)  
+    trIDs.extend(tr_id_list)
     seqCount.extend(counters_list)
 
     # Clear the batch accumulation lists for the next batch
@@ -307,6 +313,8 @@ def process_filled_batch(ids_list, masks_list, extras_list, actuals_list, counte
     extras_list.clear()
     actuals_list.clear()
     counters_list.clear()
+    pred_list.clear()
+    tr_id_list.clear()
 
 # Iterate through sequences from the FASTA file
 for seq_record in tqdm(SeqIO.parse(args.sequence_file, 'fasta'), desc="Processing sequences"):
@@ -368,7 +376,10 @@ for seq_record in tqdm(SeqIO.parse(args.sequence_file, 'fasta'), desc="Processin
 
     # Actual decay rate from FASTA name/header
     try:
-        actual_decay_rate = round(float(seq_record.name), 2)
+        description_parts = seq_record.description.split()
+        actual_rate = round(float(description_parts[-1]), 3)
+        origPred_rate = round(float(seq_record.name), 3)
+        trID = description_parts[1]
     except ValueError:
         # print(f"Warning: Could not parse decay rate from seq_record.name '{seq_record.name}' for sequence {seq_record.id} (count: {processed_sequence_counter}). Skipping this sequence.")
         continue # Skip if actual decay rate is not parseable
@@ -377,7 +388,9 @@ for seq_record in tqdm(SeqIO.parse(args.sequence_file, 'fasta'), desc="Processin
     current_batch_input_ids.append(padded_tokens)
     current_batch_attention_masks.append(attention_mask)
     current_batch_extra_features.append(current_sequence_extra_features)
-    current_batch_actual_decay_rates.append(actual_decay_rate)
+    current_batch_actual_rates.append(actual_rate)
+    current_batch_origPred_rates.append(origPred_rate)
+    current_batch_trIDs.append(trID)
     current_batch_sequence_counters.append(processed_sequence_counter)
 
     # If batch is full, process it
@@ -386,7 +399,9 @@ for seq_record in tqdm(SeqIO.parse(args.sequence_file, 'fasta'), desc="Processin
             current_batch_input_ids, 
             current_batch_attention_masks, 
             current_batch_extra_features, 
-            current_batch_actual_decay_rates, 
+            current_batch_actual_rates, 
+            current_batch_origPred_rates, 
+            current_batch_trIDs,
             current_batch_sequence_counters
         )
 
@@ -396,10 +411,19 @@ if current_batch_input_ids:
         current_batch_input_ids, 
         current_batch_attention_masks, 
         current_batch_extra_features, 
-        current_batch_actual_decay_rates, 
+        current_batch_actual_rates, 
+        current_batch_origPred_rates, 
+        current_batch_trIDs,
         current_batch_sequence_counters
     )
 
 # write actual and predicted decay rates as two columns in a csv file
-df = pd.DataFrame({'originalPrediction': decay, 'perturbedPrediction': predDecay, 'sequenceCount': seqCount})
+df = pd.DataFrame({'trID': trIDs, 'actual': actualRate, 'originalPrediction': origPred, 'perturbedPrediction': predRate, 'sequenceCount': seqCount})
 df.to_csv(args.save_path, index=False)
+
+# Lists to store results
+actualRate = []  # Stores actual decay rates
+origPred = []  # Stores original predicted decay rates
+predRate = []  # Stores predicted decay rates
+seqCount = []  # Stores a counter or ID for each sequence processed
+trIDs = []  # Stores the IDs from the FASTA header for each sequence

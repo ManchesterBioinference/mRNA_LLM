@@ -3,6 +3,8 @@ from Bio import SeqIO
 from Bio.SeqRecord import SeqRecord
 import pickle
 
+from myShap.ferret_extras import BaseExplainer, Explanation
+
 def main():
     parser = argparse.ArgumentParser(description="Process FASTA files based on specified method.")
     parser.add_argument("--params", help="Path to a parameters file (not used in current logic).")
@@ -42,7 +44,8 @@ def main():
                 print(f"Warning: No prediction found for {first_record_description[1]}. Skipping this record.")
                 continue
             id = idToPrediction[first_record_description[1]] #original prediction (E1S1)
-            first_record_description = ' '.join(first_record_description[1:]) # defines the extraFeatures (E)
+            actualTE = records[i].id
+            first_record_description = ' '.join(first_record_description[1:])+' '+actualTE #move the actual TE to the end # defines the extraFeatures (E)
             for j,record in enumerate(records):
                 if j == i:
                     continue
@@ -59,11 +62,12 @@ def main():
             if records[i].description.split(' ')[1] not in idToPrediction:
                 continue
             id = str(idToPrediction[records[i].description.split(' ')[1]]) #original prediction (E1S1)
+            actualTE = records[i].id
             first_record_sequence = records[i].seq # defines the sequence (S)
             for j,record in enumerate(records):
                 if j == i:
                     continue
-                r = SeqRecord(first_record_sequence, id, record.name, ' '.join(record.description.split()[1:]), record.dbxrefs, record.features, record.annotations, record.letter_annotations)
+                r = SeqRecord(first_record_sequence, id, record.name, ' '.join(record.description.split()[1:])+' '+actualTE, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
                 newRecords.append(r)
     elif args.process == "5UTRImpact":
         # keep the original prediction associated with the sequence (E1S1) and the 3' UTR the same (3UTR). Change the 5' UTR (5UTR).
@@ -72,6 +76,7 @@ def main():
             if records[i].description.split(' ')[1] not in idToPrediction:
                 continue
             id = idToPrediction[records[i].description.split(' ')[1]] #original prediction (E1S1)
+            actualTE = records[i].id
             first_record_3utr = str(records[i].seq.split(',')[1]) #3.1
             first_record = records[i] # E1
             for j,record in enumerate(records):
@@ -80,7 +85,7 @@ def main():
                 r = SeqRecord(record.seq, record.id, record.name, record.description, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
                 variable5UTR = str(record.seq).split(',')[0]
                 r.id = str(id)
-                r.description = ' '.join(first_record.description.split(' ')[1:])
+                r.description = ' '.join(first_record.description.split(' ')[1:])+' '+actualTE #move the actual TE to the end
                 r.seq = ','.join([variable5UTR, first_record_3utr])
                 newRecords.append(r)
     elif args.process == "3UTRImpact":
@@ -90,6 +95,7 @@ def main():
             if records[i].description.split(' ')[1] not in idToPrediction:
                 continue
             id = idToPrediction[records[i].description.split(' ')[1]] #original prediction (E1S1)
+            actualTE = records[i].id
             first_record_5utr = str(records[i].seq.split(',')[0])
             first_record = records[i]
             for j,record in enumerate(records):
@@ -98,7 +104,7 @@ def main():
                 r = SeqRecord(record.seq, record.id, record.name, record.description, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
                 variable3UTR = str(record.seq).split(',')[1]
                 r.id = str(id)
-                r.description = ' '.join(first_record.description.split(' ')[1:])
+                r.description = ' '.join(first_record.description.split(' ')[1:])+' '+actualTE #move the actual TE to the end
                 r.seq = ','.join([first_record_5utr, variable3UTR])
                 newRecords.append(r)
     else:

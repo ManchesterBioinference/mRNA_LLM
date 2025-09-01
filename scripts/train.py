@@ -63,7 +63,7 @@ from GenaLMWithExtraFeatures import GenaLMWithExtraFeatures
 import pandas as pd # Add pandas import
 
 logger = logging.getLogger(__name__)
-live = Live('dvclive/TE', cache_images=True)
+live = None #Live('dvclive/TE', cache_images=True)
 
 TOKEN_ID_GROUP = ["bert", "3utrlong", "3utrlongcat", "xlnet", "albert"]
 
@@ -439,6 +439,7 @@ def train(args, train_dataset, model, tokenizer, extraFeatures=None, scaler=None
             # Early stopping logic
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
+                live.log_metric('global/best_val_loss', best_val_loss)
                 patience_counter = 0
                 output_dir = os.path.join(args.output_dir, "best_checkpoint")
                 checkpoint_dir = os.path.join(args.output_dir,'checkpoints')
@@ -613,10 +614,12 @@ def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False, extraF
 
 def main():
 # %%
+    global live
     parser = argparse.ArgumentParser()
 
     # BASIC
     parser.add_argument("--params", default='params.yaml', type=str, help="Path to the YAML file containing parameters.",)
+    parser.add_argument("--runName", default='', type=str, help="Name of the run",)
     parser.add_argument("--data_dir", default="output/data/decay", type=str, help="The input data dir. Should contain the .tsv files (or other data files) for the task.",)
     parser.add_argument("--extraFeatures", default=None, type=str, help="Path the the csv file containing the extra features",)
     parser.add_argument("--mfe", default=None, type=str, help="Path the the csv file containing the MFE features from ViennaRNA",)
@@ -1342,6 +1345,7 @@ def main():
             output_dir_absolute = os.path.abspath(args.output_dir) if args.output_dir else args.output_dir
             
             base_args_dict = {
+                'runName': args.runName,
                 'data_dir': data_dir_absolute,
                 'output_dir': output_dir_absolute,
                 'tokenizer_name': args.tokenizer_name,
@@ -1422,7 +1426,7 @@ def main():
                 ),
                 param_space=search_space,
                 run_config=ray.air.RunConfig(
-                    name="gena_lm_tune",
+                    name="trial_results",
                     storage_path=ray_tune_storage_path,
                     verbose=1,
                 ),
@@ -1445,12 +1449,12 @@ def main():
             
             # Save results to CSV
             results_df = results.get_dataframe()
-            results_csv_path = os.path.join(args.output_dir, "ray_tune_results.csv")
+            results_csv_path = os.path.join(args.ray_tune_local_dir, "ray_tune_results.csv")
             results_df.to_csv(results_csv_path, index=False)
             logger.info(f"Ray Tune results saved to: {results_csv_path}")
             
             # Save best config to JSON
-            best_config_path = os.path.join(args.output_dir, "best_ray_tune_config.json")
+            best_config_path = os.path.join(args.ray_tune_local_dir, "best_ray_tune_config.json")
             with open(best_config_path, 'w') as f:
                 json.dump(best_config, f, indent=2)
             logger.info(f"Best config saved to: {best_config_path}")
@@ -1458,6 +1462,16 @@ def main():
             # Optionally train a final model with the best configuration
             if hasattr(args, 'train_final_model') and args.train_final_model:
                 logger.info("Training final model with best configuration...")
+                live = Live(os.path.join('dvclive/TE', args.runName), cache_images=True)
+
+                # Force single GPU to match Ray Tune conditions exactly
+                if args.n_gpu > 1:
+                    logger.info(f"Forcing single GPU for final model training to match Ray Tune conditions")
+                    args.n_gpu = 1
+                    torch.cuda.set_device(0)  # Use GPU 0
+                    args.device = torch.device("cuda:0")
+                    logger.info(f"Final model will use device: {args.device}")
+
                 # Update args with best config
                 args.learning_rate = best_config["bert_lr"]
                 args.classifier_lr = best_config["classifier_lr"]
@@ -1512,8 +1526,35 @@ def main():
             
         else:
             # Regular training without Ray Tune
+            live = Live(os.path.join('dvclive/TE', args.runName), cache_images=True)
+
+            # Force single GPU to match Ray Tune conditions exactly
+            if args.n_gpu > 1:
+                logger.info(f"Forcing single GPU for final model training to match Ray Tune conditions")
+                args.n_gpu = 1
+                torch.cuda.set_device(0)  # Use GPU 0
+                args.device = torch.device("cuda:0")
+                logger.info(f"Final model will use device: {args.device}")
+
             if model is None: 
                 raise ValueError("Model not initialized. Cannot proceed with training. Check --do_visualize flag or model loading steps.")
+
+            # load best ray tune config if available
+            best_config_path = os.path.join(args.ray_tune_local_dir, "best_ray_tune_config.json")
+            if os.path.exists(best_config_path):
+                with open(best_config_path) as f:
+                    best_config = json.load(f)
+                # Update args with best config
+                args.learning_rate = best_config["bert_lr"]
+                args.classifier_lr = best_config["classifier_lr"]
+                args.weight_decay = best_config["bert_weight_decay"]
+                args.classifier_weight_decay = best_config["classifier_weight_decay"]
+                args.hidden_dropout_prob = best_config.get("bert_hidden_dropout", 0.1)
+                args.attention_probs_dropout_prob = best_config.get("bert_atten_dropout", 0.1)
+                args.classifier_dropout_prob = best_config["classifier_dropout"]
+                args.projector_dropout = best_config.get("projector_dropout", 0.1)
+                logger.info("Loaded best Ray Tune config: %s", best_config)
+
 
             labels, seqs, atten_masks, tr_ids = load_data(args, tokenizer)
             tr_ids_str = [str(tid) for tid in tr_ids] # Ensure tr_ids from load_data are strings for matching
@@ -1558,25 +1599,25 @@ def main():
             live.end()
     
 
-    # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
-    if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
-        # Create output directory if needed
-        if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
-            os.makedirs(args.output_dir)
+            # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
+            if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
+                # Create output directory if needed
+                if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
+                    os.makedirs(args.output_dir)
 
-        logger.info("Saving model checkpoint to %s", args.output_dir)
-        # Save a trained model, configuration and tokenizer using `save_pretrained()`.
-        # They can then be reloaded using `from_pretrained()`
-        model_to_save = (model.module if hasattr(model, "module") else model)  # Take care of distributed/parallel training
-        model_to_save.save_pretrained(args.output_dir)
-        tokenizer.save_pretrained(args.output_dir)
+                logger.info("Saving model checkpoint to %s", args.output_dir)
+                # Save a trained model, configuration and tokenizer using `save_pretrained()`.
+                # They can then be reloaded using `from_pretrained()`
+                model_to_save = (model.module if hasattr(model, "module") else model)  # Take care of distributed/parallel training
+                model_to_save.save_pretrained(args.output_dir)
+                tokenizer.save_pretrained(args.output_dir)
 
-        # Save the scaler along with the model
-        if scaler is not None: # Changed condition to check if scaler exists
-            joblib.dump(scaler, os.path.join(args.output_dir, "scaler.joblib"))
+                # Save the scaler along with the model
+                if scaler is not None: # Changed condition to check if scaler exists
+                    joblib.dump(scaler, os.path.join(args.output_dir, "scaler.joblib"))
 
-        # Good practice: save your training arguments together with the trained model
-        torch.save(args, os.path.join(args.output_dir, "training_args.bin"))
+                # Good practice: save your training arguments together with the trained model
+                torch.save(args, os.path.join(args.output_dir, "training_args.bin"))
 
 if __name__ == "__main__":
     main()

@@ -126,7 +126,30 @@ stages:
     - preprocessData
     - preprocessFlyUTRs
 
-  fineTuneModel:
+  rayTune:
+    cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && python scripts/train.py --params params.yaml
+      --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/ --max_seq_length
+      512 --data_dir ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
+      --mfe ${runViennaRNA.output_csv} --use_ray_tune --train_final_model
+    deps:
+    - scripts/train.py
+    - scripts/GenaLMWithExtraFeatures.py
+    - ${preprocessData.output_dir}
+    - ${trainToFlyUTRs.output_dir}/best_checkpoint
+    - ${getDecayResiduals.extraFeatures}
+    - ${runViennaRNA.output_csv}
+    outs:
+    - ${rayTune.ray_tune_local_dir}/best_ray_tune_config.json:
+        persist: true
+    - ${rayTune.ray_tune_local_dir}/ray_tune_results.csv:
+        persist: true
+    # - ${preprocessData.output_dir}_cache
+    params:
+    - fineTuneModel
+    - modelParams
+    - rayTune
+
+  run_fineTuneModel:
     cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && python scripts/train.py --params params.yaml
       --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/ --max_seq_length
       512 --data_dir ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
@@ -138,10 +161,9 @@ stages:
     - ${trainToFlyUTRs.output_dir}/best_checkpoint
     - ${getDecayResiduals.extraFeatures}
     - ${runViennaRNA.output_csv}
+    - ${rayTune.ray_tune_local_dir}
     outs:
     - ${fineTuneModel.output_dir}:
-        persist: true
-    - ${rayTune.ray_tune_local_dir}:
         persist: true
     # - ${preprocessData.output_dir}_cache
     params:
@@ -172,34 +194,32 @@ stages:
       params:
       - ablate_features
 
-  fineTuneModel_ablations:
+  rayTune_ablations: #fineTuneModel_ablations:
     foreach:
-    - name: no_mfe
-      extra_features: ${getDecayResiduals.extraFeatures}
-      mfe_flag: ''
-    - name: no_lengths
-      extra_features: ${ablate_features.output_dir}/no_lengths.csv
-      mfe_flag: --mfe ${runViennaRNA.output_csv}
-    - name: no_gc_content
-      extra_features: ${ablate_features.output_dir}/no_gc_content.csv
-      mfe_flag: --mfe ${runViennaRNA.output_csv}
-    - name: no_codons
-      extra_features: ${ablate_features.output_dir}/no_codons.csv
-      mfe_flag: --mfe ${runViennaRNA.output_csv}
-    - name: seq_only
-      extra_features: ''
-      mfe_flag: ''
-    - name: only_codons
-      extra_features: ${ablate_features.output_dir}/no_lengths_gc.csv
-      mfe_flag: ''
+      no_mfe:
+        extra_features: ${getDecayResiduals.extraFeatures}
+        mfe_flag: ''
+      no_lengths:
+        extra_features: ${ablate_features.output_dir}/no_lengths.csv
+        mfe_flag: --mfe ${runViennaRNA.output_csv}
+      no_gc_content:
+        extra_features: ${ablate_features.output_dir}/no_gc_content.csv
+        mfe_flag: --mfe ${runViennaRNA.output_csv}
+      no_codons:
+        extra_features: ${ablate_features.output_dir}/no_codons.csv
+        mfe_flag: --mfe ${runViennaRNA.output_csv}
+      seq_only:
+        extra_features: scripts/train.py #none but can't have an empty string in the deps
+        mfe_flag: ''
+      only_codons:
+        extra_features: ${ablate_features.output_dir}/no_lengths_gc.csv
+        mfe_flag: ''
     do:
-      cmd: >
-        python scripts/train.py --params params.yaml  --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
+      cmd: python scripts/train.py --params params.yaml  --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
         --max_seq_length 512 --data_dir ${preprocessData.output_dir}  --output_dir
-        ${fineTuneModel.output_dir}_${item.name}
-        $(if [ -n "${item.extra_features}" ]; then echo "--extraFeatures ${item.extra_features}";
-        fi)
-        ${item.mfe_flag}
+        ${fineTuneModel.output_dir}_${key} --ray_tune_local_dir output/ray_ablations/${key}
+        $( if [ "${item.extra_features}" != "scripts/train.py" ]; then echo "--extraFeatures
+        ${item.extra_features}"; fi ) ${item.mfe_flag} --use_ray_tune --runName ${key}
       deps:
       - scripts/train.py
       - scripts/GenaLMWithExtraFeatures.py
@@ -207,47 +227,97 @@ stages:
       - ${trainToFlyUTRs.output_dir}/best_checkpoint
       - ${getDecayResiduals.extraFeatures}
       - ${runViennaRNA.output_csv}
-      - ${ablate_features.output_dir}/no_lengths.csv
-      - ${ablate_features.output_dir}/no_gc_content.csv
-      - ${ablate_features.output_dir}/no_codons.csv
-      - ${ablate_features.output_dir}/no_lengths_gc.csv
+      - ${item.extra_features}
       outs:
-      - ${fineTuneModel.output_dir}_${item.name}:
+      - output/ray_ablations/${key}/best_ray_tune_config.json:
+          persist: true
+      - output/ray_ablations/${key}/ray_tune_results.csv:
           persist: true
       params:
       - fineTuneModel
       - modelParams
+      - rayTune
+
+  run_fineTuneModel_ablations:
+    foreach:
+      no_mfe:
+        extra_features: ${getDecayResiduals.extraFeatures}
+        mfe_flag: ''
+      no_lengths:
+        extra_features: ${ablate_features.output_dir}/no_lengths.csv
+        mfe_flag: --mfe ${runViennaRNA.output_csv}
+      no_gc_content:
+        extra_features: ${ablate_features.output_dir}/no_gc_content.csv
+        mfe_flag: --mfe ${runViennaRNA.output_csv}
+      no_codons:
+        extra_features: ${ablate_features.output_dir}/no_codons.csv
+        mfe_flag: --mfe ${runViennaRNA.output_csv}
+      seq_only:
+        extra_features: scripts/train.py #none but can't have an empty string in the deps
+        mfe_flag: ''
+      only_codons:
+        extra_features: ${ablate_features.output_dir}/no_lengths_gc.csv
+        mfe_flag: ''
+    do:
+      cmd: python scripts/train.py --params params.yaml  --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
+        --max_seq_length 512 --data_dir ${preprocessData.output_dir}  --output_dir
+        ${fineTuneModel.output_dir}_${key} --ray_tune_local_dir output/ray_ablations/${key}
+        $( if [ "${item.extra_features}" != "scripts/train.py" ]; then echo "--extraFeatures
+        ${item.extra_features}"; fi ) ${item.mfe_flag} --runName ${key}
+      deps:
+      - scripts/train.py
+      - scripts/GenaLMWithExtraFeatures.py
+      - ${preprocessData.output_dir}
+      - ${trainToFlyUTRs.output_dir}/best_checkpoint
+      - ${getDecayResiduals.extraFeatures}
+      - ${runViennaRNA.output_csv}
+      - ${item.extra_features}
+      - output/ray_ablations/${key}/best_ray_tune_config.json
+      outs:
+      - ${fineTuneModel.output_dir}_${key}:
+          persist: true
+      params:
+      - fineTuneModel
+      - modelParams
+      - rayTune
 
   predict:
     foreach:
-    - name: _no_mfe
-      extra_features: ${getDecayResiduals.extraFeatures}
-      mfe_flag: ''
-    - name: _no_lengths
-      extra_features: ${ablate_features.output_dir}/no_lengths.csv
-      mfe_flag: --mfe ${runViennaRNA.output_csv}
-    - name: _no_gc_content
-      extra_features: ${ablate_features.output_dir}/no_gc_content.csv
-      mfe_flag: --mfe ${runViennaRNA.output_csv}
-    - name: _no_codons
-      extra_features: ${ablate_features.output_dir}/no_codons.csv
-      mfe_flag: --mfe ${runViennaRNA.output_csv}
-    - name: _only_codons
-      extra_features: ${ablate_features.output_dir}/no_lengths_gc.csv
-      mfe_flag: ''
-    - name: _seq_only
-      extra_features: ''
-      mfe_flag: ''
-    - name: ''
-      extra_features: ${getDecayResiduals.extraFeatures}
-      mfe_flag: --mfe ${runViennaRNA.output_csv}
+      no_mfe:
+        name: _no_mfe
+        extra_features: ${getDecayResiduals.extraFeatures}
+        mfe_flag: ''
+      no_lengths:
+        name: _no_lengths
+        extra_features: ${ablate_features.output_dir}/no_lengths.csv
+        mfe_flag: --mfe ${runViennaRNA.output_csv}
+      no_gc_content:
+        name: _no_gc_content
+        extra_features: ${ablate_features.output_dir}/no_gc_content.csv
+        mfe_flag: --mfe ${runViennaRNA.output_csv}
+      no_codons:
+        name: _no_codons
+        extra_features: ${ablate_features.output_dir}/no_codons.csv
+        mfe_flag: --mfe ${runViennaRNA.output_csv}
+      only_codons:
+        name: _only_codons
+        extra_features: ${ablate_features.output_dir}/no_lengths_gc.csv
+        mfe_flag: ''
+      seq_only:
+        name: _seq_only
+        extra_features: ''
+        mfe_flag: ''
+      fullLLM:
+        name: ''
+        extra_features: ${getDecayResiduals.extraFeatures}
+        mfe_flag: --mfe ${runViennaRNA.output_csv}
     do:
       cmd: python scripts/predict.py --params params.yaml --model_name_or_path ${fineTuneModel.output_dir}${item.name}/best_spearmanr/
         --data_dir ${preprocessData.output_dir} --output_dir ${predict.output_dir}${item.name}
         --scaler ${fineTuneModel.output_dir}${item.name}/best_spearmanr/scaler.joblib
-        $( if [ -n "${item.name}" ]; then echo "--label ${item.name}"; fi) $(if [
-        -n "${item.extra_features}" ]; then echo "--extraFeatures ${item.extra_features}";
-        fi) ${item.mfe_flag}
+        $( if [ -n "${item.name}" ]; then echo "--label ${item.name}"; fi ) $( if
+        [ -n "${item.extra_features}" ]; then echo "--extraFeatures ${item.extra_features}";
+        fi ) ${item.mfe_flag}
       deps:
       - scripts/predict.py
       - ${preprocessData.output_dir}
@@ -259,50 +329,66 @@ stages:
       - modelParams
 
   importanceAnalysis:
-    cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
-      ${fineTuneModel.output_dir}/best_spearmanr/ --save_path ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
-      --extraFeatures ${getDecayResiduals.extraFeatures} --sequence_file ${preprocessData.output_dir}/train.fasta
-      --mfe ${runViennaRNA.output_csv}                                                                                                             #test.fasta
-    deps:
-    - scripts/importanceAnalysis.py
-    - ${fineTuneModel.output_dir}
-    outs:
-    - ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
-    params:
-    - importanceAnalysis
+    foreach:
+    - train
+    - dev
+    - test
+    do:
+      cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
+        ${fineTuneModel.output_dir}/best_spearmanr/ --save_path ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
+        --extraFeatures ${getDecayResiduals.extraFeatures} --sequence_file ${preprocessData.output_dir}/${item}.fasta
+        --mfe ${runViennaRNA.output_csv}                                                                                                             #test.fasta
+      deps:
+      - scripts/importanceAnalysis.py
+      - ${fineTuneModel.output_dir}
+      outs:
+      - ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
+      params:
+      - importanceAnalysis
 
   visualizeImportance:
-    cmd: python scripts/visualizeImportance.py --params params.yaml --kmer ${preprocessData.kmer}
-      --SHAP ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file} --scoresOnly
-      ${importanceAnalysis.output_dir}/${visualizeImportance.scoresOnly} --save_path
-      ${importanceAnalysis.output_dir}/${visualizeImportance.save_path} --save_tokenized_path
-      ${importanceAnalysis.output_dir}/${visualizeImportance.save_tokenized_path}
-    deps:
-    - scripts/visualizeImportance.py
-    - ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
-    outs:
-    # - ${importanceAnalysis.output_dir}/${visualizeImportance.scoresOnly}
-    - ${importanceAnalysis.output_dir}/${visualizeImportance.save_path}
-    params:
-    - visualizeImportance
+    foreach:
+    - train
+    - dev
+    - test
+    do:
+      cmd: python scripts/visualizeImportance.py --params params.yaml --kmer ${preprocessData.kmer}
+        --SHAP ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
+        --scoresOnly ${importanceAnalysis.output_dir}/${item}_${visualizeImportance.scoresOnly}
+        --save_path ${importanceAnalysis.output_dir}/${item}_${visualizeImportance.save_path}
+        --save_tokenized_path 
+        ${importanceAnalysis.output_dir}/${item}_${visualizeImportance.save_tokenized_path}
+      deps:
+      - scripts/visualizeImportance.py
+      - ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
+      outs:
+      # - ${importanceAnalysis.output_dir}/${visualizeImportance.scoresOnly}
+      - ${importanceAnalysis.output_dir}/${item}_${visualizeImportance.save_path}
+      params:
+      - visualizeImportance
 
   findMotifs:
-    cmd: python scripts/find_motifs.py --SHAP ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
-      --save_file_dir ${findMotifs.output_dir}
-    deps:
-    - scripts/find_motifs.py
-    - ${importanceAnalysis.output_dir}/${visualizeImportance.save_path}
-    outs:
-    - ${findMotifs.output_dir}/positive/${findMotifs.motif_file}
-    - ${findMotifs.output_dir}/positive/${findMotifs.control_file}
-    - ${findMotifs.output_dir}/positive/${findMotifs.motif_positions}
-    - ${findMotifs.output_dir}/positive/${findMotifs.control_positions}
-    - ${findMotifs.output_dir}/negative/${findMotifs.motif_file}
-    - ${findMotifs.output_dir}/negative/${findMotifs.control_file}
-    - ${findMotifs.output_dir}/negative/${findMotifs.motif_positions}
-    - ${findMotifs.output_dir}/negative/${findMotifs.control_positions}
-    params:
-    - findMotifs
+    foreach:
+    - train
+    - dev
+    - test
+    do:
+      cmd: python scripts/find_motifs.py --SHAP ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
+        --save_file_dir ${findMotifs.output_dir}/${item}
+      deps:
+      - scripts/find_motifs.py
+      - ${importanceAnalysis.output_dir}/${item}_${visualizeImportance.save_path}
+      outs:
+      - ${findMotifs.output_dir}/${item}/positive/${findMotifs.motif_file}
+      - ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_file}
+      - ${findMotifs.output_dir}/${item}/positive/${findMotifs.motif_positions}
+      - ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions}
+      - ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_file}
+      - ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_file}
+      - ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_positions}
+      - ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions}
+      params:
+      - findMotifs
 
   runMASTFilter:
     cmd: head ${prepForMAST.output_fasta} -n 10 > /tmp/train.fasta && singularity
@@ -327,26 +413,26 @@ stages:
     - motifsToKeep
 
   runAME:
-    foreach:
-    - positive
-    - negative
-    do:
-      cmd: singularity exec -B $(readlink 
-        ${findMotifs.output_dir}/${item}/${findMotifs.control_file}):/tmp/${findMotifs.control_file}
-        -B $(readlink 
-        ${findMotifs.output_dir}/${item}/${findMotifs.motif_file}):/tmp/${findMotifs.motif_file}
-        docker://memesuite/memesuite:5.5.7 ame $( cat ${runMASTFilter.output_dir}/${motifsToKeep.output_file})
-        --oc ${findMotifs.output_dir}/${item}/${runAME.output_dir} --control /tmp/${findMotifs.control_file}
-        --evalue-report-threshold 100 --method fisher --rna /tmp/${findMotifs.motif_file}
-        /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
-      outs:
-      - ${findMotifs.output_dir}/${item}/${runAME.output_dir}
-      deps:
-      - ${runMASTFilter.output_dir}/${motifsToKeep.output_file}
-      - ${findMotifs.output_dir}/${item}/${findMotifs.control_file}
-      - ${findMotifs.output_dir}/${item}/${findMotifs.motif_file}
-      params:
-      - runAME
+    matrix:
+      model: [train, test, dev]
+      feature: [positive, negative]
+    cmd: singularity exec -B $(readlink 
+      ${findMotifs.output_dir}/${item.model}/${item.feature}/${findMotifs.control_file}):/tmp/${findMotifs.control_file}
+      -B $(readlink 
+      ${findMotifs.output_dir}/${item.model}/${item.feature}/${findMotifs.motif_file}):/tmp/${findMotifs.motif_file}
+      docker://memesuite/memesuite:5.5.7 ame $( cat ${runMASTFilter.output_dir}/${motifsToKeep.output_file})
+      --oc ${findMotifs.output_dir}/${item.model}/${item.feature}/${runAME.output_dir}
+      --control /tmp/${findMotifs.control_file} --evalue-report-threshold 100 --method
+      fisher --rna /tmp/${findMotifs.motif_file} 
+      /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+    outs:
+    - ${findMotifs.output_dir}/${item.model}/${item.feature}/${runAME.output_dir}
+    deps:
+    - ${runMASTFilter.output_dir}/${motifsToKeep.output_file}
+    - ${findMotifs.output_dir}/${item.model}/${item.feature}/${findMotifs.control_file}
+    - ${findMotifs.output_dir}/${item.model}/${item.feature}/${findMotifs.motif_file}
+    params:
+    - runAME
 
   downloadMicroRNAData:
     cmd: mkdir -p data/microRNA && wget -P data/microRNA 
@@ -418,13 +504,13 @@ stages:
     - 3UTRImpact
     do:
       cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
-        --sequence_file ${preprocessData.output_dir}/train.fasta --process ${item}
-        --output_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
-        --importance ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
+        --sequence_file ${preprocessData.output_dir}/${prepRandomizeSeqsAndExtraFeatures.seq_file}.fasta
+        --process ${item} --output_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
+        --importance 
+        ${importanceAnalysis.output_dir}/${prepRandomizeSeqsAndExtraFeatures.seq_file}_${importanceAnalysis.pickle_file}
       deps:
       - scripts/prepRandomizeSeqsAndExtraFeatures.py
-      - ${preprocessData.output_dir}/train.fasta
-      - ${importanceAnalysis.output_dir}/${importanceAnalysis.pickle_file}
+      - ${importanceAnalysis.output_dir}/${prepRandomizeSeqsAndExtraFeatures.seq_file}_${importanceAnalysis.pickle_file}
       outs:
       - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
       params:
@@ -451,32 +537,39 @@ stages:
 
   splitHighLowDecay:
     foreach:
-    - input: ${mergeUTRsAndDecayRates.output_file}
-      label: all
-    - input: ${preprocessData.output_dir}/train.fasta
-      label: train
+    - train
+    - dev
+    - test
     do:
-      cmd: python scripts/splitHighLowDecay.py --params params.yaml --input ${item.input}
-        --high ${item.label}_${splitHighLowDecay.high} --low ${item.label}_${splitHighLowDecay.low}                                                                                   #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
+      cmd: python scripts/splitHighLowDecay.py --params params.yaml --input ${preprocessData.output_dir}/${item}.fasta
+        --high ${item}_${splitHighLowDecay.high} --low ${item}_${splitHighLowDecay.low}                                                                                   #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
       deps:
       - scripts/splitHighLowDecay.py
-      - ${item.input} #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
+      - ${preprocessData.output_dir}/${item}.fasta
       outs:
-      - ${splitHighLowDecay.output}/${item.label}_${splitHighLowDecay.high}
-      - ${splitHighLowDecay.output}/${item.label}_${splitHighLowDecay.low}
+      - ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.high}
+      - ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.low}
       params:
       - splitHighLowDecay
 
   runAME_highLowDecay:
     foreach:
     - interest: high
-      label: all
-      control: ${splitHighLowDecay.output}/all_${splitHighLowDecay.low}
-      rna: ${splitHighLowDecay.output}/all_${splitHighLowDecay.high}
+      label: test
+      control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
+      rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
     - interest: low
-      label: all
-      control: ${splitHighLowDecay.output}/all_${splitHighLowDecay.high}
-      rna: ${splitHighLowDecay.output}/all_${splitHighLowDecay.low}
+      label: test
+      control: ${splitHighLowDecay.output}/test_${splitHighLowDecay.high}
+      rna: ${splitHighLowDecay.output}/test_${splitHighLowDecay.low}
+    - interest: high
+      label: dev
+      control: ${splitHighLowDecay.output}/dev_${splitHighLowDecay.low}
+      rna: ${splitHighLowDecay.output}/dev_${splitHighLowDecay.high}
+    - interest: low
+      label: dev
+      control: ${splitHighLowDecay.output}/dev_${splitHighLowDecay.high}
+      rna: ${splitHighLowDecay.output}/dev_${splitHighLowDecay.low}
     - interest: high
       label: train
       control: ${splitHighLowDecay.output}/train_${splitHighLowDecay.low}
@@ -515,37 +608,62 @@ stages:
     - runFIMO
 
   prepForMAST:
-    cmd: python scripts/prepForMAST.py --input_fasta ${preprocessData.output_dir}/train.fasta
-      --output_fasta ${prepForMAST.output_fasta}
-    outs:
-    - ${prepForMAST.output_fasta}
-    deps:
-    - scripts/prepForMAST.py
-    - ${preprocessData.output_dir}/train.fasta
-    params:
-    - prepForMAST
+    foreach:
+    - train
+    - dev
+    - test
+    do:
+      cmd: python scripts/prepForMAST.py --input_fasta ${preprocessData.output_dir}/${item}.fasta
+        --output_fasta ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}
+      outs:
+      - ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}
+      deps:
+      - scripts/prepForMAST.py
+      - ${preprocessData.output_dir}/${item}.fasta
+      params:
+      - prepForMAST
 
   runTOMTOM:
-    cmd: singularity exec -B $(readlink ${prepForMAST.output_fasta}):/tmp/train.fasta
+    cmd: singularity exec -B $(readlink ${prepForMAST.output_dir}/train_${prepForMAST.output_fasta}):/tmp/train.fasta
       docker://memesuite/memesuite:5.5.7 tomtom -oc ${runTOMTOM.output_dir} -norc
       ${runTOMTOM.motif_file} ${runTOMTOM.motif_file}
     outs:
     - ${runTOMTOM.output_dir}
     deps:
-    - ${prepForMAST.output_fasta}
+    - ${prepForMAST.output_dir}/train_${prepForMAST.output_fasta}
     params:
     - runTOMTOM
 
   runMAST:
-    cmd: mkdir -p ${runMAST.output_dir} && singularity exec -B $(readlink ${prepForMAST.output_fasta}):/tmp/train.fasta
-      docker://memesuite/memesuite:5.5.7 mast -hit_list -remcorr -mt ${runMAST.mast_pvalue_threshold}
-      ${runMAST.motif_file} /tmp/train.fasta > ${runMAST.output_dir}/${runMAST.output_file}
-    outs:
-    - ${runMAST.output_dir}
+    foreach:
+    - train
+    - dev
+    - test
+    do:
+      cmd: mkdir -p ${runMAST.output_dir} && singularity exec -B $(readlink 
+        ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}):/tmp/${item}.fasta
+        docker://memesuite/memesuite:5.5.7 mast -hit_list -remcorr -mt ${runMAST.mast_pvalue_threshold}
+        ${runMAST.motif_file} /tmp/${item}.fasta > ${runMAST.output_dir}/${item}_${runMAST.output_file}
+        && singularity exec -B $(readlink 
+        ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}):/tmp/${item}.fasta
+        docker://memesuite/memesuite:5.5.7 mast -oc ${runMAST.output_dir}/${item}
+        -remcorr -ev 10000 -mt ${runMAST.mast_pvalue_threshold} ${runMAST.motif_file}
+        /tmp/${item}.fasta
+      outs:
+      - ${runMAST.output_dir}/${item}_${runMAST.output_file}
+      deps:
+      - ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}
+      params:
+      - runMAST
+
+  runMAST_topHits:
+    cmd: singularity exec -B $(readlink ${prepForMAST.output_dir}/dev_${prepForMAST.output_fasta}):/tmp/dev.fasta
+      docker://memesuite/memesuite:5.5.7 mast -oc ${runMAST.output_dir}/topHits -remcorr
+      -ev 1000 -mt ${runMAST.mast_pvalue_threshold} data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster_topHits.meme
+      /tmp/dev.fasta
     deps:
-    - ${prepForMAST.output_fasta}
-    params:
-    - runMAST
+    - ${prepForMAST.output_dir}/dev_${prepForMAST.output_fasta}
+    - data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster_topHits.meme
 
   getLSGKM_SVR:
     # clone lsgkm-svr repository, update max seq length, and compile it
@@ -634,8 +752,10 @@ stages:
     - ${preprocessData.output_dir}
     - ${getDecayResiduals.extraFeatures}
     outs:
-    - ${codonOnlyClassificationMLP.output_dir}/${codonOnlyClassificationMLP.label}/best_spearmanr
-    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${codonOnlyClassificationMLP.label}
+    - ${codonOnlyClassificationMLP.output_dir}/${codonOnlyClassificationMLP.label}/best_spearmanr:
+        persist: true
+    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${codonOnlyClassificationMLP.label}:
+        persist: true
     params:
     - codonOnlyClassificationMLP
 
@@ -651,15 +771,17 @@ stages:
     - ${getDecayResiduals.extraFeatures}
     - ${runViennaRNA.output_csv}
     outs:
-    - ${codonOnlyClassificationMLP.output_dir}/${allExtraFeaturesClassificationMLP.label}/best_spearmanr
-    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${allExtraFeaturesClassificationMLP.label}
+    - ${codonOnlyClassificationMLP.output_dir}/${allExtraFeaturesClassificationMLP.label}/best_spearmanr:
+        persist: true
+    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${allExtraFeaturesClassificationMLP.label}:
+        persist: true
     params:
     - allExtraFeaturesClassificationMLP
 
   extraFeaturesAndMotifCountsClassificationMLP:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
       ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
-      --mfe ${runViennaRNA.output_csv} --mastResults ${runMAST.output_dir}/${runMAST.output_file}
+      --mfe ${runViennaRNA.output_csv} --mastResults ${runMAST.output_dir}/train_${runMAST.output_file}
       --output_dir 
       ${codonOnlyClassificationMLP.output_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}
       --label ${extraFeaturesAndMotifCountsClassificationMLP.label}
@@ -669,8 +791,10 @@ stages:
     - ${getDecayResiduals.extraFeatures}
     - ${runViennaRNA.output_csv}
     outs:
-    - ${codonOnlyClassificationMLP.output_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}/best_spearmanr
-    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}
+    - ${codonOnlyClassificationMLP.output_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}/best_spearmanr:
+        persist: true
+    - ${rayTuneClassificationMLP.ray_tune_local_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}:
+        persist: true
     params:
     - extraFeaturesAndMotifCountsClassificationMLP
 
@@ -681,7 +805,6 @@ plots:
 - dvclive/decay/plots/metrics:
     x: step
 - dvclive/decay/plots/images
-- dvclive/findMotifs/plots/images
 - dvclive/codonOnlyClassificationMLP/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/plots/images
@@ -691,25 +814,50 @@ plots:
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/images
-- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/metrics:
+- dvclive/findMotifs/plots/images
+- dvclive/TE/plots/metrics:
     x: step
-- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/images
+- dvclive/TE/plots/images
+- dvclive/TE/seq_only/plots/metrics:
+    x: step
+- dvclive/TE/seq_only/plots/images
+- dvclive/TE/no_lengths/plots/metrics:
+    x: step
+- dvclive/TE/no_lengths/plots/images
+- dvclive/TE/only_codons/plots/metrics:
+    x: step
+- dvclive/TE/only_codons/plots/images
+- dvclive/TE/no_codons/plots/metrics:
+    x: step
+- dvclive/TE/no_codons/plots/images
+- dvclive/TE/no_gc_content/plots/metrics:
+    x: step
+- dvclive/TE/no_gc_content/plots/images
+- dvclive/TE/no_mfe/plots/metrics:
+    x: step
+- dvclive/TE/no_mfe/plots/images
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/images
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/plots/images
-- dvclive/TE/plots/metrics:
+- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/metrics:
     x: step
-- dvclive/TE/plots/images
+- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
 - dvclive/codonOnlyClassificationMLP/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly/metrics.json
-- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/metrics.json
+- dvclive/TE/metrics.json
+- dvclive/TE/seq_only/metrics.json
+- dvclive/TE/no_lengths/metrics.json
+- dvclive/TE/only_codons/metrics.json
+- dvclive/TE/no_codons/metrics.json
+- dvclive/TE/no_gc_content/metrics.json
+- dvclive/TE/no_mfe/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/metrics.json
-- dvclive/TE/metrics.json
+- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/metrics.json

@@ -1,9 +1,10 @@
 from myShap import Explainer
 from myShap.maskers import Text as TextMasker
-from ferret import BaseExplainer
-from ferret.explainers.explanation import Explanation
 from ferret.explainers.utils import parse_explainer_args
 import joblib
+
+from myShap.ferret_extras import BaseExplainer, Explanation
+
 
 class SHAPExplainer(BaseExplainer):
     NAME = "Partition SHAP"

@@ -64,7 +64,7 @@ def plotPredictions(preds, out_label_ids, results, label=None, eval_output_dir=N
     import matplotlib.pyplot as plt
     from scipy.stats import pearsonr, spearmanr
     
-    fig = plt.figure()
+    plt.figure(figsize=(5,5))
     
     # Create a scatter plot
     plt.scatter(out_label_ids, preds, alpha=0.5)
@@ -74,6 +74,11 @@ def plotPredictions(preds, out_label_ids, results, label=None, eval_output_dir=N
     plt.xlim(min(out_label_ids.min(), preds.min()), max(out_label_ids.max(), preds.max()))
     plt.ylim(min(out_label_ids.min(), preds.min()), max(out_label_ids.max(), preds.max()))
     
+    # Add a red dashed line for x=y
+    plt.plot([min(out_label_ids.min(), preds.min()), max(out_label_ids.max(), preds.max())], 
+             [min(out_label_ids.min(), preds.min()), max(out_label_ids.max(), preds.max())], 
+             'r--')
+    
     # Calculate Pearson and Spearman correlation coefficients
     pearson_corr = results.get('pearson', pearsonr(out_label_ids, preds)[0])
     spearman_corr = results.get('spearmanr', spearmanr(out_label_ids, preds)[0])
@@ -81,7 +86,8 @@ def plotPredictions(preds, out_label_ids, results, label=None, eval_output_dir=N
     # Annotate the plot with the correlation coefficients
     plt.annotate(f'Pearson: {pearson_corr:.2f}', xy=(0.05, 0.95), xycoords='axes fraction')
     plt.annotate(f'Spearman: {spearman_corr:.2f}', xy=(0.05, 0.90), xycoords='axes fraction')
-    plt.savefig(os.path.join(eval_output_dir, f'predictions_vs_true_labels{label}.png'))
+    plt.savefig(os.path.join(eval_output_dir, f'predictions_vs_true_labels{label}.svg'))
+    pd.DataFrame({'True Labels': out_label_ids, 'Predictions': preds}).to_csv(os.path.join(eval_output_dir, f'predictions_vs_true_labels{label}.csv'), index=False)
 
 def load_data(args, tokenizer, test_run=False, split='train.fasta'):
     from Bio import SeqIO
@@ -181,17 +187,16 @@ def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False, extraF
     preds = np.squeeze(preds)
 
     results = compute_metrics('sts-b', preds, out_label_ids)
+    results['eval_loss'] = eval_loss
     plotPredictions(preds, out_label_ids, results, args.label, eval_output_dir)
 
-    output_eval_file = os.path.join(eval_output_dir, prefix, "test_results.txt")
-    with open(output_eval_file, "a") as writer:
-        eval_result = args.data_dir.split("/")[-1] + " "
+    output_eval_file = os.path.join(eval_output_dir, prefix, "test_results.json")
+    with open(output_eval_file, "w") as writer:
+        json.dump({**{k: (v.item() if isinstance(v, (np.float32, np.int32, np.int64)) else v) for k, v in results.items()}}, writer, indent=4)
 
-        logger.info("***** Eval results {} *****".format(prefix))
-        for key in sorted(results.keys()):
-            logger.info("  %s = %s", key, str(results[key]))
-            eval_result = eval_result + str(results[key])[:5] + " "
-        writer.write(eval_result + "\n")
+    logger.info("***** Eval results {} *****".format(prefix))
+    for key in sorted(results.keys()):
+        logger.info("  %s = %s", key, str(results[key]))
 
     return results
 

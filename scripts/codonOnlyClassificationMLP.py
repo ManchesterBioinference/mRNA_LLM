@@ -213,7 +213,7 @@ def plotPredictions(preds, out_label_ids, results, stage='train', live_logger=No
     import matplotlib.pyplot as plt
     from scipy.stats import pearsonr, spearmanr
     
-    fig = plt.figure()
+    fig = plt.figure(figsize=(5,5))
     # Create a scatter plot
     plt.scatter(out_label_ids, preds, alpha=0.5)
     plt.xlabel('True Labels')
@@ -221,6 +221,10 @@ def plotPredictions(preds, out_label_ids, results, stage='train', live_logger=No
     plt.title('Predictions vs True Labels')
     plt.xlim(min(out_label_ids.min(), preds.min()), max(out_label_ids.max(), preds.max()))
     plt.ylim(min(out_label_ids.min(), preds.min()), max(out_label_ids.max(), preds.max()))
+    # Add a red dashed line for x=y
+    plt.plot([min(out_label_ids.min(), preds.min()), max(out_label_ids.max(), preds.max())], 
+             [min(out_label_ids.min(), preds.min()), max(out_label_ids.max(), preds.max())], 
+             'r--')
     
     # Calculate Pearson and Spearman correlation coefficients
     pearson_corr = results.get('pearson', pearsonr(out_label_ids, preds)[0])
@@ -233,7 +237,11 @@ def plotPredictions(preds, out_label_ids, results, stage='train', live_logger=No
     # Log the image using dvclive only if live_logger is provided
     if live_logger is not None:
         live_logger.log_image(f'{stage}/predictions_vs_true_labels_{live_logger.step}.png', fig)
-    
+
+    if stage == 'test':
+        pd.DataFrame({'True Labels': out_label_ids, 'Predictions': preds}).to_csv(os.path.join(live_logger._dir, f'{stage}_predictions_vs_true_labels.csv'), index=False)
+        plt.savefig(os.path.join(live_logger._dir, f'{stage}_predictions_vs_true_labels.svg'), dpi=300)
+
     plt.close(fig)  # Close figure to prevent memory leaks
 
 def prepMotifCounts(mastResultsPath):
@@ -518,27 +526,37 @@ def main():
     # Set up HyperOpt search algorithm
     search_alg = HyperOptSearch(n_initial_points=args.ray_tune_initial_points)
 
-    # Run hyperparameter tuning
-    logger.info("Starting Ray Tune hyperparameter optimization...")
-    tuner = tune.Tuner(
-        tune.with_parameters(train_model, data_dict=data_dict, args=args),
-        tune_config=tune.TuneConfig(
-            scheduler=scheduler,
-            search_alg=search_alg,
-            num_samples=args.ray_tune_samples,
-            metric="best_val_loss",
-            mode="min",
-            max_concurrent_trials=max_concurrent_trials  # Explicitly set max concurrent trials
-        ),
-        param_space=config,
-        run_config=ray.air.RunConfig(
-            storage_path=args.ray_tune_local_dir,
-            name=args.label,
-            stop={"training_iteration": args.ray_tune_max_epochs}
+    try:
+        tuner = tune.Tuner.restore(os.path.abspath(os.path.join(args.ray_tune_local_dir, args.label)),trainable=train_model)
+        logger.info("Restored Ray Tune tuner from previous run.")
+        results = tuner.get_results()
+        if len(results) != args.ray_tune_samples:
+            logger.info("Number of results does not match expected samples. Finishing hyperparameter tuning...")
+            results = tuner.fit()
+        else:
+            results = tuner.get_results()
+    except:
+        # Run hyperparameter tuning
+        logger.info("Starting Ray Tune hyperparameter optimization...")
+        tuner = tune.Tuner(
+            tune.with_parameters(train_model, data_dict=data_dict, args=args),
+            tune_config=tune.TuneConfig(
+                scheduler=scheduler,
+                search_alg=search_alg,
+                num_samples=args.ray_tune_samples,
+                metric="best_val_loss",
+                mode="min",
+                max_concurrent_trials=max_concurrent_trials  # Explicitly set max concurrent trials
+            ),
+            param_space=config,
+            run_config=ray.air.RunConfig(
+                storage_path=args.ray_tune_local_dir,
+                name=args.label,
+                stop={"training_iteration": args.ray_tune_max_epochs}
+            )
         )
-    )
 
-    results = tuner.fit()
+        results = tuner.fit()
     best_result = results.get_best_result("best_val_spearmanr", "max")
     
     logger.info(f"Best hyperparameters found: {best_result.config}")
@@ -675,6 +693,7 @@ def main():
             # Early stopping logic
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
+                live.log_metric('global/best_val_loss', best_val_loss)
                 patience_counter = 0
                 output_dir = os.path.join(args.output_dir, "best_checkpoint")
                 os.makedirs(output_dir, exist_ok=True)
@@ -695,6 +714,7 @@ def main():
         model.eval()
         test_preds = None
         test_labels = None
+        test_loss = 0.0
         test_batches = len(extraFeatures['test']) // batch_size + (1 if len(extraFeatures['test']) % batch_size > 0 else 0)
 
         with torch.no_grad():
@@ -706,6 +726,9 @@ def main():
 
                 outputs = model(batch_features, labels=batch_labels)
                 test_logits = outputs.logits
+                # accumulate loss reported by the model
+                if outputs.loss is not None:
+                    test_loss += outputs.loss.item()
 
                 if test_preds is None:
                     test_preds = test_logits.detach().cpu().numpy()
@@ -714,8 +737,16 @@ def main():
                     test_preds = np.append(test_preds, test_logits.detach().cpu().numpy(), axis=0)
                     test_labels = np.append(test_labels, batch_labels.detach().cpu().numpy(), axis=0)
 
+        # Average test loss across batches
+        if test_batches > 0:
+            test_loss /= test_batches
+
         test_preds = np.squeeze(test_preds)
         test_results = compute_metrics('sts-b', test_preds, test_labels)
+        # add loss to test_results and log it
+        test_results['loss'] = test_loss
+        live.log_metric('test/loss', test_loss)
+
         for key, value in test_results.items():
             live.log_metric(f"test/{key}", value)
         plotPredictions(test_preds, test_labels, test_results, stage='test', live_logger=live)
