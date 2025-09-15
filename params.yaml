@@ -215,6 +215,9 @@ prepForMAST:
   output_dir: output/data/MEME_suite
   output_fasta: TEseqs_split_by_utr.fasta
 
+getMASTBackgroundFile:
+  output_file: nucFrequencies.txt
+
 runMAST:
   output_dir: output/mast_out
   output_file: mast_results.txt

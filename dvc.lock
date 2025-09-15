@@ -1094,8 +1094,8 @@ stages:
       size: 1681715
     - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
       hash: md5
-      md5: 25b4dce75ebb005ec16d6787313972ab
-      size: 6971
+      md5: 9a3d419a3375cccebdc4a75ab67205f4
+      size: 7347
     params:
       params.yaml:
         prepRandomizeSeqsAndExtraFeatures:
@@ -1104,8 +1104,8 @@ stages:
     outs:
     - path: output/data/sanityCheck/3UTRImpact.fasta
       hash: md5
-      md5: f90ccd44801d4b16958a31d10256ee07
-      size: 604089185
+      md5: ff68915a9b24ed42cb1694d5a300ba17
+      size: 613906481
   randomizeSeqsAndExtraFeatures@seqImpact:
     cmd: python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
       output/data/sanityCheck/seqImpact.fasta --save_path output/data/sanityCheck/seqImpact_predictions.csv
@@ -1179,12 +1179,12 @@ stages:
     deps:
     - path: output/data/sanityCheck/3UTRImpact.fasta
       hash: md5
-      md5: f90ccd44801d4b16958a31d10256ee07
-      size: 604089185
+      md5: ff68915a9b24ed42cb1694d5a300ba17
+      size: 613906481
     - path: scripts/sanityCheck_predictions.py
       hash: md5
-      md5: 70e174a9385758b554971b3fc7f1f9dd
-      size: 23254
+      md5: 05f56b1cb5d5f95c4540a059cb4353d2
+      size: 23588
     params:
       params.yaml:
         randomizeSeqsAndExtraFeatures:
@@ -1192,8 +1192,8 @@ stages:
     outs:
     - path: output/data/sanityCheck/3UTRImpact_predictions.csv
       hash: md5
-      md5: b08d8a760d8285dba7a967e8c957638f
-      size: 28198998
+      md5: 7cd3e55ad4699657c31127ed15fab043
+      size: 37987645
   runFIMO:
     cmd: singularity exec -B $(readlink output/motifs/positive/motif_seqs.fasta):/tmp/motif_seqs.fasta
       docker://memesuite/memesuite:5.5.7 fimo --oc output/fimo_out --thresh 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster_filtered.meme
@@ -1259,7 +1259,7 @@ stages:
       size: 17745906
       nfiles: 1
   runMASTFilter:
-    cmd: head output/data/MEME_suite/TEseqs_split_by_utr.fasta -n 10 > /tmp/train.fasta
+    cmd: head output/data/MEME_suite/train_TEseqs_split_by_utr.fasta -n 10 > /tmp/train.fasta
       && singularity exec -B /tmp/train.fasta docker://memesuite/memesuite:5.5.7 mast
       -oc output/mastFilter_out -remcorr 
       /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
@@ -1271,16 +1271,16 @@ stages:
     outs:
     - path: output/mastFilter_out/mast.txt
       hash: md5
-      md5: 2ef71d076dfd9f7e44a371f78326a52c
-      size: 11956
+      md5: b967caa8937001b0bba4322e7be75c48
+      size: 11955
   motifsToKeep:
     cmd: python scripts/motifsToKeep.py --input output/mastFilter_out/mast.txt --output
       output/mastFilter_out/motifsToKeep.txt
     deps:
     - path: output/mastFilter_out/mast.txt
       hash: md5
-      md5: 2ef71d076dfd9f7e44a371f78326a52c
-      size: 11956
+      md5: b967caa8937001b0bba4322e7be75c48
+      size: 11955
     - path: scripts/motifsToKeep.py
       hash: md5
       md5: 711b67c3dea1b3662eaba628d457ed6b
@@ -2885,8 +2885,8 @@ stages:
     deps:
     - path: output/ftModel
       hash: md5
-      md5: c27f29ba4e4f5e14addfa383d1f814f9.dir
-      size: 2216501807
+      md5: ce24c79c68c5b7e052b5c4476fff0e2f.dir
+      size: 2216502675
       nfiles: 26
     - path: scripts/importanceAnalysis.py
       hash: md5
@@ -4092,16 +4092,22 @@ stages:
       size: 797222
   runMAST@dev:
     cmd: mkdir -p output/mast_out && singularity exec -B $(readlink output/data/MEME_suite/dev_TEseqs_split_by_utr.fasta):/tmp/dev.fasta
-      docker://memesuite/memesuite:5.5.7 mast -hit_list -remcorr -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+      -B $(readlink output/data/MEME_suite/nucFrequencies.txt):/tmp/bfile.txt docker://memesuite/memesuite:5.5.7
+      mast -bfile /tmp/bfile.txt -hit_list -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
       /tmp/dev.fasta > output/mast_out/dev_mast_results.txt && singularity exec -B
       $(readlink output/data/MEME_suite/dev_TEseqs_split_by_utr.fasta):/tmp/dev.fasta
-      docker://memesuite/memesuite:5.5.7 mast -oc output/mast_out/dev -remcorr -ev
-      10000 -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme /tmp/dev.fasta
+      -B $(readlink output/data/MEME_suite/nucFrequencies.txt):/tmp/bfile.txt docker://memesuite/memesuite:5.5.7
+      mast -bfile /tmp/bfile.txt -oc output/mast_out/dev -ev 10000 -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+      /tmp/dev.fasta
     deps:
     - path: output/data/MEME_suite/dev_TEseqs_split_by_utr.fasta
       hash: md5
       md5: 2b8fab65141c526b37ff3ab857c94252
       size: 797222
+    - path: output/data/MEME_suite/nucFrequencies.txt
+      hash: md5
+      md5: 79a0ef1bae8079962a57b80fd3b10e0c
+      size: 254
     params:
       params.yaml:
         runMAST:
@@ -4112,8 +4118,8 @@ stages:
     outs:
     - path: output/mast_out/dev_mast_results.txt
       hash: md5
-      md5: 96c1dc8230666ecc6b6951e6f6e300e1
-      size: 3968760
+      md5: 0a29e966179113e24ff41ef37b35dacd
+      size: 4050370
   prepForMAST@test:
     cmd: python scripts/prepForMAST.py --input_fasta output/data/decay/test.fasta
       --output_fasta output/data/MEME_suite/test_TEseqs_split_by_utr.fasta
@@ -4160,12 +4166,18 @@ stages:
       size: 3622401
   runMAST@train:
     cmd: mkdir -p output/mast_out && singularity exec -B $(readlink output/data/MEME_suite/train_TEseqs_split_by_utr.fasta):/tmp/train.fasta
-      docker://memesuite/memesuite:5.5.7 mast -hit_list -remcorr -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+      -B $(readlink output/data/MEME_suite/nucFrequencies.txt):/tmp/bfile.txt docker://memesuite/memesuite:5.5.7
+      mast -bfile /tmp/bfile.txt -hit_list -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
       /tmp/train.fasta > output/mast_out/train_mast_results.txt && singularity exec
       -B $(readlink output/data/MEME_suite/train_TEseqs_split_by_utr.fasta):/tmp/train.fasta
-      docker://memesuite/memesuite:5.5.7 mast -oc output/mast_out/train -remcorr -mt
-      0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme /tmp/train.fasta
+      -B $(readlink output/data/MEME_suite/nucFrequencies.txt):/tmp/bfile.txt docker://memesuite/memesuite:5.5.7
+      mast -bfile /tmp/bfile.txt -oc output/mast_out/train -ev 10000 -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+      /tmp/train.fasta
     deps:
+    - path: output/data/MEME_suite/nucFrequencies.txt
+      hash: md5
+      md5: 79a0ef1bae8079962a57b80fd3b10e0c
+      size: 254
     - path: output/data/MEME_suite/train_TEseqs_split_by_utr.fasta
       hash: md5
       md5: b8a79b6167cdf55f2227803e68d57acd
@@ -4180,16 +4192,22 @@ stages:
     outs:
     - path: output/mast_out/train_mast_results.txt
       hash: md5
-      md5: d51c4f6da3aac0e959b17e1f8a18924f
-      size: 17745906
+      md5: c3ea8102c0e4805169fb0912deba8823
+      size: 18127330
   runMAST@test:
     cmd: mkdir -p output/mast_out && singularity exec -B $(readlink output/data/MEME_suite/test_TEseqs_split_by_utr.fasta):/tmp/test.fasta
-      docker://memesuite/memesuite:5.5.7 mast -hit_list -remcorr -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+      -B $(readlink output/data/MEME_suite/nucFrequencies.txt):/tmp/bfile.txt docker://memesuite/memesuite:5.5.7
+      mast -bfile /tmp/bfile.txt -hit_list -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
       /tmp/test.fasta > output/mast_out/test_mast_results.txt && singularity exec
       -B $(readlink output/data/MEME_suite/test_TEseqs_split_by_utr.fasta):/tmp/test.fasta
-      docker://memesuite/memesuite:5.5.7 mast -oc output/mast_out/test -remcorr -mt
-      0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme /tmp/test.fasta
+      -B $(readlink output/data/MEME_suite/nucFrequencies.txt):/tmp/bfile.txt docker://memesuite/memesuite:5.5.7
+      mast -bfile /tmp/bfile.txt -oc output/mast_out/test -ev 10000 -mt 0.05 data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+      /tmp/test.fasta
     deps:
+    - path: output/data/MEME_suite/nucFrequencies.txt
+      hash: md5
+      md5: 79a0ef1bae8079962a57b80fd3b10e0c
+      size: 254
     - path: output/data/MEME_suite/test_TEseqs_split_by_utr.fasta
       hash: md5
       md5: e3802f7a1dd96d6511f82e5ce8730c87
@@ -4204,8 +4222,8 @@ stages:
     outs:
     - path: output/mast_out/test_mast_results.txt
       hash: md5
-      md5: 5735f4c40eb9b8dfb72538a10476b5db
-      size: 3928846
+      md5: ab9bded4cc211fab5d2f0e8efc12c325
+      size: 4006108
   runMAST_topHits:
     cmd: singularity exec -B $(readlink output/data/MEME_suite/dev_TEseqs_split_by_utr.fasta):/tmp/dev.fasta
       docker://memesuite/memesuite:5.5.7 mast -oc output/mast_out/topHits -remcorr
@@ -5904,3 +5922,20 @@ stages:
       md5: 743149f6ce2d543272c313f075d44ad5.dir
       size: 180580
       nfiles: 3
+  getMASTBackgroundFile:
+    cmd: singularity exec -B $(readlink output/data/decay/train.fasta):/tmp/train.fasta
+      docker://memesuite/memesuite:5.5.7 fasta-get-markov /tmp/train.fasta output/data/MEME_suite/nucFrequencies.txt
+    deps:
+    - path: output/data/decay/train.fasta
+      hash: md5
+      md5: 4c7808bd05acff6e4808f9d5997c57ab
+      size: 3014517
+    params:
+      params.yaml:
+        getMASTBackgroundFile:
+          output_file: nucFrequencies.txt
+    outs:
+    - path: output/data/MEME_suite/nucFrequencies.txt
+      hash: md5
+      md5: 79a0ef1bae8079962a57b80fd3b10e0c
+      size: 254

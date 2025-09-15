@@ -391,9 +391,9 @@ stages:
       - findMotifs
 
   runMASTFilter:
-    cmd: head ${prepForMAST.output_fasta} -n 10 > /tmp/train.fasta && singularity
-      exec -B /tmp/train.fasta docker://memesuite/memesuite:5.5.7 mast -oc ${runMASTFilter.output_dir}
-      -remcorr 
+    cmd: head ${prepForMAST.output_dir}/train_${prepForMAST.output_fasta} -n 10 >
+      /tmp/train.fasta && singularity exec -B /tmp/train.fasta docker://memesuite/memesuite:5.5.7
+      mast -oc ${runMASTFilter.output_dir} -remcorr 
       /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
       /tmp/train.fasta
     outs:
@@ -623,16 +623,27 @@ stages:
       params:
       - prepForMAST
 
-  runTOMTOM:
-    cmd: singularity exec -B $(readlink ${prepForMAST.output_dir}/train_${prepForMAST.output_fasta}):/tmp/train.fasta
-      docker://memesuite/memesuite:5.5.7 tomtom -oc ${runTOMTOM.output_dir} -norc
-      ${runTOMTOM.motif_file} ${runTOMTOM.motif_file}
+#  runTOMTOM:
+#    cmd: singularity exec -B $(readlink ${prepForMAST.output_dir}/train_${prepForMAST.output_fasta}):/tmp/train.fasta
+#      docker://memesuite/memesuite:5.5.7 tomtom -oc ${runTOMTOM.output_dir} -norc
+#      ${runTOMTOM.motif_file} ${runTOMTOM.motif_file}
+#    outs:
+#    - ${runTOMTOM.output_dir}
+#    deps:
+#    - ${prepForMAST.output_dir}/train_${prepForMAST.output_fasta}
+#    params:
+#    - runTOMTOM
+
+  getMASTBackgroundFile:
+    cmd: singularity exec -B $(readlink ${preprocessData.output_dir}/train.fasta):/tmp/train.fasta
+        docker://memesuite/memesuite:5.5.7 fasta-get-markov /tmp/train.fasta
+        ${prepForMAST.output_dir}/${getMASTBackgroundFile.output_file}
     outs:
-    - ${runTOMTOM.output_dir}
+    - ${prepForMAST.output_dir}/${getMASTBackgroundFile.output_file}
     deps:
-    - ${prepForMAST.output_dir}/train_${prepForMAST.output_fasta}
+    - ${preprocessData.output_dir}/train.fasta
     params:
-    - runTOMTOM
+    - getMASTBackgroundFile
 
   runMAST:
     foreach:
@@ -640,19 +651,20 @@ stages:
     - dev
     - test
     do:
-      cmd: mkdir -p ${runMAST.output_dir} && singularity exec -B $(readlink 
-        ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}):/tmp/${item}.fasta
-        docker://memesuite/memesuite:5.5.7 mast -hit_list -remcorr -mt ${runMAST.mast_pvalue_threshold}
+      cmd: mkdir -p ${runMAST.output_dir} && singularity exec -B $(readlink ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}):/tmp/${item}.fasta
+        -B $(readlink ${prepForMAST.output_dir}/${getMASTBackgroundFile.output_file}):/tmp/bfile.txt
+        docker://memesuite/memesuite:5.5.7 mast -bfile /tmp/bfile.txt -hit_list -mt ${runMAST.mast_pvalue_threshold}
         ${runMAST.motif_file} /tmp/${item}.fasta > ${runMAST.output_dir}/${item}_${runMAST.output_file}
-        && singularity exec -B $(readlink 
-        ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}):/tmp/${item}.fasta
-        docker://memesuite/memesuite:5.5.7 mast -oc ${runMAST.output_dir}/${item}
-        -remcorr -ev 10000 -mt ${runMAST.mast_pvalue_threshold} ${runMAST.motif_file}
+        && singularity exec -B $(readlink ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}):/tmp/${item}.fasta
+        -B $(readlink ${prepForMAST.output_dir}/${getMASTBackgroundFile.output_file}):/tmp/bfile.txt
+        docker://memesuite/memesuite:5.5.7 mast -bfile /tmp/bfile.txt -oc ${runMAST.output_dir}/${item}
+        -ev 10000 -mt ${runMAST.mast_pvalue_threshold} ${runMAST.motif_file}
         /tmp/${item}.fasta
       outs:
       - ${runMAST.output_dir}/${item}_${runMAST.output_file}
       deps:
       - ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}
+      - ${prepForMAST.output_dir}/${getMASTBackgroundFile.output_file}
       params:
       - runMAST
 
@@ -814,7 +826,6 @@ plots:
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/images
-- dvclive/findMotifs/plots/images
 - dvclive/TE/plots/metrics:
     x: step
 - dvclive/TE/plots/images
@@ -845,6 +856,7 @@ plots:
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/images
+- dvclive/findMotifs/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json

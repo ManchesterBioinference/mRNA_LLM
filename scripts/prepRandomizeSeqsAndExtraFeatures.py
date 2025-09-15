@@ -45,15 +45,16 @@ def main():
                 continue
             id = idToPrediction[first_record_description[1]] #original prediction (E1S1)
             actualTE = records[i].id
-            first_record_description = ' '.join(first_record_description[1:])+' '+actualTE #move the actual TE to the end # defines the extraFeatures (E)
+            first_record_description = ' '.join(first_record_description[1:])
             for j,record in enumerate(records):
                 if j == i:
                     continue
-                if record.description.split(' ')[1] not in idToPrediction:
+                pertID = record.description.split(' ')[1] # ID for the perturbed sequence
+                if pertID not in idToPrediction:
                     continue
                 r = SeqRecord(record.seq, record.id, record.name, record.description, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
                 r.id = str(id)
-                r.description = first_record_description
+                r.description = first_record_description+' '+pertID+' '+actualTE #move the actual TE to the end # defines the extraFeatures (E)
                 newRecords.append(r)
     elif args.process == "extraFeatImpact":
         # keep the original prediction associated with the sequence (E1S1) and the sequence the same (S1). Change the extraFeatures (E).
@@ -64,10 +65,11 @@ def main():
             id = str(idToPrediction[records[i].description.split(' ')[1]]) #original prediction (E1S1)
             actualTE = records[i].id
             first_record_sequence = records[i].seq # defines the sequence (S)
+            origTRID = records[i].description.split(' ')[1] # original extraFeatures (E1)
             for j,record in enumerate(records):
                 if j == i:
                     continue
-                r = SeqRecord(first_record_sequence, id, record.name, ' '.join(record.description.split()[1:])+' '+actualTE, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
+                r = SeqRecord(first_record_sequence, id, record.name, ' '.join(record.description.split()[1:])+' '+origTRID+' '+actualTE, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
                 newRecords.append(r)
     elif args.process == "5UTRImpact":
         # keep the original prediction associated with the sequence (E1S1) and the 3' UTR the same (3UTR). Change the 5' UTR (5UTR).
@@ -83,9 +85,10 @@ def main():
                 if j == i:
                     continue
                 r = SeqRecord(record.seq, record.id, record.name, record.description, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
+                pertID = record.description.split(' ')[1] # ID for the perturbed 5' UTR
                 variable5UTR = str(record.seq).split(',')[0]
                 r.id = str(id)
-                r.description = ' '.join(first_record.description.split(' ')[1:])+' '+actualTE #move the actual TE to the end
+                r.description = ' '.join(first_record.description.split(' ')[1:])+' '+pertID+' '+actualTE #move the actual TE to the end
                 r.seq = ','.join([variable5UTR, first_record_3utr])
                 newRecords.append(r)
     elif args.process == "3UTRImpact":
@@ -102,9 +105,10 @@ def main():
                 if j == i:
                     continue
                 r = SeqRecord(record.seq, record.id, record.name, record.description, record.dbxrefs, record.features, record.annotations, record.letter_annotations)
+                pertID = record.description.split(' ')[1] # ID for the perturbed 3' UTR
                 variable3UTR = str(record.seq).split(',')[1]
                 r.id = str(id)
-                r.description = ' '.join(first_record.description.split(' ')[1:])+' '+actualTE #move the actual TE to the end
+                r.description = ' '.join(first_record.description.split(' ')[1:])+' '+pertID+' '+actualTE #move the actual TE to the end
                 r.seq = ','.join([first_record_5utr, variable3UTR])
                 newRecords.append(r)
     else:
