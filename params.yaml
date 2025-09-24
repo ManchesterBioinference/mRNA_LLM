@@ -172,6 +172,12 @@ motifsToKeep:
 runAME:
   output_dir: ame_output
 
+motifEnrichment:
+  output_dir: output/motifEnrichment
+
+motifEnrichment_highLowDecay:
+  output_dir: output/motifEnrichment_highLow
+
 correctAME_pvalues:
   output_file: ame_corrected.tsv
 

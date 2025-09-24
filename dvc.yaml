@@ -130,7 +130,7 @@ stages:
     cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && python scripts/train.py --params params.yaml
       --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/ --max_seq_length
       512 --data_dir ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
-      --mfe ${runViennaRNA.output_csv} --use_ray_tune --train_final_model
+      --mfe ${runViennaRNA.output_csv} --use_ray_tune #--train_final_model
     deps:
     - scripts/train.py
     - scripts/GenaLMWithExtraFeatures.py
@@ -412,6 +412,31 @@ stages:
     params:
     - motifsToKeep
 
+  motifEnrichment:
+    foreach:
+    - train
+    - dev
+    - test
+    do:
+      cmd: python scripts/motifEnrichment.py --params params.yaml --name ${item} --motifLocations
+        ${runMAST.output_dir}/${item}_${runMAST.output_file} --highSHAP ${findMotifs.output_dir}/${item}/positive/${findMotifs.motif_positions}
+        --highControl ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions}
+        --lowSHAP ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_positions}
+        --lowControl ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions}
+      deps:
+      - scripts/motifEnrichment.py
+      - ${findMotifs.output_dir}/${item}/positive/${findMotifs.motif_positions}
+      - ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions}
+      - ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_positions}
+      - ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions}
+      outs:
+      - ${motifEnrichment.output_dir}/${item}_pos5_mannwhitneyu_results.csv
+      - ${motifEnrichment.output_dir}/${item}_pos3_mannwhitneyu_results.csv
+      - ${motifEnrichment.output_dir}/${item}_neg5_mannwhitneyu_results.csv
+      - ${motifEnrichment.output_dir}/${item}_neg3_mannwhitneyu_results.csv
+      params:
+      - motifEnrichment
+
   runAME:
     matrix:
       model: [train, test, dev]
@@ -552,6 +577,16 @@ stages:
       params:
       - splitHighLowDecay
 
+  motifEnrichment_highLowDecay:
+    foreach:
+    - train
+    - dev
+    - test
+    do:
+      cmd: python scripts/motifEnrichment_highLow.py --params params.yaml --name ${item}
+        --motifLocations ${runMAST.output_dir}/${item}_${runMAST.output_file} --highTE
+        ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.high} --lowTE ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.low}
+
   runAME_highLowDecay:
     foreach:
     - interest: high
@@ -636,8 +671,7 @@ stages:
 
   getMASTBackgroundFile:
     cmd: singularity exec -B $(readlink ${preprocessData.output_dir}/train.fasta):/tmp/train.fasta
-        docker://memesuite/memesuite:5.5.7 fasta-get-markov /tmp/train.fasta
-        ${prepForMAST.output_dir}/${getMASTBackgroundFile.output_file}
+      docker://memesuite/memesuite:5.5.7 fasta-get-markov /tmp/train.fasta ${prepForMAST.output_dir}/${getMASTBackgroundFile.output_file}
     outs:
     - ${prepForMAST.output_dir}/${getMASTBackgroundFile.output_file}
     deps:
@@ -651,15 +685,17 @@ stages:
     - dev
     - test
     do:
-      cmd: mkdir -p ${runMAST.output_dir} && singularity exec -B $(readlink ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}):/tmp/${item}.fasta
+      cmd: mkdir -p ${runMAST.output_dir} && singularity exec -B $(readlink 
+        ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}):/tmp/${item}.fasta
         -B $(readlink ${prepForMAST.output_dir}/${getMASTBackgroundFile.output_file}):/tmp/bfile.txt
-        docker://memesuite/memesuite:5.5.7 mast -bfile /tmp/bfile.txt -hit_list -mt ${runMAST.mast_pvalue_threshold}
-        ${runMAST.motif_file} /tmp/${item}.fasta > ${runMAST.output_dir}/${item}_${runMAST.output_file}
-        && singularity exec -B $(readlink ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}):/tmp/${item}.fasta
+        docker://memesuite/memesuite:5.5.7 mast -bfile /tmp/bfile.txt -hit_list -mt
+        ${runMAST.mast_pvalue_threshold} ${runMAST.motif_file} /tmp/${item}.fasta
+        > ${runMAST.output_dir}/${item}_${runMAST.output_file} && singularity exec
+        -B $(readlink 
+        ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}):/tmp/${item}.fasta
         -B $(readlink ${prepForMAST.output_dir}/${getMASTBackgroundFile.output_file}):/tmp/bfile.txt
         docker://memesuite/memesuite:5.5.7 mast -bfile /tmp/bfile.txt -oc ${runMAST.output_dir}/${item}
-        -ev 10000 -mt ${runMAST.mast_pvalue_threshold} ${runMAST.motif_file}
-        /tmp/${item}.fasta
+        -ev 10000 -mt ${runMAST.mast_pvalue_threshold} ${runMAST.motif_file} /tmp/${item}.fasta
       outs:
       - ${runMAST.output_dir}/${item}_${runMAST.output_file}
       deps:
@@ -826,27 +862,6 @@ plots:
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/images
-- dvclive/TE/plots/metrics:
-    x: step
-- dvclive/TE/plots/images
-- dvclive/TE/seq_only/plots/metrics:
-    x: step
-- dvclive/TE/seq_only/plots/images
-- dvclive/TE/no_lengths/plots/metrics:
-    x: step
-- dvclive/TE/no_lengths/plots/images
-- dvclive/TE/only_codons/plots/metrics:
-    x: step
-- dvclive/TE/only_codons/plots/images
-- dvclive/TE/no_codons/plots/metrics:
-    x: step
-- dvclive/TE/no_codons/plots/images
-- dvclive/TE/no_gc_content/plots/metrics:
-    x: step
-- dvclive/TE/no_gc_content/plots/images
-- dvclive/TE/no_mfe/plots/metrics:
-    x: step
-- dvclive/TE/no_mfe/plots/images
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/images
@@ -856,20 +871,25 @@ plots:
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/images
+- dvclive/TE/plots/metrics:
+    x: step
+- dvclive/TE/plots/images
 - dvclive/findMotifs/plots/images
+- dvclive/TE/seq_only/plots/metrics:
+    x: step
+- dvclive/TE/seq_only/plots/images
+- dvclive/TE/only_codons/plots/metrics:
+    x: step
+- dvclive/TE/only_codons/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
 - dvclive/codonOnlyClassificationMLP/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly/metrics.json
-- dvclive/TE/metrics.json
-- dvclive/TE/seq_only/metrics.json
-- dvclive/TE/no_lengths/metrics.json
-- dvclive/TE/only_codons/metrics.json
-- dvclive/TE/no_codons/metrics.json
-- dvclive/TE/no_gc_content/metrics.json
-- dvclive/TE/no_mfe/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/metrics.json
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/metrics.json
+- dvclive/TE/metrics.json
+- dvclive/TE/seq_only/metrics.json
+- dvclive/TE/only_codons/metrics.json

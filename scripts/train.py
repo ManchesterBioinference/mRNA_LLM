@@ -880,30 +880,38 @@ def main():
     # 4. Determine num_extra_features for model initialization
     num_extra_features = extraFeatures_df.shape[1] if extraFeatures_df is not None else 0
     
-    model = None # Initialize model to None
-    if not args.do_visualize: 
-        model_path = args.model_name_or_path if args.model_name_or_path else 'AIRI-Institute/gena-lm-bert-base-fly'
-        try:
-            model = GenaLMWithExtraFeatures(model_path, num_extra_features=num_extra_features,projector_dropout=args.projector_dropout, classifier_dropout_prob=args.classifier_dropout_prob)
-            logger.info(f"Model initialized from {model_path} with num_extra_features: {num_extra_features}")
-        except Exception as e:
-            logger.error(f"Failed to initialize model from {model_path}: {e}")
-            # Decide on fallback or re-raise
-            raise
-        logger.info("finish loading model")
-
-        if args.local_rank == 0 and torch.distributed.is_initialized(): # Check if distributed is initialized
-            torch.distributed.barrier()
-
-        if model: model.to(args.device)
-    # else: model remains None if only visualizing.
-
-    logger.info("Training/evaluation parameters %s", args)
 
 
     # TRAIN  -----------------------------------------------------------------------------------------------------
     if args.do_train:
         if args.use_ray_tune:
+            model = None # Initialize model to None
+            if not args.do_visualize: 
+                model_path = args.model_name_or_path if args.model_name_or_path else 'AIRI-Institute/gena-lm-bert-base-fly'
+                try:
+                    model = GenaLMWithExtraFeatures(
+                        model_path if model_path else 'AIRI-Institute/gena-lm-bert-base-fly', 
+                        num_extra_features=num_extra_features,
+                        dropout_percent=args.hidden_dropout_prob, 
+                        hidden_dropout_prob=args.hidden_dropout_prob, 
+                        attention_probs_dropout_prob=args.attention_probs_dropout_prob,
+                        projector_dropout=args.projector_dropout, 
+                        classifier_dropout_prob=args.classifier_dropout_prob
+                    )
+                    logger.info(f"Model initialized from {model_path} with num_extra_features: {num_extra_features}")
+                except Exception as e:
+                    logger.error(f"Failed to initialize model from {model_path}: {e}")
+                    # Decide on fallback or re-raise
+                    raise
+                logger.info("finish loading model")
+
+                if args.local_rank == 0 and torch.distributed.is_initialized(): # Check if distributed is initialized
+                    torch.distributed.barrier()
+
+                if model: model.to(args.device)
+            # else: model remains None if only visualizing.
+
+            logger.info("Training/evaluation parameters %s", args)
             # Ray Tune hyperparameter optimization
             logger.info("Starting Ray Tune hyperparameter optimization...")
             
@@ -1020,8 +1028,11 @@ def main():
                 # Initialize model
                 model_path = args.model_name_or_path if args.model_name_or_path else 'AIRI-Institute/gena-lm-bert-base-fly'
                 model = GenaLMWithExtraFeatures(
-                    model_path, 
+                    model_path if model_path else 'AIRI-Institute/gena-lm-bert-base-fly', 
                     num_extra_features=num_extra_features,
+                    dropout_percent=args.hidden_dropout_prob, 
+                    hidden_dropout_prob=args.hidden_dropout_prob, 
+                    attention_probs_dropout_prob=args.attention_probs_dropout_prob,
                     projector_dropout=args.projector_dropout, 
                     classifier_dropout_prob=args.classifier_dropout_prob
                 )
@@ -1486,6 +1497,9 @@ def main():
                 model = GenaLMWithExtraFeatures(
                     model_path if model_path else 'AIRI-Institute/gena-lm-bert-base-fly', 
                     num_extra_features=num_extra_features,
+                    dropout_percent=args.hidden_dropout_prob, 
+                    hidden_dropout_prob=args.hidden_dropout_prob, 
+                    attention_probs_dropout_prob=args.attention_probs_dropout_prob,
                     projector_dropout=args.projector_dropout, 
                     classifier_dropout_prob=args.classifier_dropout_prob
                 )
@@ -1528,17 +1542,6 @@ def main():
             # Regular training without Ray Tune
             live = Live(os.path.join('dvclive/TE', args.runName), cache_images=True)
 
-            # Force single GPU to match Ray Tune conditions exactly
-            if args.n_gpu > 1:
-                logger.info(f"Forcing single GPU for final model training to match Ray Tune conditions")
-                args.n_gpu = 1
-                torch.cuda.set_device(0)  # Use GPU 0
-                args.device = torch.device("cuda:0")
-                logger.info(f"Final model will use device: {args.device}")
-
-            if model is None: 
-                raise ValueError("Model not initialized. Cannot proceed with training. Check --do_visualize flag or model loading steps.")
-
             # load best ray tune config if available
             best_config_path = os.path.join(args.ray_tune_local_dir, "best_ray_tune_config.json")
             if os.path.exists(best_config_path):
@@ -1554,6 +1557,46 @@ def main():
                 args.classifier_dropout_prob = best_config["classifier_dropout"]
                 args.projector_dropout = best_config.get("projector_dropout", 0.1)
                 logger.info("Loaded best Ray Tune config: %s", best_config)
+
+
+            model = None # Initialize model to None
+            if not args.do_visualize: 
+                model_path = args.model_name_or_path if args.model_name_or_path else 'AIRI-Institute/gena-lm-bert-base-fly'
+                try:
+                    model = GenaLMWithExtraFeatures(
+                        model_path if model_path else 'AIRI-Institute/gena-lm-bert-base-fly', 
+                        num_extra_features=num_extra_features,
+                        dropout_percent=args.hidden_dropout_prob, 
+                        hidden_dropout_prob=args.hidden_dropout_prob, 
+                        attention_probs_dropout_prob=args.attention_probs_dropout_prob,
+                        projector_dropout=args.projector_dropout, 
+                        classifier_dropout_prob=args.classifier_dropout_prob
+                    )
+                    logger.info(f"Model initialized from {model_path} with num_extra_features: {num_extra_features}")
+                except Exception as e:
+                    logger.error(f"Failed to initialize model from {model_path}: {e}")
+                    # Decide on fallback or re-raise
+                    raise
+                logger.info("finish loading model")
+
+                if args.local_rank == 0 and torch.distributed.is_initialized(): # Check if distributed is initialized
+                    torch.distributed.barrier()
+
+                if model: model.to(args.device)
+            # else: model remains None if only visualizing.
+
+            logger.info("Training/evaluation parameters %s", args)
+
+            # Force single GPU to match Ray Tune conditions exactly
+            if args.n_gpu > 1:
+                logger.info(f"Forcing single GPU for final model training to match Ray Tune conditions")
+                args.n_gpu = 1
+                torch.cuda.set_device(0)  # Use GPU 0
+                args.device = torch.device("cuda:0")
+                logger.info(f"Final model will use device: {args.device}")
+
+            if model is None: 
+                raise ValueError("Model not initialized. Cannot proceed with training. Check --do_visualize flag or model loading steps.")
 
 
             labels, seqs, atten_masks, tr_ids = load_data(args, tokenizer)

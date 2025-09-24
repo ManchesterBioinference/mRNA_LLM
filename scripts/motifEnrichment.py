@@ -3,6 +3,28 @@
 import pandas as pd
 import os
 from Bio import SeqIO
+import argparse
+import yaml
+
+parser = argparse.ArgumentParser(description='Process motif enrichment analysis.')
+parser.add_argument("--params", type=str, required=True, help="Path to the extra features .csv file")
+parser.add_argument('--name', type=str, required=False, help='Study name')
+parser.add_argument('--motifLocations', type=str, required=False, help='Path to MAST output file')
+parser.add_argument('--highSHAP', type=str, required=False, help='Path to highSHAP file')
+parser.add_argument('--highControl', type=str, required=False, help='Path to highControl file')
+parser.add_argument('--lowSHAP', type=str, required=False, help='Path to lowSHAP file')
+parser.add_argument('--lowControl', type=str, required=False, help='Path to lowControl file')
+parser.add_argument('--output_dir', type=str, required=False, help='Path to output directory')
+args = parser.parse_known_args()[0]
+
+# Read parameters from YAML file
+if args.params:
+    with open(args.params, 'r') as file:
+        yaml_params = yaml.safe_load(file)
+        for key, value in yaml_params['motifEnrichment'].items():
+            parser.set_defaults(**{key: value})
+
+args = parser.parse_args()
 
 def _reorder_lengths_median_alternating(lengths_list):
     """
@@ -46,11 +68,12 @@ def _reorder_lengths_median_alternating(lengths_list):
             
     return new_order_lengths
 
-try:
-    df = pd.read_csv('output/mast_out/dev_mast_results.txt', sep='\s+', skiprows=2, skipfooter=1, engine='python')
-except:
-    os.chdir('..')
-    df = pd.read_csv('output/mast_out/dev_mast_results.txt', sep='\s+', skiprows=2, skipfooter=1, engine='python')
+#try:
+#    df = pd.read_csv('output/mast_out/dev_mast_results.txt', sep='\s+', skiprows=2, skipfooter=1, engine='python')
+#except:
+#    os.chdir('..')
+#    df = pd.read_csv('output/mast_out/dev_mast_results.txt', sep='\s+', skiprows=2, skipfooter=1, engine='python')
+df = pd.read_csv(args.motifLocations, sep='\s+', skiprows=2, skipfooter=1, engine='python')
 df.columns = ['sequence_name', 'strand', 'id', 'alt_id', 'hit_start','hit_end','score','p_value']
 
 # Count unique RBPs in alt_id column
@@ -60,10 +83,10 @@ print(f"Number of unique RBPs: {unique_rbps}")
 # Create new column 'trID' by splitting sequence_name on '_' and taking index 0
 df['trID'] = df['sequence_name'].str.split('_').str[0]
 
-motifPos = pd.read_csv('output/motifs/dev/positive/motif_positions.txt', sep='\t',engine='pyarrow',dtype_backend = 'pyarrow')
-controlPos = pd.read_csv('output/motifs/dev/positive/control_positions.txt', sep='\t',engine='pyarrow',dtype_backend = 'pyarrow')
-motifNeg = pd.read_csv('output/motifs/dev/negative/motif_positions.txt', sep='\t',engine='pyarrow',dtype_backend = 'pyarrow')
-controlNeg = pd.read_csv('output/motifs/dev/negative/control_positions.txt', sep='\t',engine='pyarrow',dtype_backend = 'pyarrow')
+highSHAP = pd.read_csv(args.highSHAP, sep='\t',engine='pyarrow',dtype_backend = 'pyarrow')
+highControl = pd.read_csv(args.highControl, sep='\t',engine='pyarrow',dtype_backend = 'pyarrow')
+lowSHAP = pd.read_csv(args.lowSHAP, sep='\t',engine='pyarrow',dtype_backend = 'pyarrow')
+lowControl = pd.read_csv(args.lowControl, sep='\t',engine='pyarrow',dtype_backend = 'pyarrow')
 
 # --- New code: split each into 5' and 3' UTR dataframes and match length distributions ---
 
@@ -77,10 +100,10 @@ def split_by_utr(df_regions: pd.DataFrame):
     three['length'] = three['end'] - three['start']
     return five, three
 
-motifPos_5utr, motifPos_3utr = split_by_utr(motifPos)
-controlPos_5utr, controlPos_3utr = split_by_utr(controlPos)
-motifNeg_5utr, motifNeg_3utr = split_by_utr(motifNeg)
-controlNeg_5utr, controlNeg_3utr = split_by_utr(controlNeg)
+highSHAP_5utr, highSHAP_3utr = split_by_utr(highSHAP)
+highControl_5utr, highControl_3utr = split_by_utr(highControl)
+lowSHAP_5utr, lowSHAP_3utr = split_by_utr(lowSHAP)
+lowControl_5utr, lowControl_3utr = split_by_utr(lowControl)
 
 # Helper to get reordered motif lengths
 
@@ -91,10 +114,10 @@ def get_reordered_lengths(motif_df: pd.DataFrame):
     lengths = lengths[lengths > 0].tolist()
     return _reorder_lengths_median_alternating(lengths)
 
-pos5_lengths = get_reordered_lengths(motifPos_5utr)
-pos3_lengths = get_reordered_lengths(motifPos_3utr)
-neg5_lengths = get_reordered_lengths(motifNeg_5utr)
-neg3_lengths = get_reordered_lengths(motifNeg_3utr)
+pos5_lengths = get_reordered_lengths(highSHAP_5utr)
+pos3_lengths = get_reordered_lengths(highSHAP_3utr)
+neg5_lengths = get_reordered_lengths(lowSHAP_5utr)
+neg3_lengths = get_reordered_lengths(lowSHAP_3utr)
 
 print("Length counts (motif): pos5", len(pos5_lengths), "pos3", len(pos3_lengths), "neg5", len(neg5_lengths), "neg3", len(neg3_lengths))
 
@@ -104,6 +127,7 @@ from collections import Counter
 import numpy as np
 from scipy.stats import mannwhitneyu
 from statsmodels.stats.multitest import multipletests
+import tqdm
 
 def split_regions_to_lengths_proportional(control_df: pd.DataFrame, motif_lengths, random_state: int = 42):
     """Split control regions into segments whose length distribution mirrors motif_lengths.
@@ -124,7 +148,7 @@ def split_regions_to_lengths_proportional(control_df: pd.DataFrame, motif_length
     total_segments = 0
     records = []
 
-    for _, row in control_df.iterrows():
+    for _, row in tqdm.tqdm(control_df.iterrows()):
         region_start = int(row['start'])
         region_end = int(row['end'])
         remaining = region_end - region_start
@@ -181,99 +205,99 @@ def split_regions_to_lengths_proportional(control_df: pd.DataFrame, motif_length
     return pd.DataFrame(records)
 
 # Generate matched control sets with new proportional splitter
-controlPos_5utr_matched = split_regions_to_lengths_proportional(controlPos_5utr, motifPos_5utr['length'].astype(int).tolist())
-controlPos_3utr_matched = split_regions_to_lengths_proportional(controlPos_3utr, motifPos_3utr['length'].astype(int).tolist())
-controlNeg_5utr_matched = split_regions_to_lengths_proportional(controlNeg_5utr, motifNeg_5utr['length'].astype(int).tolist())
-controlNeg_3utr_matched = split_regions_to_lengths_proportional(controlNeg_3utr, motifNeg_3utr['length'].astype(int).tolist())
+highControl_5utr_matched = split_regions_to_lengths_proportional(highControl_5utr, highSHAP_5utr['length'].astype(int).tolist())
+highControl_3utr_matched = split_regions_to_lengths_proportional(highControl_3utr, highSHAP_3utr['length'].astype(int).tolist())
+lowControl_5utr_matched = split_regions_to_lengths_proportional(lowControl_5utr, lowSHAP_5utr['length'].astype(int).tolist())
+lowControl_3utr_matched = split_regions_to_lengths_proportional(lowControl_3utr, lowSHAP_3utr['length'].astype(int).tolist())
 
 # create a more descriptive index
-for d in [motifPos_5utr, motifPos_3utr, controlPos_5utr_matched, controlPos_3utr_matched, motifNeg_5utr, motifNeg_3utr, controlNeg_5utr_matched, controlNeg_3utr_matched]:
+for d in [highSHAP_5utr, highSHAP_3utr, highControl_5utr_matched, highControl_3utr_matched, lowSHAP_5utr, lowSHAP_3utr, lowControl_5utr_matched, lowControl_3utr_matched]:
     d.index = d['trID'] + '_'+ d['start'].astype(str) + '-' + d['end'].astype(str)
 
 print("Matched control segment counts (proportional):",
-      "pos5", len(controlPos_5utr_matched),
-      "pos3", len(controlPos_3utr_matched),
-      "neg5", len(controlNeg_5utr_matched),
-      "neg3", len(controlNeg_3utr_matched))
+      "pos5", len(highControl_5utr_matched),
+      "pos3", len(highControl_3utr_matched),
+      "neg5", len(lowControl_5utr_matched),
+      "neg3", len(lowControl_3utr_matched))
 
 # These new DataFrames are now available:
-# motifPos_5utr, motifPos_3utr, motifNeg_5utr, motifNeg_3utr
-# controlPos_5utr_matched, controlPos_3utr_matched, controlNeg_5utr_matched, controlNeg_3utr_matched
+# highSHAP_5utr, highSHAP_3utr, lowSHAP_5utr, lowSHAP_3utr
+# highControl_5utr_matched, highControl_3utr_matched, lowControl_5utr_matched, lowControl_3utr_matched
 # -----------------------------------------------------------------------------
 
 # %%
-import matplotlib.pyplot as plt
-
-# Define the pairs
-pairs = [
-    (motifPos_5utr, controlPos_5utr_matched, "5'UTR Positive"),
-    (motifPos_3utr, controlPos_3utr_matched, "3'UTR Positive"),
-    (motifNeg_5utr, controlNeg_5utr_matched, "5'UTR Negative"),
-    (motifNeg_3utr, controlNeg_3utr_matched, "3'UTR Negative")
-]
-
-fig, axes = plt.subplots(4, 2, figsize=(12, 16))
-fig.suptitle('Histograms of Motif and Control Lengths')
-
-for i, (motif_df, control_df, title) in enumerate(pairs):
-    motif_lengths = None
-    control_lengths = None
-    
-    if not motif_df.empty and 'length' in motif_df.columns:
-        motif_lengths = motif_df['length'].dropna()
-    
-    if not control_df.empty and 'length' in control_df.columns:
-        control_lengths = control_df['length'].dropna()
-    
-    # Compute shared bins and xlim if both have data
-    if motif_lengths is not None and control_lengths is not None:
-        all_lengths = pd.concat([motif_lengths, control_lengths])
-        overall_min = all_lengths.min()
-        overall_max = all_lengths.max()
-        bins = np.linspace(overall_min, overall_max, 21)  # 20 bins
-        xlim = (overall_min, overall_max)
-    elif motif_lengths is not None:
-        overall_min = motif_lengths.min()
-        overall_max = motif_lengths.max()
-        bins = np.linspace(overall_min, overall_max, 21)
-        xlim = (overall_min, overall_max)
-    elif control_lengths is not None:
-        overall_min = control_lengths.min()
-        overall_max = control_lengths.max()
-        bins = np.linspace(overall_min, overall_max, 21)
-        xlim = (overall_min, overall_max)
-    else:
-        continue  # Skip if no data
-    
-    if motif_lengths is not None:
-        axes[i, 0].hist(motif_lengths, bins=bins, alpha=0.7, color='blue', edgecolor='black')
-        axes[i, 0].set_title(f'Motif {title}')
-        axes[i, 0].set_xlabel('Length')
-        axes[i, 0].set_ylabel('Frequency')
-        axes[i, 0].set_xlim(xlim)
-    
-    if control_lengths is not None:
-        axes[i, 1].hist(control_lengths, bins=bins, alpha=0.7, color='red', edgecolor='black')
-        axes[i, 1].set_title(f'Control {title}')
-        axes[i, 1].set_xlabel('Length')
-        axes[i, 1].set_ylabel('Frequency')
-        axes[i, 1].set_xlim(xlim)
-
-plt.tight_layout()
-plt.show()
+#import matplotlib.pyplot as plt
+#
+## Define the pairs
+#pairs = [
+#    (highSHAP_5utr, highControl_5utr_matched, "5'UTR Positive"),
+#    (highSHAP_3utr, highControl_3utr_matched, "3'UTR Positive"),
+#    (lowSHAP_5utr, lowControl_5utr_matched, "5'UTR Negative"),
+#    (lowSHAP_3utr, lowControl_3utr_matched, "3'UTR Negative")
+#]
+#
+#fig, axes = plt.subplots(4, 2, figsize=(12, 16))
+#fig.suptitle('Histograms of Motif and Control Lengths')
+#
+#for i, (motif_df, control_df, title) in tqdm.tqdm(enumerate(pairs)):
+#    motif_lengths = None
+#    control_lengths = None
+#    
+#    if not motif_df.empty and 'length' in motif_df.columns:
+#        motif_lengths = motif_df['length'].dropna()
+#    
+#    if not control_df.empty and 'length' in control_df.columns:
+#        control_lengths = control_df['length'].dropna()
+#    
+#    # Compute shared bins and xlim if both have data
+#    if motif_lengths is not None and control_lengths is not None:
+#        all_lengths = pd.concat([motif_lengths, control_lengths])
+#        overall_min = all_lengths.min()
+#        overall_max = all_lengths.max()
+#        bins = np.linspace(overall_min, overall_max, 21)  # 20 bins
+#        xlim = (overall_min, overall_max)
+#    elif motif_lengths is not None:
+#        overall_min = motif_lengths.min()
+#        overall_max = motif_lengths.max()
+#        bins = np.linspace(overall_min, overall_max, 21)
+#        xlim = (overall_min, overall_max)
+#    elif control_lengths is not None:
+#        overall_min = control_lengths.min()
+#        overall_max = control_lengths.max()
+#        bins = np.linspace(overall_min, overall_max, 21)
+#        xlim = (overall_min, overall_max)
+#    else:
+#        continue  # Skip if no data
+#    
+#    if motif_lengths is not None:
+#        axes[i, 0].hist(motif_lengths, bins=bins, alpha=0.7, color='blue', edgecolor='black')
+#        axes[i, 0].set_title(f'Motif {title}')
+#        axes[i, 0].set_xlabel('Length')
+#        axes[i, 0].set_ylabel('Frequency')
+#        axes[i, 0].set_xlim(xlim)
+#    
+#    if control_lengths is not None:
+#        axes[i, 1].hist(control_lengths, bins=bins, alpha=0.7, color='red', edgecolor='black')
+#        axes[i, 1].set_title(f'Control {title}')
+#        axes[i, 1].set_xlabel('Length')
+#        axes[i, 1].set_ylabel('Frequency')
+#        axes[i, 1].set_xlim(xlim)
+#
+#plt.tight_layout()
+#plt.show()
 
 # %%
-pos5 = pd.DataFrame(0, index=motifPos_5utr.index, columns=df['alt_id'].unique())
-pos3 = pd.DataFrame(0, index=motifPos_3utr.index, columns=df['alt_id'].unique())
-pcontrol5 = pd.DataFrame(0, index=controlPos_5utr_matched.index, columns=df['alt_id'].unique())
-pcontrol3 = pd.DataFrame(0, index=controlPos_3utr_matched.index, columns=df['alt_id'].unique())
-neg5 = pd.DataFrame(0, index=motifNeg_5utr.index, columns=df['alt_id'].unique())
-neg3 = pd.DataFrame(0, index=motifNeg_3utr.index, columns=df['alt_id'].unique())
-ncontrol5 = pd.DataFrame(0, index=controlNeg_5utr_matched.index, columns=df['alt_id'].unique())
-ncontrol3 = pd.DataFrame(0, index=controlNeg_3utr_matched.index, columns=df['alt_id'].unique())
+pos5 = pd.DataFrame(0, index=highSHAP_5utr.index, columns=df['alt_id'].unique())
+pos3 = pd.DataFrame(0, index=highSHAP_3utr.index, columns=df['alt_id'].unique())
+pcontrol5 = pd.DataFrame(0, index=highControl_5utr_matched.index, columns=df['alt_id'].unique())
+pcontrol3 = pd.DataFrame(0, index=highControl_3utr_matched.index, columns=df['alt_id'].unique())
+neg5 = pd.DataFrame(0, index=lowSHAP_5utr.index, columns=df['alt_id'].unique())
+neg3 = pd.DataFrame(0, index=lowSHAP_3utr.index, columns=df['alt_id'].unique())
+ncontrol5 = pd.DataFrame(0, index=lowControl_5utr_matched.index, columns=df['alt_id'].unique())
+ncontrol3 = pd.DataFrame(0, index=lowControl_3utr_matched.index, columns=df['alt_id'].unique())
 
 
-for regions, tmpDF in zip([motifPos_5utr, motifPos_3utr, controlPos_5utr_matched, controlPos_3utr_matched, motifNeg_5utr,motifNeg_3utr, controlNeg_5utr_matched, controlNeg_3utr_matched], [pos5, pos3, pcontrol5, pcontrol3, neg5, neg3, ncontrol5, ncontrol3]):
+for regions, tmpDF in tqdm.tqdm(zip([highSHAP_5utr, highSHAP_3utr, highControl_5utr_matched, highControl_3utr_matched, lowSHAP_5utr,lowSHAP_3utr, lowControl_5utr_matched, lowControl_3utr_matched], [pos5, pos3, pcontrol5, pcontrol3, neg5, neg3, ncontrol5, ncontrol3])):
     for r in regions.iterrows():
         if r[1]['start'] > r[1]['sepStart']:
             id = r[1]['trID']+'_3utr'
@@ -300,19 +324,19 @@ df_pairs = [
 ]
 
 for d, name in df_pairs:
-    d.to_parquet(f"output/motifEnrichment/{name}.parquet")
+    d.to_parquet(f"{args.output_dir}/{name}.parquet")
 # %%
 # Define the pairs for Mann-Whitney U tests
 test_pairs = [
-    (pos5, pcontrol5, 'pos5_vs_pcontrol5'),
-    (pos3, pcontrol3, 'pos3_vs_pcontrol3'),
-    (neg5, ncontrol5, 'neg5_vs_ncontrol5'),
-    (neg3, ncontrol3, 'neg3_vs_ncontrol3')
+    (pos5, pcontrol5, 'pos5'),
+    (pos3, pcontrol3, 'pos3'),
+    (neg5, ncontrol5, 'neg5'),
+    (neg3, ncontrol3, 'neg3')
 ]
 
 # Perform Mann-Whitney U test for each pair and column
 results = {}
-for motif_df, control_df, pair_name in test_pairs:
+for motif_df, control_df, pair_name in tqdm.tqdm(test_pairs):
     pair_results = {}
     for col in motif_df.columns:
         if col in control_df.columns:
@@ -332,8 +356,10 @@ for motif_df, control_df, pair_name in test_pairs:
 for k in results.keys():
     results[k]['p_adj'] = multipletests(results[k]['p_value'], method='fdr_bh')[1]
     results[k].sort_values('p_value', inplace=True)
+    results[k].to_csv(f"{args.output_dir}/{args.name}_{k}_mannwhitneyu_results.csv")
     print(k)
-    print(results[k].head(10))
+    print(results[k][results[k]['p_adj'] < 0.07])
+
 
 
 # # Optionally, print or save results
@@ -342,4 +368,29 @@ for k in results.keys():
 #     for col, res in pair_results.items():
 #         print(f"  {col}: U={res['statistic']:.2f}, p={res['p_value']:.4e}")
 # 
-# %%
+# # %%
+# import matplotlib.pyplot as plt
+# 
+# # Plot histogram for MSI in pos5 and pcontrol5
+# fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+# fig.suptitle('Histograms of MSI Counts in pos5 and pcontrol5')
+# 
+# # pos5 MSI
+# gene = 'SHEP'
+# if gene in pos5.columns:
+#     axes[0].hist(pos5[gene], bins=20, alpha=0.7, color='blue', edgecolor='black')
+#     axes[0].set_title(f'pos5 {gene}')
+#     axes[0].set_xlabel('Count')
+#     axes[0].set_ylabel('Frequency')
+# 
+# # pcontrol5 MSI
+# if gene in pcontrol5.columns:
+#     axes[1].hist(pcontrol5[gene], bins=20, alpha=0.7, color='red', edgecolor='black')
+#     axes[1].set_title(f'pcontrol5 {gene}')
+#     axes[1].set_xlabel('Count')
+#     axes[1].set_ylabel('Frequency')
+# 
+# plt.tight_layout()
+# plt.show()
+# # %%
+# 

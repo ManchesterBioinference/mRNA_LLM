@@ -23,3 +23,5 @@ output/motifs/train/positive/interest_seqs.fasta
 data/Kallisto_DESeq2_15August25.csv
 notebooks/explorativeJupyterNotebooks/decayOld_vs_decayNew.ipynb
 data/Kallisto_DESeq2_15August25.csv
+output/ray_ablations/
+output/motifEnrichment/*parquet

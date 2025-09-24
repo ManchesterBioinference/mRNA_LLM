@@ -9,9 +9,12 @@ import os
 import json
 
 class GenaLMWithExtraFeatures(nn.Module):
-    def __init__(self, base_model_name, num_extra_features=0, num_labels=1, dropout_percent=0.1, max_length=512, projector_dropout = None, classifier_dropout_prob=None):
+    def __init__(self, base_model_name, num_extra_features=0, num_labels=1, dropout_percent=0.1, max_length=512, hidden_dropout_prob = None, attention_probs_dropout_prob = None, projector_dropout = None, classifier_dropout_prob=None):
         super(GenaLMWithExtraFeatures, self).__init__()
         self.model = AutoModel.from_pretrained(base_model_name, trust_remote_code=True).bert
+        self.hidden_dropout_prob = hidden_dropout_prob if hidden_dropout_prob is not None else self.model.config.hidden_dropout_prob
+        self.attention_probs_dropout_prob = attention_probs_dropout_prob if attention_probs_dropout_prob is not None else self.model.config.attention_probs_dropout_prob
+        self.model = AutoModel.from_pretrained(base_model_name, hidden_dropout_prob=self.hidden_dropout_prob, attention_probs_dropout_prob=self.attention_probs_dropout_prob, trust_remote_code=True).bert
         self.num_extra_features = num_extra_features # This will now include MFE
         self.num_labels = num_labels
         self.dropout_percent = dropout_percent
@@ -108,6 +111,8 @@ class GenaLMWithExtraFeatures(nn.Module):
             "num_labels": self.num_labels,
             "num_extra_features": self.num_extra_features, # Ensure this is saved correctly
             "dropout_percent": self.dropout_percent,
+            "hidden_dropout_prob": self.hidden_dropout_prob,
+            "attention_probs_dropout_prob": self.attention_probs_dropout_prob,
             "projector_dropout": self.projector_dropout,
             "classifier_dropout_prob": self.classifier_dropout_prob,
             "max_length": self.max_length
@@ -139,6 +144,8 @@ class GenaLMWithExtraFeatures(nn.Module):
             num_extra_features=config["num_extra_features"], # Ensure this is loaded correctly
             num_labels=config["num_labels"],
             dropout_percent=config["dropout_percent"],
+            hidden_dropout_prob=config["hidden_dropout_prob"] if "hidden_dropout_prob" in config else None,
+            attention_probs_dropout_prob=config["attention_probs_dropout_prob"] if "attention_probs_dropout_prob" in config else None,
             projector_dropout=config["projector_dropout"] if "projector_dropout" in config else None,
             classifier_dropout_prob=config["classifier_dropout_prob"] if "classifier_dropout_prob" in config else None,
             max_length=config["max_length"]
