@@ -254,7 +254,7 @@ def plotPredictions(preds, out_label_ids, results, stage='train', live_logger=No
 
 def prepMotifCounts(mastResultsPath):
     # Read the file, skipping the first two lines that start with #
-    df = pd.read_csv('output/mast_out/mast_results.txt', sep='\s+', skiprows=2, skipfooter=1, engine='python')
+    df = pd.read_csv(mastResultsPath, sep='\s+', skiprows=2, skipfooter=1, engine='python')
     df.columns = ['sequence_name', 'strand', 'id', 'alt_id', 'hit_start','hit_end','score','p_value']
 
     # Create new column 'trID' by splitting sequence_name on '_' and taking index 0
@@ -439,9 +439,9 @@ def main():
     # get train, validation, and test data directories
     trIDs = {}
     for item in ['train', 'dev', 'test']:
-        seqs = SeqIO.index(os.path.join(args.data_dir, item + '.fasta'), 'fasta')
+        seqs = SeqIO.parse(os.path.join(args.data_dir, item + '.fasta'), 'fasta')
         # Extract element index 1 from seq.description for each sequence
-        trID = [seq.description.split()[1] for seq in seqs.values()]
+        trID = [seq.description.split()[1] for seq in seqs]
         trIDs[item] = trID
 
     # Load extra features

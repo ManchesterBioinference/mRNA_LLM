@@ -1,5 +1,8 @@
 {
-  "learning_rate": 0.0038491183337653534,
-  "weight_decay": 0.05853100581866877,
-  "dropout_percent": 0.7406828295461403
+  "learning_rate": 0.0009693723332179149,
+  "weight_decay": 0.0632276234265635,
+  "dropout_percent": 0.7562675529315488,
+  "num_hidden_layers": 1,
+  "hidden_size": 128,
+  "negative_slope": 0.13203329721775814
 }

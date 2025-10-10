@@ -65,8 +65,6 @@ stages:
 
   mergeUTRsAndDecayRates:
     cmd: python scripts/mergeUTRsAndDecayRates.py --params params.yaml --fasta ${preprocessFlyUTRs.output_dir}
-      --gtf_file 
-      ${downloadSpeciesData.output_dir}/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
     deps:
     - scripts/mergeUTRsAndDecayRates.py
     - ${mergeUTRsAndDecayRates.decay_rates} #data/results_zygotic_tr_extended_filtered.csv
@@ -429,6 +427,7 @@ stages:
       - ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions}
       - ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_positions}
       - ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions}
+      - ${runMAST.output_dir}/${item}_${runMAST.output_file}
       outs:
       - ${motifEnrichment.output_dir}/${item}_pos5_mannwhitneyu_results.csv
       - ${motifEnrichment.output_dir}/${item}_pos3_mannwhitneyu_results.csv
@@ -586,6 +585,16 @@ stages:
       cmd: python scripts/motifEnrichment_highLow.py --params params.yaml --name ${item}
         --motifLocations ${runMAST.output_dir}/${item}_${runMAST.output_file} --highTE
         ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.high} --lowTE ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.low}
+      deps:
+      - scripts/motifEnrichment_highLow.py
+      - ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.high}
+      - ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.low}
+      - ${runMAST.output_dir}/${item}_${runMAST.output_file}
+      outs:
+      - ${motifEnrichment.output_dir}/${item}_utr5_mannwhitneyu_results.csv
+      - ${motifEnrichment.output_dir}/${item}_utr3_mannwhitneyu_results.csv
+      params:
+      - motifEnrichment_highLowDecay
 
   runAME_highLowDecay:
     foreach:
@@ -862,6 +871,22 @@ plots:
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/images
+- dvclive/TE/plots/metrics:
+    x: step
+- dvclive/TE/plots/images
+- dvclive/TE/no_codons/plots/metrics:
+    x: step
+- dvclive/TE/no_codons/plots/images
+- dvclive/TE/no_mfe/plots/metrics:
+    x: step
+- dvclive/TE/no_mfe/plots/images
+- dvclive/TE/no_lengths/plots/metrics:
+    x: step
+- dvclive/TE/no_lengths/plots/images
+- dvclive/TE/no_gc_content/plots/metrics:
+    x: step
+- dvclive/TE/no_gc_content/plots/images
+- dvclive/findMotifs/plots/images
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/images
@@ -871,25 +896,17 @@ plots:
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/images
-- dvclive/TE/plots/metrics:
-    x: step
-- dvclive/TE/plots/images
-- dvclive/findMotifs/plots/images
-- dvclive/TE/seq_only/plots/metrics:
-    x: step
-- dvclive/TE/seq_only/plots/images
-- dvclive/TE/only_codons/plots/metrics:
-    x: step
-- dvclive/TE/only_codons/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
 - dvclive/codonOnlyClassificationMLP/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly/metrics.json
+- dvclive/TE/metrics.json
+- dvclive/TE/no_codons/metrics.json
+- dvclive/TE/no_mfe/metrics.json
+- dvclive/TE/no_lengths/metrics.json
+- dvclive/TE/no_gc_content/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/metrics.json
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/metrics.json
-- dvclive/TE/metrics.json
-- dvclive/TE/seq_only/metrics.json
-- dvclive/TE/only_codons/metrics.json

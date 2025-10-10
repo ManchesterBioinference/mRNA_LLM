@@ -2,18 +2,20 @@
 
 #SBATCH -p gpuL # multicore #
 #SBATCH -G 2
-#SBATCH -n 4 #--cpus-per-task=10  # Use this instead of -n for Ray Tune #SBATCH --ntasks=1          # Single task (Ray will handle parallelization)
-#SBATCH -t 24:00:00
+#SBATCH -n 8 #--cpus-per-task=10  # Use this instead of -n for Ray Tune #SBATCH --ntasks=1          # Single task (Ray will handle parallelization)
+#SBATCH -t 6:00:00
 
 #####################################################
 ### run command
 #####################################################
 source ~/.bashrc
 conda activate rayTune
+~/.local/share/mamba/bin/dvc repro predict
+~/.local/share/mamba/bin/dvc repro motifEnrichment
 ~/.local/share/mamba/bin/dvc repro motifEnrichment_highLowDecay
-#~/.local/share/mamba/bin/dvc repro codonOnlyClassificationMLP
-#~/.local/share/mamba/bin/dvc repro allExtraFeaturesClassificationMLP
-#~/.local/share/mamba/bin/dvc repro extraFeaturesAndMotifCountsClassificationMLP
+~/.local/share/mamba/bin/dvc repro codonOnlyClassificationMLP
+~/.local/share/mamba/bin/dvc repro allExtraFeaturesClassificationMLP
+~/.local/share/mamba/bin/dvc repro extraFeaturesAndMotifCountsClassificationMLP
 
 
 # ~/.local/share/mamba/bin/git add -u
@@ -25,6 +27,8 @@ conda activate rayTune
 # 
 # ~/.local/share/mamba/bin/dvc repro -s -f fineTuneModel_ablations@1 # visualizeImportance #runViennaRNA #
 # ~/.local/share/mamba/bin/git add -u
+#30
+#31
 # ~/.local/share/mamba/bin/git commit -m "(ablations) no_lengths"
 # 
 # ~/.local/share/mamba/bin/dvc repro -s -f fineTuneModel_ablations@2 # visualizeImportance #runViennaRNA #

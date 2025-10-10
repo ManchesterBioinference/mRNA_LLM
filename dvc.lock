@@ -53,12 +53,11 @@ stages:
       nfiles: 3
   mergeUTRsAndDecayRates:
     cmd: python scripts/mergeUTRsAndDecayRates.py --params params.yaml --fasta output/data/flyUTRs
-      --gtf_file data/downloaded/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
     deps:
-    - path: data/translationEfficiency/2h_TE.csv
+    - path: data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv
       hash: md5
-      md5: 6ff90e71a6362db80a85223d0b87c0b2
-      size: 1445241
+      md5: f457204cec911d26cf261291e0d5eb3d
+      size: 218026
     - path: output/data/flyUTRs
       hash: md5
       md5: d799de301c01f205bcdcf0cb8155a820.dir
@@ -66,27 +65,26 @@ stages:
       nfiles: 3
     - path: scripts/mergeUTRsAndDecayRates.py
       hash: md5
-      md5: a69c5ea7e05b44cf8630707b20d76873
-      size: 4951
+      md5: 1b05f9edadd9d669ccc7ab9ffe73a6d5
+      size: 2065
     params:
       params.yaml:
         mergeUTRsAndDecayRates:
-          decay_rates: data/translationEfficiency/2h_TE.csv
-          transcriptExpression: data/translationEfficiency/transcripts.csv
-          output_file: output/data/utrTE.fasta
+          decay_rates: data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv
+          output_file: output/data/utrDecayRates.fasta
     outs:
-    - path: output/data/utrTE.fasta
+    - path: output/data/utrDecayRates.fasta
       hash: md5
-      md5: 0d9f0b6f3bd89c0956c719f42505bcd4
-      size: 4287694
+      md5: 598e8e9d16f74d3608117f77311acf8a
+      size: 891903
   preprocessData:
-    cmd: python scripts/preprocess.py --params params.yaml --data_dir output/data/utrTE.fasta
+    cmd: python scripts/preprocess.py --params params.yaml --data_dir output/data/utrDecayRates.fasta
       --ncbi_geneID_map data/gene2refseq_Dmel.txt --geneID_flybase_map data/GeneID_to_FlybaseID.txt
     deps:
-    - path: output/data/utrTE.fasta
+    - path: output/data/utrDecayRates.fasta
       hash: md5
-      md5: 0d9f0b6f3bd89c0956c719f42505bcd4
-      size: 4287694
+      md5: 598e8e9d16f74d3608117f77311acf8a
+      size: 891903
     - path: scripts/preprocess.py
       hash: md5
       md5: d743e017cd26a9041672d7260cc08d51
@@ -106,8 +104,8 @@ stages:
     outs:
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
   trainToFlyUTRs:
     cmd: python scripts/trainToFlyUTRs.py --params params.yaml --data_dir output/data/flyUTRs
@@ -326,17 +324,17 @@ stages:
       size: 25
       nfiles: 1
   getDecayResiduals:
-    cmd: python scripts/getDecayResiduals.py --params params.yaml --decay_file data/translationEfficiency/2h_TE.csv
-      --utr_fasta output/data/utrTE.fasta --CDS_fasta data/3UTRs/Drosophila_melanogaster-cds.fa
+    cmd: python scripts/getDecayResiduals.py --params params.yaml --decay_file data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv
+      --utr_fasta output/data/utrDecayRates.fasta --CDS_fasta data/3UTRs/Drosophila_melanogaster-cds.fa
     deps:
     - path: data/3UTRs/Drosophila_melanogaster-cds.fa
       hash: md5
       md5: 99d74cc84b9079be0abfd3a0a29af10d
       size: 61914081
-    - path: output/data/utrTE.fasta
+    - path: output/data/utrDecayRates.fasta
       hash: md5
-      md5: 0d9f0b6f3bd89c0956c719f42505bcd4
-      size: 4287694
+      md5: 598e8e9d16f74d3608117f77311acf8a
+      size: 891903
     - path: scripts/getDecayResiduals.py
       hash: md5
       md5: f9604d471ca9364289889e5ef84921eb
@@ -350,12 +348,12 @@ stages:
     outs:
     - path: output/data/codons/decayResiduals.fasta
       hash: md5
-      md5: 35034553938fd768cbb4bc6e9950e7ed
-      size: 4411336
+      md5: c8b02645a4bcd81a6b372fa3a9a0804d
+      size: 904614
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
   downloadSpeciesData:
     cmd: python scripts/downloadSpeciesData.py data/downloaded
     deps:
@@ -966,17 +964,17 @@ stages:
       size: 12505
   isolateFullTranscripts:
     cmd: python scripts/isolateFullTranscripts.py --params params.yaml --data_dir
-      data/3UTRs --target_ids_fasta output/data/utrTE.fasta
+      data/3UTRs --target_ids_fasta output/data/utrDecayRates.fasta
     deps:
     - path: data/downloaded
       hash: md5
       md5: edd2ffb5bae5b9df825ca55bf7409d09.dir
       size: 50408678
       nfiles: 2
-    - path: output/data/utrTE.fasta
+    - path: output/data/utrDecayRates.fasta
       hash: md5
-      md5: 0d9f0b6f3bd89c0956c719f42505bcd4
-      size: 4287694
+      md5: 598e8e9d16f74d3608117f77311acf8a
+      size: 891903
     - path: scripts/isolateFullTranscripts.py
       hash: md5
       md5: 7aa6be3829f80630148a9699b5030fe4
@@ -988,8 +986,8 @@ stages:
     outs:
     - path: output/data/full_transcripts/Dmela-full_transcripts.fa
       hash: md5
-      md5: 3bd6423af316c817a68f3f68dedcc7c2
-      size: 15870067
+      md5: 7c19d64b6a5afe32c055fd0944612505
+      size: 2444865
   runViennaRNA:
     cmd: python scripts/runViennaRNA.py --input_fasta output/data/full_transcripts/Dmela-full_transcripts.fa
       --output_csv output/data/codons/vienna_features.csv --condaPath /mnt/mr01-home01/m65338lb/.local/bin/micromamba
@@ -997,8 +995,8 @@ stages:
     deps:
     - path: output/data/full_transcripts/Dmela-full_transcripts.fa
       hash: md5
-      md5: 3bd6423af316c817a68f3f68dedcc7c2
-      size: 15870067
+      md5: 7c19d64b6a5afe32c055fd0944612505
+      size: 2444865
     - path: scripts/runViennaRNA.py
       hash: md5
       md5: c2ead86d5971984a7894013084773939
@@ -1012,8 +1010,8 @@ stages:
     outs:
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
   prepRandomizeSeqsAndExtraFeatures@seqImpact:
     cmd: python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
       --sequence_file output/data/decay/dev.fasta --process seqImpact --output_file
@@ -2298,8 +2296,8 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: scripts/ablate_features.py
       hash: md5
       md5: 66f69c97e770a557616895475c08025f
@@ -2311,16 +2309,16 @@ stages:
     outs:
     - path: output/data/ablations/no_lengths_gc.csv
       hash: md5
-      md5: 56946750d25c2d21a7cb4accf9a8f7a4
-      size: 6846370
+      md5: b8a9732d3daf564d218fe366104c7688
+      size: 744115
   ablate_features@2:
     cmd: "python scripts/ablate_features.py --input_file output/data/codons/extraFeatures.csv
       --output_file output/data/ablations/no_codons.csv --ablate_codons\n"
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: scripts/ablate_features.py
       hash: md5
       md5: 66f69c97e770a557616895475c08025f
@@ -2332,16 +2330,16 @@ stages:
     outs:
     - path: output/data/ablations/no_codons.csv
       hash: md5
-      md5: 2ed34076c992e1108f2a2df24321039a
-      size: 711408
+      md5: 7d90f860ccafb995a446c82c6f26f565
+      size: 77034
   ablate_features@0:
     cmd: "python scripts/ablate_features.py --input_file output/data/codons/extraFeatures.csv
       --output_file output/data/ablations/no_lengths.csv --ablate_lengths\n"
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: scripts/ablate_features.py
       hash: md5
       md5: 66f69c97e770a557616895475c08025f
@@ -2353,16 +2351,16 @@ stages:
     outs:
     - path: output/data/ablations/no_lengths.csv
       hash: md5
-      md5: cf530fc628abf16384485166c9e07c3b
-      size: 7178584
+      md5: 0fb5fd1442f64a90606b1b95401a360a
+      size: 780401
   ablate_features@1:
     cmd: "python scripts/ablate_features.py --input_file output/data/codons/extraFeatures.csv
       --output_file output/data/ablations/no_gc_content.csv --ablate_gc_content\n"
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: scripts/ablate_features.py
       hash: md5
       md5: 66f69c97e770a557616895475c08025f
@@ -2374,8 +2372,8 @@ stages:
     outs:
     - path: output/data/ablations/no_gc_content.csv
       hash: md5
-      md5: c823f0a9ac3db27d2c7981e5f0fa6e9f
-      size: 6920709
+      md5: 54c34447529afd6394ff54d328787c5d
+      size: 752605
   fineTuneModel_ablations@5:
     cmd: "python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_only_codons
@@ -2706,17 +2704,17 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: 69d49b741cf3bcebfcdfdb48ef16f878
-      size: 33805
+      md5: 00a24d3a137a4e48559731ff1d6b221b
+      size: 35093
     params:
       params.yaml:
         codonOnlyClassificationMLP:
@@ -2728,13 +2726,13 @@ stages:
     outs:
     - path: output/codonOnlyClassificationMLP/codonOnly/best_spearmanr
       hash: md5
-      md5: 0f42d3ca5301a287d05f95e758ee6c23.dir
-      size: 71964
+      md5: e31efc667c065eb6a6113d8e44ccfea1.dir
+      size: 863401
       nfiles: 4
     - path: output/ray_results_MLP/codonOnly
       hash: md5
-      md5: 0b649ceac872ed7e7889d3267988f84e.dir
-      size: 11001346
+      md5: 236aae18e5288c9d8e3ffe5893b9ad81.dir
+      size: 12414968
       nfiles: 1505
   codonOnlyClassificationMLP@codonOnly:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
@@ -2808,21 +2806,21 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: 69d49b741cf3bcebfcdfdb48ef16f878
-      size: 33805
+      md5: 00a24d3a137a4e48559731ff1d6b221b
+      size: 35093
     params:
       params.yaml:
         allExtraFeaturesClassificationMLP:
@@ -2830,13 +2828,13 @@ stages:
     outs:
     - path: output/codonOnlyClassificationMLP/allExtraFeatures/best_spearmanr
       hash: md5
-      md5: 91fcc51d522ee1a2211647a3e685b1ab.dir
-      size: 82748
+      md5: 4a7712178be7fe8821b46a74fcaa5287.dir
+      size: 874119
       nfiles: 4
     - path: output/ray_results_MLP/allExtraFeatures
       hash: md5
-      md5: c5e780951526ea2ae4868bcae0e72aa8.dir
-      size: 12286542
+      md5: c9114d5c3f6ca54a14171a727c7d1cb7.dir
+      size: 10892454
       nfiles: 1505
   extraFeaturesAndMotifCountsClassificationMLP:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
@@ -2847,21 +2845,21 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: 69d49b741cf3bcebfcdfdb48ef16f878
-      size: 33805
+      md5: 00a24d3a137a4e48559731ff1d6b221b
+      size: 35093
     params:
       params.yaml:
         extraFeaturesAndMotifCountsClassificationMLP:
@@ -2869,13 +2867,13 @@ stages:
     outs:
     - path: output/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts/best_spearmanr
       hash: md5
-      md5: 6a865eca576e6b065b4d2ba5ca8e1492.dir
-      size: 114813
+      md5: f5ac3d323abfc35f045ac66c48604744.dir
+      size: 73589
       nfiles: 4
     - path: output/ray_results_MLP/extraFeaturesAndMotifCounts
       hash: md5
-      md5: 070fcf65f9d52ddd9127b0aa9d29e4b3.dir
-      size: 10219023
+      md5: 9cdd1ee750faf7ba6c91e8a0b7752377.dir
+      size: 9751925
       nfiles: 1505
   importanceAnalysis@dev:
     cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
@@ -2885,8 +2883,8 @@ stages:
     deps:
     - path: output/ftModel
       hash: md5
-      md5: e4bf8c36dba20270269e9712288000c6.dir
-      size: 2216503491
+      md5: a0187760dde567044dc44b866ad0635b.dir
+      size: 2216503956
       nfiles: 26
     - path: scripts/importanceAnalysis.py
       hash: md5
@@ -2901,8 +2899,8 @@ stages:
     outs:
     - path: output/importance/dev_shap.pkl
       hash: md5
-      md5: 63776a8cddc57660a6ed40fd85268efe
-      size: 1681715
+      md5: c6e1ef7bd2c37fbca3325b65634201af
+      size: 340479
   visualizeImportance@dev:
     cmd: python scripts/visualizeImportance.py --params params.yaml --kmer 4 --SHAP
       output/importance/dev_shap.pkl --scoresOnly output/importance/dev_shapScores.npy
@@ -2911,8 +2909,8 @@ stages:
     deps:
     - path: output/importance/dev_shap.pkl
       hash: md5
-      md5: 63776a8cddc57660a6ed40fd85268efe
-      size: 1681715
+      md5: c6e1ef7bd2c37fbca3325b65634201af
+      size: 340479
     - path: scripts/visualizeImportance.py
       hash: md5
       md5: a0c0c1aff1fe371ac073281f7763d4ad
@@ -2926,8 +2924,8 @@ stages:
     outs:
     - path: output/importance/dev_visualizeImportance.html
       hash: md5
-      md5: 8774e05d28554ba01ef516256a633a42
-      size: 7380361
+      md5: 822e81b5f2d593081a8d6c3459b612df
+      size: 1517136
   fineTuneModel_ablations@no_codons:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_codons
@@ -3124,8 +3122,8 @@ stages:
     deps:
     - path: output/ftModel
       hash: md5
-      md5: e4bf8c36dba20270269e9712288000c6.dir
-      size: 2216503491
+      md5: a0187760dde567044dc44b866ad0635b.dir
+      size: 2216503956
       nfiles: 26
     - path: scripts/importanceAnalysis.py
       hash: md5
@@ -3140,8 +3138,8 @@ stages:
     outs:
     - path: output/importance/test_shap.pkl
       hash: md5
-      md5: 7db756168c442e76e0938969f05a83c4
-      size: 1700997
+      md5: f8e0a71a2c9839292b66176bfafc8ad4
+      size: 272068
   visualizeImportance@test:
     cmd: python scripts/visualizeImportance.py --params params.yaml --kmer 4 --SHAP
       output/importance/test_shap.pkl --scoresOnly output/importance/test_shapScores.npy
@@ -3150,8 +3148,8 @@ stages:
     deps:
     - path: output/importance/test_shap.pkl
       hash: md5
-      md5: 7db756168c442e76e0938969f05a83c4
-      size: 1700997
+      md5: f8e0a71a2c9839292b66176bfafc8ad4
+      size: 272068
     - path: scripts/visualizeImportance.py
       hash: md5
       md5: a0c0c1aff1fe371ac073281f7763d4ad
@@ -3165,16 +3163,16 @@ stages:
     outs:
     - path: output/importance/test_visualizeImportance.html
       hash: md5
-      md5: 44228f19e775e18d27f0651dde926134
-      size: 7472498
+      md5: d2c97237e63474e70e00bf9fe6dc7541
+      size: 1208957
   findMotifs@test:
     cmd: python scripts/find_motifs.py --SHAP output/importance/test_shap.pkl --save_file_dir
       output/motifs/test
     deps:
     - path: output/importance/test_visualizeImportance.html
       hash: md5
-      md5: 44228f19e775e18d27f0651dde926134
-      size: 7472498
+      md5: d2c97237e63474e70e00bf9fe6dc7541
+      size: 1208957
     - path: scripts/find_motifs.py
       hash: md5
       md5: ab8c8dd90d38d1aaf842c6f28cc249f7
@@ -3191,36 +3189,36 @@ stages:
     outs:
     - path: output/motifs/test/negative/control_positions.txt
       hash: md5
-      md5: 455cda25f520ef7950c92f29979ac338
-      size: 46403
+      md5: a47c8c247d1dacefeb8de1d3cfa40756
+      size: 3935
     - path: output/motifs/test/negative/control_seqs.fasta
       hash: md5
-      md5: 4e80bdfbf8943fca23373a60a6da508f
-      size: 186997
+      md5: 24137fd294b04d3af10e3cff11174705
+      size: 197081
     - path: output/motifs/test/negative/motif_positions.txt
       hash: md5
-      md5: 5f8979c331ae3c588aac095ca7e2c8b2
-      size: 64382
+      md5: 8a913b7932e3308e9623d024b4d6f163
+      size: 332
     - path: output/motifs/test/negative/motif_seqs.fasta
       hash: md5
-      md5: 705d5d55ba1b6e6ff9e8bfda47ed6c2b
-      size: 121927
+      md5: 9d67237690b387f894ad7f9f591a329e
+      size: 144
     - path: output/motifs/test/positive/control_positions.txt
       hash: md5
-      md5: 43853105fca8e07833d9eb158f063e51
-      size: 65769
+      md5: 99ecb7cc416dd03454e31200d60ad5ea
+      size: 586
     - path: output/motifs/test/positive/control_seqs.fasta
       hash: md5
-      md5: b96de1047725a2c6c82cf436eceb6059
-      size: 1271052
+      md5: e8bbffb4805d25283b2703354e2a1d0e
+      size: 2240
     - path: output/motifs/test/positive/motif_positions.txt
       hash: md5
-      md5: 63ed6b31086e676a7fad14fdd54557ea
-      size: 20212
+      md5: 506fda30104bf6aa8b2caaff946bf484
+      size: 8481
     - path: output/motifs/test/positive/motif_seqs.fasta
       hash: md5
-      md5: c1a51740bc73e1b32620e1ff2032ed26
-      size: 26996
+      md5: 5229d6dc0b7147a1d9d0816ada2a90b7
+      size: 16283
   importanceAnalysis@train:
     cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
       output/ftModel/best_spearmanr/ --save_path output/importance/train_shap.pkl
@@ -3229,8 +3227,8 @@ stages:
     deps:
     - path: output/ftModel
       hash: md5
-      md5: e4bf8c36dba20270269e9712288000c6.dir
-      size: 2216503491
+      md5: a0187760dde567044dc44b866ad0635b.dir
+      size: 2216503956
       nfiles: 26
     - path: scripts/importanceAnalysis.py
       hash: md5
@@ -3245,8 +3243,8 @@ stages:
     outs:
     - path: output/importance/train_shap.pkl
       hash: md5
-      md5: 9734b13e19ed5afa5cb0abb856619aef
-      size: 7723172
+      md5: 1d4059eb191ab9a1d2e577205de093da
+      size: 1389959
   visualizeImportance@train:
     cmd: python scripts/visualizeImportance.py --params params.yaml --kmer 4 --SHAP
       output/importance/train_shap.pkl --scoresOnly output/importance/train_shapScores.npy
@@ -3255,8 +3253,8 @@ stages:
     deps:
     - path: output/importance/train_shap.pkl
       hash: md5
-      md5: 9734b13e19ed5afa5cb0abb856619aef
-      size: 7723172
+      md5: 1d4059eb191ab9a1d2e577205de093da
+      size: 1389959
     - path: scripts/visualizeImportance.py
       hash: md5
       md5: a0c0c1aff1fe371ac073281f7763d4ad
@@ -3270,16 +3268,16 @@ stages:
     outs:
     - path: output/importance/train_visualizeImportance.html
       hash: md5
-      md5: 98b2df496ca98935a547e9848f48fb6e
-      size: 33548215
+      md5: eebf7008f8a9c46c7fbc3c25296f0078
+      size: 6190030
   findMotifs@train:
     cmd: python scripts/find_motifs.py --SHAP output/importance/train_shap.pkl --save_file_dir
       output/motifs/train
     deps:
     - path: output/importance/train_visualizeImportance.html
       hash: md5
-      md5: 98b2df496ca98935a547e9848f48fb6e
-      size: 33548215
+      md5: eebf7008f8a9c46c7fbc3c25296f0078
+      size: 6190030
     - path: scripts/find_motifs.py
       hash: md5
       md5: ab8c8dd90d38d1aaf842c6f28cc249f7
@@ -3296,44 +3294,44 @@ stages:
     outs:
     - path: output/motifs/train/negative/control_positions.txt
       hash: md5
-      md5: 548cda4c56fe9ac51f745ccbeae73314
-      size: 221667
+      md5: a461cec1b3cf978717d7110fdf700b1c
+      size: 18462
     - path: output/motifs/train/negative/control_seqs.fasta
       hash: md5
-      md5: 430c3866977c7ed06c79916f01c25866
-      size: 897365
+      md5: 1d24def1462dc4ca280b6aa0c07ff1c9
+      size: 1059669
     - path: output/motifs/train/negative/motif_positions.txt
       hash: md5
-      md5: 7724f88f6ee2af84efc690c7ddb259df
-      size: 293705
+      md5: 617862a959245632a904d7fa54bd07b6
+      size: 1352
     - path: output/motifs/train/negative/motif_seqs.fasta
       hash: md5
-      md5: 83e3074fac15ea753485bef25157ad3a
-      size: 537690
+      md5: 130d03397828285d7e070521ea171f2a
+      size: 1404
     - path: output/motifs/train/positive/control_positions.txt
       hash: md5
-      md5: 3895bc343588f161add7d9f44848c58d
-      size: 308402
+      md5: c2c4ddeb2f5440d346e4ada528b7ef74
+      size: 3007
     - path: output/motifs/train/positive/control_seqs.fasta
       hash: md5
-      md5: 27c20ec3ae765b8fb1702ab2d90e5107
-      size: 5314844
+      md5: e9f317ac1cb6cc8404b6e3a82709e3bb
+      size: 8607
     - path: output/motifs/train/positive/motif_positions.txt
       hash: md5
-      md5: 98f8ee1896e60166db1413fcedb73aab
-      size: 99065
+      md5: 8f01003de6b9a85ca64a6aabfe068432
+      size: 41037
     - path: output/motifs/train/positive/motif_seqs.fasta
       hash: md5
-      md5: c4cebd1d3f25342c65a61849ac89d3b3
-      size: 124439
+      md5: 435511cbbb39fb9a4b18e29aff802a97
+      size: 80622
   findMotifs@dev:
     cmd: python scripts/find_motifs.py --SHAP output/importance/dev_shap.pkl --save_file_dir
       output/motifs/dev
     deps:
     - path: output/importance/dev_visualizeImportance.html
       hash: md5
-      md5: 8774e05d28554ba01ef516256a633a42
-      size: 7380361
+      md5: 822e81b5f2d593081a8d6c3459b612df
+      size: 1517136
     - path: scripts/find_motifs.py
       hash: md5
       md5: ab8c8dd90d38d1aaf842c6f28cc249f7
@@ -3350,36 +3348,36 @@ stages:
     outs:
     - path: output/motifs/dev/negative/control_positions.txt
       hash: md5
-      md5: 39347c9fb13f6a2cb28440fd87024921
-      size: 49293
+      md5: 3d35bb249b95dbc29deae1f0767c7c4b
+      size: 4444
     - path: output/motifs/dev/negative/control_seqs.fasta
       hash: md5
-      md5: 8c2ba93793d190e06918d7b9017e9e16
-      size: 213500
+      md5: 4dbee94aeeeea05bc8197ce98f181c97
+      size: 244820
     - path: output/motifs/dev/negative/motif_positions.txt
       hash: md5
-      md5: 547b5261a4ce5deb75cf49a667141bbb
-      size: 62856
+      md5: 1768350375b7561d3a08c7edc3f31a4e
+      size: 334
     - path: output/motifs/dev/negative/motif_seqs.fasta
       hash: md5
-      md5: d3d2c4519a162125a2b3c169eb78961c
-      size: 119450
+      md5: 1bae935e7929895193f89e332fb1a13c
+      size: 430
     - path: output/motifs/dev/positive/control_positions.txt
       hash: md5
-      md5: 7ccbb00158fe47cec2a4694ad5201fb0
-      size: 67698
+      md5: 3827d5ee13810b95eba4f2939d355ffc
+      size: 1026
     - path: output/motifs/dev/positive/control_seqs.fasta
       hash: md5
-      md5: e0b88c6eb35c89d97a1a88c9dc0f6247
-      size: 1131926
+      md5: b8bb395a446b46dcd48bbfc25f68110f
+      size: 2691
     - path: output/motifs/dev/positive/motif_positions.txt
       hash: md5
-      md5: c3f1c25c26907e1d050be63f91a825fb
-      size: 21484
+      md5: a85f6e3621f3ffd04d449d9df1d0cf8d
+      size: 10543
     - path: output/motifs/dev/positive/motif_seqs.fasta
       hash: md5
-      md5: 8ce9af04e1fce4d74f837b1c05dbb586
-      size: 30449
+      md5: 31101651469ab457a4de333cb1aeb6bf
+      size: 20400
   runAME@test-negative:
     cmd: singularity exec -B $(readlink output/motifs/test/negative/control_seqs.fasta):/tmp/control_seqs.fasta
       -B $(readlink output/motifs/test/negative/motif_seqs.fasta):/tmp/motif_seqs.fasta
@@ -3663,16 +3661,16 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -3681,8 +3679,8 @@ stages:
       nfiles: 7
     - path: output/ray_ablations/seq_only/best_ray_tune_config.json
       hash: md5
-      md5: 6069da311e63c4573b385b2dcec19d67
-      size: 354
+      md5: b4b8f8950882723c7b74bd18da9e30a9
+      size: 351
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
       md5: 7cb59e40f20fc83d2bd4dab28f5e5593
@@ -3746,8 +3744,8 @@ stages:
     outs:
     - path: output/ftModel_seq_only
       hash: md5
-      md5: 9c8407270536c6ec573d44cd06415e62.dir
-      size: 1330207813
+      md5: e4aa520c25039e5604a3db8bae338b20.dir
+      size: 1330208368
       nfiles: 21
   predict@seq_only:
     cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_seq_only/best_spearmanr/
@@ -3757,13 +3755,13 @@ stages:
     deps:
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/ftModel_seq_only/best_spearmanr
       hash: md5
-      md5: 91ab034703b16534272c30ef1dd37ca1.dir
-      size: 443399802
+      md5: debf927771fe09926362c8dd1d06619a.dir
+      size: 443399801
       nfiles: 6
     - path: scripts/predict.py
       hash: md5
@@ -3811,8 +3809,8 @@ stages:
     outs:
     - path: output/predict_seq_only
       hash: md5
-      md5: bb723493fb03d92ad6deb10ec2cdb605.dir
-      size: 180262
+      md5: 08a6883e2b74735e7de9359fe61752fa.dir
+      size: 40781
       nfiles: 3
   fineTuneModel_ablations@only_codons:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
@@ -3917,20 +3915,20 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -3939,16 +3937,16 @@ stages:
       nfiles: 7
     - path: output/ray_ablations/no_mfe/best_ray_tune_config.json
       hash: md5
-      md5: a2328da3f94a1008c4430eadd5afc95c
-      size: 351
+      md5: d4df5845524b9acc4b30deb447c20e49
+      size: 352
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
-      md5: 9b3306db7d220495b22061ba1f6b9ea9
-      size: 6625
+      md5: 7cb59e40f20fc83d2bd4dab28f5e5593
+      size: 7578
     - path: scripts/train.py
       hash: md5
-      md5: 2058bda2929297045afa47c2a2ed44ee
-      size: 87259
+      md5: 1db21a056716ab3ea21d6a5b1569a949
+      size: 89838
     params:
       params.yaml:
         fineTuneModel:
@@ -4000,8 +3998,8 @@ stages:
     outs:
     - path: output/ftModel_no_mfe
       hash: md5
-      md5: 81ffad66da253793f59c40c6de116f1f.dir
-      size: 1330575531
+      md5: 0e24336f9a0e4e944aaf8d77f146abb4.dir
+      size: 1330576310
       nfiles: 24
   predict@no_mfe:
     cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_mfe/best_spearmanr/
@@ -4011,13 +4009,13 @@ stages:
     deps:
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/ftModel_no_mfe/best_spearmanr
       hash: md5
-      md5: 06aca9243b2660999a06b2a604aa1312.dir
-      size: 443509496
+      md5: f5b94edb28d285f9e46b52090edf0c34.dir
+      size: 443509611
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
@@ -4065,8 +4063,8 @@ stages:
     outs:
     - path: output/predict_no_mfe
       hash: md5
-      md5: bb268431d7bb2ad3be07e5cf95b36247.dir
-      size: 180788
+      md5: 02e1fa8748e0dfc9ddfe802b6779777d.dir
+      size: 40790
       nfiles: 3
   prepForMAST@dev:
     cmd: python scripts/prepForMAST.py --input_fasta output/data/decay/dev.fasta --output_fasta
@@ -4074,8 +4072,8 @@ stages:
     deps:
     - path: output/data/decay/dev.fasta
       hash: md5
-      md5: 30610336ef0564638984963c22d45d09
-      size: 667918
+      md5: df57b6831f966596c89d94ccf0cfd13d
+      size: 151828
     - path: scripts/prepForMAST.py
       hash: md5
       md5: 2ecde82a6c4e4ac93a40b2e3ea2c17ff
@@ -4088,8 +4086,8 @@ stages:
     outs:
     - path: output/data/MEME_suite/dev_TEseqs_split_by_utr.fasta
       hash: md5
-      md5: 2b8fab65141c526b37ff3ab857c94252
-      size: 797222
+      md5: 0c0b36b04087a6bee44117de2fddf59f
+      size: 168624
   runMAST@dev:
     cmd: mkdir -p output/mast_out && singularity exec -B $(readlink output/data/MEME_suite/dev_TEseqs_split_by_utr.fasta):/tmp/dev.fasta
       -B $(readlink output/data/MEME_suite/nucFrequencies.txt):/tmp/bfile.txt docker://memesuite/memesuite:5.5.7
@@ -4102,11 +4100,11 @@ stages:
     deps:
     - path: output/data/MEME_suite/dev_TEseqs_split_by_utr.fasta
       hash: md5
-      md5: 2b8fab65141c526b37ff3ab857c94252
-      size: 797222
+      md5: 0c0b36b04087a6bee44117de2fddf59f
+      size: 168624
     - path: output/data/MEME_suite/nucFrequencies.txt
       hash: md5
-      md5: 79a0ef1bae8079962a57b80fd3b10e0c
+      md5: 48822495689136686363d67b55667a41
       size: 254
     params:
       params.yaml:
@@ -4118,16 +4116,16 @@ stages:
     outs:
     - path: output/mast_out/dev_mast_results.txt
       hash: md5
-      md5: 0a29e966179113e24ff41ef37b35dacd
-      size: 4050370
+      md5: af062ef60b0fe19f9bbd3f154a23c687
+      size: 1000549
   prepForMAST@test:
     cmd: python scripts/prepForMAST.py --input_fasta output/data/decay/test.fasta
       --output_fasta output/data/MEME_suite/test_TEseqs_split_by_utr.fasta
     deps:
     - path: output/data/decay/test.fasta
       hash: md5
-      md5: b261c024f57872ab67fa4ac555380895
-      size: 662914
+      md5: 439c60179bd0997df7875cbf7e50f252
+      size: 122015
     - path: scripts/prepForMAST.py
       hash: md5
       md5: 2ecde82a6c4e4ac93a40b2e3ea2c17ff
@@ -4140,16 +4138,16 @@ stages:
     outs:
     - path: output/data/MEME_suite/test_TEseqs_split_by_utr.fasta
       hash: md5
-      md5: e3802f7a1dd96d6511f82e5ce8730c87
-      size: 793018
+      md5: 3e771df530e680648446dea3a68c45d4
+      size: 137904
   prepForMAST@train:
     cmd: python scripts/prepForMAST.py --input_fasta output/data/decay/train.fasta
       --output_fasta output/data/MEME_suite/train_TEseqs_split_by_utr.fasta
     deps:
     - path: output/data/decay/train.fasta
       hash: md5
-      md5: 4c7808bd05acff6e4808f9d5997c57ab
-      size: 3014517
+      md5: 5369f9b716546e09f1030d2ab5445571
+      size: 626765
     - path: scripts/prepForMAST.py
       hash: md5
       md5: 2ecde82a6c4e4ac93a40b2e3ea2c17ff
@@ -4162,8 +4160,8 @@ stages:
     outs:
     - path: output/data/MEME_suite/train_TEseqs_split_by_utr.fasta
       hash: md5
-      md5: b8a79b6167cdf55f2227803e68d57acd
-      size: 3622401
+      md5: a0890b6eeb3dc936ef0b75f30836ba25
+      size: 703119
   runMAST@train:
     cmd: mkdir -p output/mast_out && singularity exec -B $(readlink output/data/MEME_suite/train_TEseqs_split_by_utr.fasta):/tmp/train.fasta
       -B $(readlink output/data/MEME_suite/nucFrequencies.txt):/tmp/bfile.txt docker://memesuite/memesuite:5.5.7
@@ -4176,12 +4174,12 @@ stages:
     deps:
     - path: output/data/MEME_suite/nucFrequencies.txt
       hash: md5
-      md5: 79a0ef1bae8079962a57b80fd3b10e0c
+      md5: 48822495689136686363d67b55667a41
       size: 254
     - path: output/data/MEME_suite/train_TEseqs_split_by_utr.fasta
       hash: md5
-      md5: b8a79b6167cdf55f2227803e68d57acd
-      size: 3622401
+      md5: a0890b6eeb3dc936ef0b75f30836ba25
+      size: 703119
     params:
       params.yaml:
         runMAST:
@@ -4192,8 +4190,8 @@ stages:
     outs:
     - path: output/mast_out/train_mast_results.txt
       hash: md5
-      md5: c3ea8102c0e4805169fb0912deba8823
-      size: 18127330
+      md5: 8378d5ce9a710b6eebe5ca1e36f51ff0
+      size: 4074248
   runMAST@test:
     cmd: mkdir -p output/mast_out && singularity exec -B $(readlink output/data/MEME_suite/test_TEseqs_split_by_utr.fasta):/tmp/test.fasta
       -B $(readlink output/data/MEME_suite/nucFrequencies.txt):/tmp/bfile.txt docker://memesuite/memesuite:5.5.7
@@ -4206,12 +4204,12 @@ stages:
     deps:
     - path: output/data/MEME_suite/nucFrequencies.txt
       hash: md5
-      md5: 79a0ef1bae8079962a57b80fd3b10e0c
+      md5: 48822495689136686363d67b55667a41
       size: 254
     - path: output/data/MEME_suite/test_TEseqs_split_by_utr.fasta
       hash: md5
-      md5: e3802f7a1dd96d6511f82e5ce8730c87
-      size: 793018
+      md5: 3e771df530e680648446dea3a68c45d4
+      size: 137904
     params:
       params.yaml:
         runMAST:
@@ -4222,8 +4220,8 @@ stages:
     outs:
     - path: output/mast_out/test_mast_results.txt
       hash: md5
-      md5: ab9bded4cc211fab5d2f0e8efc12c325
-      size: 4006108
+      md5: 1d27e4f4a7518c08cf9795e09a4e7f76
+      size: 789355
   runMAST_topHits:
     cmd: singularity exec -B $(readlink output/data/MEME_suite/dev_TEseqs_split_by_utr.fasta):/tmp/dev.fasta
       docker://memesuite/memesuite:5.5.7 mast -oc output/mast_out/topHits -remcorr
@@ -4244,8 +4242,8 @@ stages:
     deps:
     - path: output/data/decay/test.fasta
       hash: md5
-      md5: b261c024f57872ab67fa4ac555380895
-      size: 662914
+      md5: 439c60179bd0997df7875cbf7e50f252
+      size: 122015
     - path: scripts/splitHighLowDecay.py
       hash: md5
       md5: 7abc6beff3b46ded2220b95a903ab88d
@@ -4259,20 +4257,20 @@ stages:
     outs:
     - path: output/splitDecay/test_highDecay.fasta
       hash: md5
-      md5: a19201a8859d8ca1791495ebe8cb9477
-      size: 232469
+      md5: 73fd089090c28aef0c402820f663d333
+      size: 35325
     - path: output/splitDecay/test_lowDecay.fasta
       hash: md5
-      md5: a1aa8f945a28c0bdb1914b5d484f0a6c
-      size: 280591
+      md5: 9d320a60f0ca2bae90e038db03170f86
+      size: 52516
   splitHighLowDecay@train:
     cmd: python scripts/splitHighLowDecay.py --params params.yaml --input output/data/decay/train.fasta
       --high train_highDecay.fasta --low train_lowDecay.fasta
     deps:
     - path: output/data/decay/train.fasta
       hash: md5
-      md5: 4c7808bd05acff6e4808f9d5997c57ab
-      size: 3014517
+      md5: 5369f9b716546e09f1030d2ab5445571
+      size: 626765
     - path: scripts/splitHighLowDecay.py
       hash: md5
       md5: 7abc6beff3b46ded2220b95a903ab88d
@@ -4286,12 +4284,12 @@ stages:
     outs:
     - path: output/splitDecay/train_highDecay.fasta
       hash: md5
-      md5: aa53f369db8a11a7bddf03ab59d5c71a
-      size: 1043574
+      md5: b83408feaef149a27a828e715bb37a5d
+      size: 242092
     - path: output/splitDecay/train_lowDecay.fasta
       hash: md5
-      md5: 566e9e5ce15cf87030062474d15b43df
-      size: 1356428
+      md5: 3acf412ff364e7625231b3ddb0474edd
+      size: 270547
   runAME_highLowDecay@4:
     cmd: mkdir -p output/splitDecay/high/ame_output && singularity exec -B $(readlink
       output/splitDecay/train_lowDecay.fasta):/tmp/control.fasta -B $(readlink output/splitDecay/train_highDecay.fasta):/tmp/rna.fasta
@@ -4350,8 +4348,8 @@ stages:
     deps:
     - path: output/data/decay/dev.fasta
       hash: md5
-      md5: 30610336ef0564638984963c22d45d09
-      size: 667918
+      md5: df57b6831f966596c89d94ccf0cfd13d
+      size: 151828
     - path: scripts/splitHighLowDecay.py
       hash: md5
       md5: 7abc6beff3b46ded2220b95a903ab88d
@@ -4365,12 +4363,12 @@ stages:
     outs:
     - path: output/splitDecay/dev_highDecay.fasta
       hash: md5
-      md5: 65324f647429226558af11adb83d8fa9
-      size: 231371
+      md5: 7f212000ac6ac666588329df6b018abd
+      size: 57737
     - path: output/splitDecay/dev_lowDecay.fasta
       hash: md5
-      md5: e6d8a7f7e609c0229c27bd90fd1a0a49
-      size: 289153
+      md5: b84b4d3998476d3a324e581890aff2fe
+      size: 59834
   fineTuneModel_ablations@no_gc_content:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_gc_content
@@ -4474,20 +4472,20 @@ stages:
     deps:
     - path: output/data/ablations/no_gc_content.csv
       hash: md5
-      md5: c823f0a9ac3db27d2c7981e5f0fa6e9f
-      size: 6920709
+      md5: 54c34447529afd6394ff54d328787c5d
+      size: 752605
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -4496,16 +4494,16 @@ stages:
       nfiles: 7
     - path: output/ray_ablations/no_gc_content/best_ray_tune_config.json
       hash: md5
-      md5: d92b4bf505bc2a4b938561097adf6c3b
-      size: 351
+      md5: 62049b2da4bd2b732432b031fb017ad1
+      size: 352
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
-      md5: 9b3306db7d220495b22061ba1f6b9ea9
-      size: 6625
+      md5: 7cb59e40f20fc83d2bd4dab28f5e5593
+      size: 7578
     - path: scripts/train.py
       hash: md5
-      md5: 2058bda2929297045afa47c2a2ed44ee
-      size: 87259
+      md5: 1db21a056716ab3ea21d6a5b1569a949
+      size: 89838
     params:
       params.yaml:
         fineTuneModel:
@@ -4557,8 +4555,8 @@ stages:
     outs:
     - path: output/ftModel_no_gc_content
       hash: md5
-      md5: fcc3ed88ecbff6fee5859e902201744f.dir
-      size: 1330518708
+      md5: 10b6b6bb81b0558cae7aecc0c856d846.dir
+      size: 1330519493
       nfiles: 22
   predict@no_gc_content:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_gc_content/best_spearmanr/
@@ -4570,13 +4568,13 @@ stages:
     deps:
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/ftModel_no_gc_content/best_spearmanr
       hash: md5
-      md5: 9a857ce9a9f23870980f4dcb62051cf0.dir
-      size: 443505368
+      md5: baf6c0a0e55e7308bb5c2bbe18b0710f.dir
+      size: 443505485
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
@@ -4624,8 +4622,8 @@ stages:
     outs:
     - path: output/predict_no_gc_content
       hash: md5
-      md5: 4dbed7987d7fd29d50a51c831bf63d2a.dir
-      size: 180578
+      md5: 3b7cf6a6c7a1126e57302118698d800d.dir
+      size: 40624
       nfiles: 3
   run_fineTuneModel_ablations@no_codons:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
@@ -4636,20 +4634,20 @@ stages:
     deps:
     - path: output/data/ablations/no_codons.csv
       hash: md5
-      md5: 2ed34076c992e1108f2a2df24321039a
-      size: 711408
+      md5: 7d90f860ccafb995a446c82c6f26f565
+      size: 77034
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -4658,16 +4656,16 @@ stages:
       nfiles: 7
     - path: output/ray_ablations/no_codons/best_ray_tune_config.json
       hash: md5
-      md5: b2cab79710138607903733af0c7f4f9f
-      size: 353
+      md5: cb43342a84082c40bf42eb8ec61f553a
+      size: 355
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
-      md5: 9b3306db7d220495b22061ba1f6b9ea9
-      size: 6625
+      md5: 7cb59e40f20fc83d2bd4dab28f5e5593
+      size: 7578
     - path: scripts/train.py
       hash: md5
-      md5: 2058bda2929297045afa47c2a2ed44ee
-      size: 87259
+      md5: 1db21a056716ab3ea21d6a5b1569a949
+      size: 89838
     params:
       params.yaml:
         fineTuneModel:
@@ -4719,8 +4717,8 @@ stages:
     outs:
     - path: output/ftModel_no_codons
       hash: md5
-      md5: 0de7b16f5298d63cefc7f584733c54e6.dir
-      size: 1330276034
+      md5: fd70e37038f1bd256c8498ee693b38ac.dir
+      size: 1330276878
       nfiles: 24
   predict@no_codons:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_codons/best_spearmanr/
@@ -4732,13 +4730,13 @@ stages:
     deps:
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/ftModel_no_codons/best_spearmanr
       hash: md5
-      md5: bd31558f6f61fbfbf455bd660198bfdc.dir
-      size: 443410055
+      md5: a87dbe658b60d12c6c9d72fd91c4252e.dir
+      size: 443410171
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
@@ -4786,8 +4784,8 @@ stages:
     outs:
     - path: output/predict_no_codons
       hash: md5
-      md5: 9910ee52763597056f4ce85d9edfb1f6.dir
-      size: 180387
+      md5: af91f1dd14673f22e83322f843369373.dir
+      size: 41446
       nfiles: 3
   run_fineTuneModel_ablations@only_codons:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
@@ -4798,20 +4796,20 @@ stages:
     deps:
     - path: output/data/ablations/no_lengths_gc.csv
       hash: md5
-      md5: 56946750d25c2d21a7cb4accf9a8f7a4
-      size: 6846370
+      md5: b8a9732d3daf564d218fe366104c7688
+      size: 744115
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -4820,8 +4818,8 @@ stages:
       nfiles: 7
     - path: output/ray_ablations/only_codons/best_ray_tune_config.json
       hash: md5
-      md5: e670940c833717382dc5512d9ed77477
-      size: 352
+      md5: 1a491154d17c9a34d11c719f802e58ea
+      size: 356
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
       md5: 7cb59e40f20fc83d2bd4dab28f5e5593
@@ -4881,8 +4879,8 @@ stages:
     outs:
     - path: output/ftModel_only_codons
       hash: md5
-      md5: 1f156434ef043214bf71f7639858ddd5.dir
-      size: 1330492804
+      md5: 59996ac41193fe82180bbccefe296284.dir
+      size: 1330493275
       nfiles: 22
   predict@only_codons:
     cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_only_codons/best_spearmanr/
@@ -4893,13 +4891,13 @@ stages:
     deps:
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/ftModel_only_codons/best_spearmanr
       hash: md5
-      md5: 00a4687ceaee70539fe42c09c71e05ec.dir
-      size: 443496940
+      md5: 6b1758eb6e130fdf237547d7be50304a.dir
+      size: 443496942
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
@@ -4947,8 +4945,8 @@ stages:
     outs:
     - path: output/predict_only_codons
       hash: md5
-      md5: 3dc5cb0610b13e0204dda925c7e7778c.dir
-      size: 180521
+      md5: 2dfdbf474997c3bea288a5b30f81ef36.dir
+      size: 41444
       nfiles: 3
   run_fineTuneModel:
     cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && python scripts/train.py --params params.yaml
@@ -4958,16 +4956,16 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -4976,9 +4974,9 @@ stages:
       nfiles: 7
     - path: output/ray_results
       hash: md5
-      md5: 5a597f2a04ec57799a1c4a611f0ed064.dir
-      size: 4242284
-      nfiles: 510
+      md5: 8f06fa509a3d48923c9cf94153af026f.dir
+      size: 3552296
+      nfiles: 507
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
       md5: 7cb59e40f20fc83d2bd4dab28f5e5593
@@ -5038,8 +5036,8 @@ stages:
     outs:
     - path: output/ftModel
       hash: md5
-      md5: e4bf8c36dba20270269e9712288000c6.dir
-      size: 2216503491
+      md5: a0187760dde567044dc44b866ad0635b.dir
+      size: 2216503956
       nfiles: 26
   predict@fullLLM:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
@@ -5050,12 +5048,12 @@ stages:
     deps:
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/ftModel/best_spearmanr
       hash: md5
-      md5: a23c9b153bbc9a8ddc0bf0b067f66fd8.dir
+      md5: a6a9cd2c056d756b575a24796007534e.dir
       size: 443511845
       nfiles: 7
     - path: scripts/predict.py
@@ -5104,8 +5102,8 @@ stages:
     outs:
     - path: output/predict
       hash: md5
-      md5: 107b948a18999067361bf5dc6404886e.dir
-      size: 180780
+      md5: 2a45d763de6d24af9a7c7834e39c1609.dir
+      size: 40621
       nfiles: 3
   rayTune:
     cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && python scripts/train.py --params params.yaml
@@ -5115,16 +5113,16 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -5190,12 +5188,12 @@ stages:
     outs:
     - path: output/ray_results/best_ray_tune_config.json
       hash: md5
-      md5: abe4b5aa0343dc663c7b7260b164443e
-      size: 352
+      md5: ca3fe0692606f39c7808462f91cc847b
+      size: 354
     - path: output/ray_results/ray_tune_results.csv
       hash: md5
-      md5: 866a19088b223e4affc0b548921c2e62
-      size: 43103
+      md5: dee53899440648f4ceaf235b44d0e4f7
+      size: 42755
   rayTune_ablations@no_lengths:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_lengths
@@ -5205,20 +5203,20 @@ stages:
     deps:
     - path: output/data/ablations/no_lengths.csv
       hash: md5
-      md5: cf530fc628abf16384485166c9e07c3b
-      size: 7178584
+      md5: 0fb5fd1442f64a90606b1b95401a360a
+      size: 780401
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -5227,12 +5225,12 @@ stages:
       nfiles: 7
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
-      md5: 9b3306db7d220495b22061ba1f6b9ea9
-      size: 6625
+      md5: 7cb59e40f20fc83d2bd4dab28f5e5593
+      size: 7578
     - path: scripts/train.py
       hash: md5
-      md5: 2058bda2929297045afa47c2a2ed44ee
-      size: 87259
+      md5: 1db21a056716ab3ea21d6a5b1569a949
+      size: 89838
     params:
       params.yaml:
         fineTuneModel:
@@ -5284,12 +5282,12 @@ stages:
     outs:
     - path: output/ray_ablations/no_lengths/best_ray_tune_config.json
       hash: md5
-      md5: c912f0e71550b06c17c188bca4051296
-      size: 350
+      md5: 9b56fd8010b936d4ef4fe0e0c96a2fe2
+      size: 355
     - path: output/ray_ablations/no_lengths/ray_tune_results.csv
       hash: md5
-      md5: 87b5f79884fe5e19dfff991f1427d711
-      size: 43280
+      md5: 8ab4c41d6975799546a72c8fc44dd5ea
+      size: 42584
   rayTune_ablations@no_mfe:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_mfe
@@ -5299,20 +5297,20 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -5321,12 +5319,12 @@ stages:
       nfiles: 7
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
-      md5: 9b3306db7d220495b22061ba1f6b9ea9
-      size: 6625
+      md5: 7cb59e40f20fc83d2bd4dab28f5e5593
+      size: 7578
     - path: scripts/train.py
       hash: md5
-      md5: 2058bda2929297045afa47c2a2ed44ee
-      size: 87259
+      md5: 1db21a056716ab3ea21d6a5b1569a949
+      size: 89838
     params:
       params.yaml:
         fineTuneModel:
@@ -5378,12 +5376,12 @@ stages:
     outs:
     - path: output/ray_ablations/no_mfe/best_ray_tune_config.json
       hash: md5
-      md5: a2328da3f94a1008c4430eadd5afc95c
-      size: 351
+      md5: d4df5845524b9acc4b30deb447c20e49
+      size: 352
     - path: output/ray_ablations/no_mfe/ray_tune_results.csv
       hash: md5
-      md5: fd77b9f50d24a1c2da5dedfcb6e77b64
-      size: 43914
+      md5: ca89ae9eb49b6afa63c61d6d23a1e69b
+      size: 43388
   rayTune_ablations@no_gc_content:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_gc_content
@@ -5393,20 +5391,20 @@ stages:
     deps:
     - path: output/data/ablations/no_gc_content.csv
       hash: md5
-      md5: c823f0a9ac3db27d2c7981e5f0fa6e9f
-      size: 6920709
+      md5: 54c34447529afd6394ff54d328787c5d
+      size: 752605
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -5415,12 +5413,12 @@ stages:
       nfiles: 7
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
-      md5: 9b3306db7d220495b22061ba1f6b9ea9
-      size: 6625
+      md5: 7cb59e40f20fc83d2bd4dab28f5e5593
+      size: 7578
     - path: scripts/train.py
       hash: md5
-      md5: 2058bda2929297045afa47c2a2ed44ee
-      size: 87259
+      md5: 1db21a056716ab3ea21d6a5b1569a949
+      size: 89838
     params:
       params.yaml:
         fineTuneModel:
@@ -5472,12 +5470,12 @@ stages:
     outs:
     - path: output/ray_ablations/no_gc_content/best_ray_tune_config.json
       hash: md5
-      md5: d92b4bf505bc2a4b938561097adf6c3b
-      size: 351
+      md5: 62049b2da4bd2b732432b031fb017ad1
+      size: 352
     - path: output/ray_ablations/no_gc_content/ray_tune_results.csv
       hash: md5
-      md5: 9697f2503910bcee4bd5b6d741967e69
-      size: 43547
+      md5: 9e2f95372a7ce91e37ba9f3994da0296
+      size: 42642
   rayTune_ablations@no_codons:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_codons
@@ -5487,20 +5485,20 @@ stages:
     deps:
     - path: output/data/ablations/no_codons.csv
       hash: md5
-      md5: 2ed34076c992e1108f2a2df24321039a
-      size: 711408
+      md5: 7d90f860ccafb995a446c82c6f26f565
+      size: 77034
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -5509,12 +5507,12 @@ stages:
       nfiles: 7
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
-      md5: 9b3306db7d220495b22061ba1f6b9ea9
-      size: 6625
+      md5: 7cb59e40f20fc83d2bd4dab28f5e5593
+      size: 7578
     - path: scripts/train.py
       hash: md5
-      md5: 2058bda2929297045afa47c2a2ed44ee
-      size: 87259
+      md5: 1db21a056716ab3ea21d6a5b1569a949
+      size: 89838
     params:
       params.yaml:
         fineTuneModel:
@@ -5566,12 +5564,12 @@ stages:
     outs:
     - path: output/ray_ablations/no_codons/best_ray_tune_config.json
       hash: md5
-      md5: b2cab79710138607903733af0c7f4f9f
-      size: 353
+      md5: cb43342a84082c40bf42eb8ec61f553a
+      size: 355
     - path: output/ray_ablations/no_codons/ray_tune_results.csv
       hash: md5
-      md5: e77dba30ab5f5b2d7bef03f0b2f7ae98
-      size: 42912
+      md5: 38fb93a067a2ed5285f062bdca304266
+      size: 41408
   rayTune_ablations@seq_only:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_seq_only
@@ -5581,16 +5579,16 @@ stages:
     deps:
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -5660,12 +5658,12 @@ stages:
     outs:
     - path: output/ray_ablations/seq_only/best_ray_tune_config.json
       hash: md5
-      md5: 6069da311e63c4573b385b2dcec19d67
-      size: 354
+      md5: b4b8f8950882723c7b74bd18da9e30a9
+      size: 351
     - path: output/ray_ablations/seq_only/ray_tune_results.csv
       hash: md5
-      md5: 3e7367ed127a17081196be0b2f8e18d0
-      size: 43044
+      md5: 39b04e5db10c4c11cbaf6c602f43dcff
+      size: 43600
   rayTune_ablations@only_codons:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_only_codons
@@ -5675,20 +5673,20 @@ stages:
     deps:
     - path: output/data/ablations/no_lengths_gc.csv
       hash: md5
-      md5: 56946750d25c2d21a7cb4accf9a8f7a4
-      size: 6846370
+      md5: b8a9732d3daf564d218fe366104c7688
+      size: 744115
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -5754,12 +5752,12 @@ stages:
     outs:
     - path: output/ray_ablations/only_codons/best_ray_tune_config.json
       hash: md5
-      md5: e670940c833717382dc5512d9ed77477
-      size: 352
+      md5: 1a491154d17c9a34d11c719f802e58ea
+      size: 356
     - path: output/ray_ablations/only_codons/ray_tune_results.csv
       hash: md5
-      md5: f89badf913f41ab36858eefcaf704ae9
-      size: 44436
+      md5: b3108fd006f6592bb937a7d4aaca9c5b
+      size: 43304
   run_fineTuneModel_ablations@no_lengths:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_lengths
@@ -5769,20 +5767,20 @@ stages:
     deps:
     - path: output/data/ablations/no_lengths.csv
       hash: md5
-      md5: cf530fc628abf16384485166c9e07c3b
-      size: 7178584
+      md5: 0fb5fd1442f64a90606b1b95401a360a
+      size: 780401
     - path: output/data/codons/extraFeatures.csv
       hash: md5
-      md5: 553d9c1081f048fe66c15dcb6ffc1f3e
-      size: 7894810
+      md5: 5037dd8852180cd853e0ec6c0fb5b8e1
+      size: 859672
     - path: output/data/codons/vienna_features.csv
       hash: md5
-      md5: af600d3e3adf97355b18c76bfee40ef4
-      size: 15605730
+      md5: 2e30c82d2cb749c79884e351c657c5a2
+      size: 2404548
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/flyTrained/best_checkpoint
       hash: md5
@@ -5791,16 +5789,16 @@ stages:
       nfiles: 7
     - path: output/ray_ablations/no_lengths/best_ray_tune_config.json
       hash: md5
-      md5: c912f0e71550b06c17c188bca4051296
-      size: 350
+      md5: 9b56fd8010b936d4ef4fe0e0c96a2fe2
+      size: 355
     - path: scripts/GenaLMWithExtraFeatures.py
       hash: md5
-      md5: 9b3306db7d220495b22061ba1f6b9ea9
-      size: 6625
+      md5: 7cb59e40f20fc83d2bd4dab28f5e5593
+      size: 7578
     - path: scripts/train.py
       hash: md5
-      md5: 2058bda2929297045afa47c2a2ed44ee
-      size: 87259
+      md5: 1db21a056716ab3ea21d6a5b1569a949
+      size: 89838
     params:
       params.yaml:
         fineTuneModel:
@@ -5852,8 +5850,8 @@ stages:
     outs:
     - path: output/ftModel_no_lengths
       hash: md5
-      md5: d84c44c233719b61af4a737ac748eacc.dir
-      size: 1330561510
+      md5: 5a1385dc0564b6b6dd91e55d3f4b6e68.dir
+      size: 1330562357
       nfiles: 24
   predict@no_lengths:
     cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_lengths/best_spearmanr/
@@ -5865,13 +5863,13 @@ stages:
     deps:
     - path: output/data/decay
       hash: md5
-      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
-      size: 4345349
+      md5: 33921ede90f63aad12fddbb798193ea7.dir
+      size: 900608
       nfiles: 3
     - path: output/ftModel_no_lengths/best_spearmanr
       hash: md5
-      md5: 06d7f1a9123c2506924ed03e8468ae92.dir
-      size: 443505368
+      md5: b579a0139d29d42e738dfe93be5924d3.dir
+      size: 443505485
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
@@ -5919,8 +5917,8 @@ stages:
     outs:
     - path: output/predict_no_lengths
       hash: md5
-      md5: 743149f6ce2d543272c313f075d44ad5.dir
-      size: 180580
+      md5: faccd2a90eb74d1ffaa0cdfa76bc833b.dir
+      size: 42081
       nfiles: 3
   getMASTBackgroundFile:
     cmd: singularity exec -B $(readlink output/data/decay/train.fasta):/tmp/train.fasta
@@ -5928,8 +5926,8 @@ stages:
     deps:
     - path: output/data/decay/train.fasta
       hash: md5
-      md5: 4c7808bd05acff6e4808f9d5997c57ab
-      size: 3014517
+      md5: 5369f9b716546e09f1030d2ab5445571
+      size: 626765
     params:
       params.yaml:
         getMASTBackgroundFile:
@@ -5937,7 +5935,7 @@ stages:
     outs:
     - path: output/data/MEME_suite/nucFrequencies.txt
       hash: md5
-      md5: 79a0ef1bae8079962a57b80fd3b10e0c
+      md5: 48822495689136686363d67b55667a41
       size: 254
   motifEnrichment@dev:
     cmd: python scripts/motifEnrichment.py --params params.yaml --name dev --motifLocations
@@ -5945,22 +5943,26 @@ stages:
       --highControl output/motifs/dev/positive/control_positions.txt --lowSHAP output/motifs/dev/negative/motif_positions.txt
       --lowControl output/motifs/dev/negative/control_positions.txt
     deps:
+    - path: output/mast_out/dev_mast_results.txt
+      hash: md5
+      md5: af062ef60b0fe19f9bbd3f154a23c687
+      size: 1000549
     - path: output/motifs/dev/negative/control_positions.txt
       hash: md5
-      md5: 39347c9fb13f6a2cb28440fd87024921
-      size: 49293
+      md5: 3d35bb249b95dbc29deae1f0767c7c4b
+      size: 4444
     - path: output/motifs/dev/negative/motif_positions.txt
       hash: md5
-      md5: 547b5261a4ce5deb75cf49a667141bbb
-      size: 62856
+      md5: 1768350375b7561d3a08c7edc3f31a4e
+      size: 334
     - path: output/motifs/dev/positive/control_positions.txt
       hash: md5
-      md5: 7ccbb00158fe47cec2a4694ad5201fb0
-      size: 67698
+      md5: 3827d5ee13810b95eba4f2939d355ffc
+      size: 1026
     - path: output/motifs/dev/positive/motif_positions.txt
       hash: md5
-      md5: c3f1c25c26907e1d050be63f91a825fb
-      size: 21484
+      md5: a85f6e3621f3ffd04d449d9df1d0cf8d
+      size: 10543
     - path: scripts/motifEnrichment.py
       hash: md5
       md5: dc7efb2e5a4e23aa5fc5be2776b3bbe9
@@ -5972,20 +5974,20 @@ stages:
     outs:
     - path: output/motifEnrichment/dev_neg3_mannwhitneyu_results.csv
       hash: md5
-      md5: e332f5c76c14e659530a465ab6e0815c
-      size: 4985
+      md5: e07ebf451ebc092cf749c67e01ba4b18
+      size: 3884
     - path: output/motifEnrichment/dev_neg5_mannwhitneyu_results.csv
       hash: md5
-      md5: 1308d316c884f2553062385b442941ad
-      size: 5000
+      md5: fe858b451e8a33f8943e2f099d750ebe
+      size: 4196
     - path: output/motifEnrichment/dev_pos3_mannwhitneyu_results.csv
       hash: md5
-      md5: c98f3ed4173b3f26c068db663babbbf9
-      size: 4882
+      md5: e54e57c2f7d262252e583f1ecb60957d
+      size: 4523
     - path: output/motifEnrichment/dev_pos5_mannwhitneyu_results.csv
       hash: md5
-      md5: 3cd46cd30086d45797c00196f5f8927d
-      size: 4994
+      md5: f000aa62510506ef9897f0b2405f8ab4
+      size: 4530
   motifEnrichment_highLowDecay@test:
     cmd: python scripts/motifEnrichment_highLow.py --params params.yaml --name test
       --motifLocations output/mast_out/test_mast_results.txt --highTE output/splitDecay/test_highDecay.fasta
@@ -6004,22 +6006,26 @@ stages:
       --highControl output/motifs/test/positive/control_positions.txt --lowSHAP output/motifs/test/negative/motif_positions.txt
       --lowControl output/motifs/test/negative/control_positions.txt
     deps:
+    - path: output/mast_out/test_mast_results.txt
+      hash: md5
+      md5: 1d27e4f4a7518c08cf9795e09a4e7f76
+      size: 789355
     - path: output/motifs/test/negative/control_positions.txt
       hash: md5
-      md5: 455cda25f520ef7950c92f29979ac338
-      size: 46403
+      md5: a47c8c247d1dacefeb8de1d3cfa40756
+      size: 3935
     - path: output/motifs/test/negative/motif_positions.txt
       hash: md5
-      md5: 5f8979c331ae3c588aac095ca7e2c8b2
-      size: 64382
+      md5: 8a913b7932e3308e9623d024b4d6f163
+      size: 332
     - path: output/motifs/test/positive/control_positions.txt
       hash: md5
-      md5: 43853105fca8e07833d9eb158f063e51
-      size: 65769
+      md5: 99ecb7cc416dd03454e31200d60ad5ea
+      size: 586
     - path: output/motifs/test/positive/motif_positions.txt
       hash: md5
-      md5: 63ed6b31086e676a7fad14fdd54557ea
-      size: 20212
+      md5: 506fda30104bf6aa8b2caaff946bf484
+      size: 8481
     - path: scripts/motifEnrichment.py
       hash: md5
       md5: dc7efb2e5a4e23aa5fc5be2776b3bbe9
@@ -6031,42 +6037,46 @@ stages:
     outs:
     - path: output/motifEnrichment/test_neg3_mannwhitneyu_results.csv
       hash: md5
-      md5: 79f3bbc18523e1b5918ffc28070545d0
-      size: 4995
+      md5: de76f4056dd6d2eb5b08bf5157e3536f
+      size: 3815
     - path: output/motifEnrichment/test_neg5_mannwhitneyu_results.csv
       hash: md5
-      md5: cf1e6434e41ecd87e463ed76d686b23c
-      size: 4942
+      md5: 3bb6ee46cff22be7f97f6278b8614ce5
+      size: 3937
     - path: output/motifEnrichment/test_pos3_mannwhitneyu_results.csv
       hash: md5
-      md5: e8b94531e536d8b8819b9e619f72ed13
-      size: 4838
+      md5: ef3e24bfe7b0177e1e06f27b925c0cc2
+      size: 4261
     - path: output/motifEnrichment/test_pos5_mannwhitneyu_results.csv
       hash: md5
-      md5: cada02b7bbee1c75657329a3c9330c0b
-      size: 5011
+      md5: 13df47bdfe51dc93a5a340210dc601c2
+      size: 4393
   motifEnrichment@train:
     cmd: python scripts/motifEnrichment.py --params params.yaml --name train --motifLocations
       output/mast_out/train_mast_results.txt --highSHAP output/motifs/train/positive/motif_positions.txt
       --highControl output/motifs/train/positive/control_positions.txt --lowSHAP output/motifs/train/negative/motif_positions.txt
       --lowControl output/motifs/train/negative/control_positions.txt
     deps:
+    - path: output/mast_out/train_mast_results.txt
+      hash: md5
+      md5: 8378d5ce9a710b6eebe5ca1e36f51ff0
+      size: 4074248
     - path: output/motifs/train/negative/control_positions.txt
       hash: md5
-      md5: 548cda4c56fe9ac51f745ccbeae73314
-      size: 221667
+      md5: a461cec1b3cf978717d7110fdf700b1c
+      size: 18462
     - path: output/motifs/train/negative/motif_positions.txt
       hash: md5
-      md5: 7724f88f6ee2af84efc690c7ddb259df
-      size: 293705
+      md5: 617862a959245632a904d7fa54bd07b6
+      size: 1352
     - path: output/motifs/train/positive/control_positions.txt
       hash: md5
-      md5: 3895bc343588f161add7d9f44848c58d
-      size: 308402
+      md5: c2c4ddeb2f5440d346e4ada528b7ef74
+      size: 3007
     - path: output/motifs/train/positive/motif_positions.txt
       hash: md5
-      md5: 98f8ee1896e60166db1413fcedb73aab
-      size: 99065
+      md5: 8f01003de6b9a85ca64a6aabfe068432
+      size: 41037
     - path: scripts/motifEnrichment.py
       hash: md5
       md5: dc7efb2e5a4e23aa5fc5be2776b3bbe9
@@ -6078,17 +6088,17 @@ stages:
     outs:
     - path: output/motifEnrichment/train_neg3_mannwhitneyu_results.csv
       hash: md5
-      md5: 73a834e0a835c918cd442e628a6fe0e5
-      size: 5181
+      md5: 8a5eb53fa28301c67ba564197c971b34
+      size: 4320
     - path: output/motifEnrichment/train_neg5_mannwhitneyu_results.csv
       hash: md5
-      md5: 95ecc5849f90f277bd1bc0676e537895
-      size: 5135
+      md5: 78ada3e6d4083196d18a77f22d9140e2
+      size: 4570
     - path: output/motifEnrichment/train_pos3_mannwhitneyu_results.csv
       hash: md5
-      md5: 2a801101465e5369f7d109f25b3e42a9
-      size: 5021
+      md5: dbee73cd9e2b7b2dc6bfb2d87cceb090
+      size: 4659
     - path: output/motifEnrichment/train_pos5_mannwhitneyu_results.csv
       hash: md5
-      md5: aff1832d27cec3cd981d984e3656a5c8
-      size: 5158
+      md5: 37983a4130aae7e1f8d146080d8482da
+      size: 4779

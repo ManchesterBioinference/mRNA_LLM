@@ -60,10 +60,9 @@ RMT:
   block_size: 512
   max_n_segments: 10
 
-mergeUTRsAndDecayRates: #TODO - run with translation efficiency data
-  decay_rates: data/translationEfficiency/2h_TE.csv   #"data/results_zygotic_tr_extended_filtered.csv" #"data/maternal-halflifes_modified_filtered.csv"
-  transcriptExpression: data/translationEfficiency/transcripts.csv
-  output_file: output/data/utrTE.fasta
+mergeUTRsAndDecayRates:
+  decay_rates: "data/parameters_estimates_extended_zygotic_tr_18022025_filtered.csv" #"data/results_zygotic_tr_extended_filtered.csv" #"data/maternal-halflifes_modified_filtered.csv"
+  output_file: "output/data/utrDecayRates.fasta"
 
 isolateFullTranscripts:
   output_file: output/data/full_transcripts/Dmela-full_transcripts.fa
