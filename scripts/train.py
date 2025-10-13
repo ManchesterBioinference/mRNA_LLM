@@ -1280,7 +1280,7 @@ def main():
 
                         # Report metrics to Ray Tune
                         tune.report({
-                            "best_loss": best_val_loss,
+                            "best_val_loss": best_val_loss,
                             "best_val_spearmanr": best_val_spearmanr,
                             "loss": val_loss,
                             "val_spearmanr": val_spearmanr,
@@ -1429,8 +1429,8 @@ def main():
             tuner = tune.Tuner(
                 trainable_with_resources,
                 tune_config=tune.TuneConfig(
-                    metric="best_val_spearmanr",
-                    mode="max",
+                    metric="best_val_loss",
+                    mode="min",
                     num_samples=args.ray_tune_samples,
                     scheduler=scheduler,
                     search_alg=search_alg,
@@ -1447,7 +1447,7 @@ def main():
             results = tuner.fit()
             
             # Get best result from the new API
-            best_result = results.get_best_result(metric="best_val_spearmanr", mode="max")
+            best_result = results.get_best_result(metric="best_val_loss", mode="min")
             best_config = best_result.config
             best_metrics = best_result.metrics
             

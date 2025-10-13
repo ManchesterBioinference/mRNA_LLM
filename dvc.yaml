@@ -871,22 +871,6 @@ plots:
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/images
-- dvclive/TE/plots/metrics:
-    x: step
-- dvclive/TE/plots/images
-- dvclive/TE/no_codons/plots/metrics:
-    x: step
-- dvclive/TE/no_codons/plots/images
-- dvclive/TE/no_mfe/plots/metrics:
-    x: step
-- dvclive/TE/no_mfe/plots/images
-- dvclive/TE/no_lengths/plots/metrics:
-    x: step
-- dvclive/TE/no_lengths/plots/images
-- dvclive/TE/no_gc_content/plots/metrics:
-    x: step
-- dvclive/TE/no_gc_content/plots/images
-- dvclive/findMotifs/plots/images
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/images
@@ -896,17 +880,41 @@ plots:
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/images
+- dvclive/TE/plots/metrics:
+    x: step
+- dvclive/TE/plots/images
+- dvclive/findMotifs/plots/images
+- dvclive/TE/seq_only/plots/metrics:
+    x: step
+- dvclive/TE/seq_only/plots/images
+- dvclive/TE/no_lengths/plots/metrics:
+    x: step
+- dvclive/TE/no_lengths/plots/images
+- dvclive/TE/no_codons/plots/metrics:
+    x: step
+- dvclive/TE/no_codons/plots/images
+- dvclive/TE/only_codons/plots/metrics:
+    x: step
+- dvclive/TE/only_codons/plots/images
+- dvclive/TE/no_gc_content/plots/metrics:
+    x: step
+- dvclive/TE/no_gc_content/plots/images
+- dvclive/TE/no_mfe/plots/metrics:
+    x: step
+- dvclive/TE/no_mfe/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
 - dvclive/codonOnlyClassificationMLP/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly/metrics.json
-- dvclive/TE/metrics.json
-- dvclive/TE/no_codons/metrics.json
-- dvclive/TE/no_mfe/metrics.json
-- dvclive/TE/no_lengths/metrics.json
-- dvclive/TE/no_gc_content/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly_final/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/metrics.json
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/metrics.json
+- dvclive/TE/metrics.json
+- dvclive/TE/seq_only/metrics.json
+- dvclive/TE/no_lengths/metrics.json
+- dvclive/TE/no_codons/metrics.json
+- dvclive/TE/only_codons/metrics.json
+- dvclive/TE/no_gc_content/metrics.json
+- dvclive/TE/no_mfe/metrics.json

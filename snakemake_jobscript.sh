@@ -3,15 +3,15 @@
 #SBATCH -p gpuL # multicore #
 #SBATCH -G 2
 #SBATCH -n 8 #--cpus-per-task=10  # Use this instead of -n for Ray Tune #SBATCH --ntasks=1          # Single task (Ray will handle parallelization)
-#SBATCH -t 6:00:00
+#SBATCH -t 4-0 #:00:00
 
 #####################################################
 ### run command
 #####################################################
 source ~/.bashrc
 conda activate rayTune
-~/.local/share/mamba/bin/dvc repro predict
 ~/.local/share/mamba/bin/dvc repro motifEnrichment
+~/.local/share/mamba/bin/dvc repro predict
 ~/.local/share/mamba/bin/dvc repro motifEnrichment_highLowDecay
 ~/.local/share/mamba/bin/dvc repro codonOnlyClassificationMLP
 ~/.local/share/mamba/bin/dvc repro allExtraFeaturesClassificationMLP
