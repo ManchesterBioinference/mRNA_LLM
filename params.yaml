@@ -184,9 +184,6 @@ correctAME_pvalues:
 microRNABindingEnrichment:
   mirna_file: data/microRNA/Predicted_Targets_Info.default_predictions.txt
   output_dir: output/microRNA
-  control_overlap_file: control_overlap.csv
-  interest_overlap_file: interest_overlap.csv
-  fisher_file: fisher_results.csv
 
 prepRandomizeSeqsAndExtraFeatures:
   sequence_dir: output/data/sanityCheck

@@ -6092,3 +6092,123 @@ stages:
       hash: md5
       md5: aff1832d27cec3cd981d984e3656a5c8
       size: 5158
+  microRNABindingEnrichment@train:
+    cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --name train
+      --highSHAP output/motifs/train/positive/control_positions.txt --highControl
+      output/motifs/train/positive/motif_positions.txt --lowSHAP output/motifs/train/negative/control_positions.txt
+      --lowControl output/motifs/train/negative/motif_positions.txt --output_dir output/microRNA/train
+    deps:
+    - path: output/motifs/train/negative/control_positions.txt
+      hash: md5
+      md5: 548cda4c56fe9ac51f745ccbeae73314
+      size: 221667
+    - path: output/motifs/train/negative/motif_positions.txt
+      hash: md5
+      md5: 7724f88f6ee2af84efc690c7ddb259df
+      size: 293705
+    - path: output/motifs/train/positive/control_positions.txt
+      hash: md5
+      md5: 3895bc343588f161add7d9f44848c58d
+      size: 308402
+    - path: output/motifs/train/positive/motif_positions.txt
+      hash: md5
+      md5: 98f8ee1896e60166db1413fcedb73aab
+      size: 99065
+    - path: scripts/microRNABindingEnrichment.py
+      hash: md5
+      md5: dd717d00fe3bce9d872aecf478f395c1
+      size: 13972
+    params:
+      params.yaml:
+        microRNABindingEnrichment:
+          mirna_file: data/microRNA/Predicted_Targets_Info.default_predictions.txt
+          output_dir: output/microRNA
+    outs:
+    - path: output/microRNA/train/train_neg3_mannwhitneyu_results.csv
+      hash: md5
+      md5: 929cb029c1cb254e243e80f696a0c4e5
+      size: 8198
+    - path: output/microRNA/train/train_pos3_mannwhitneyu_results.csv
+      hash: md5
+      md5: eef543480d1d851d17ccac53a4f2f166
+      size: 7773
+  microRNABindingEnrichment@test:
+    cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --name test
+      --highSHAP output/motifs/test/positive/control_positions.txt --highControl output/motifs/test/positive/motif_positions.txt
+      --lowSHAP output/motifs/test/negative/control_positions.txt --lowControl output/motifs/test/negative/motif_positions.txt
+      --output_dir output/microRNA/test
+    deps:
+    - path: output/motifs/test/negative/control_positions.txt
+      hash: md5
+      md5: 455cda25f520ef7950c92f29979ac338
+      size: 46403
+    - path: output/motifs/test/negative/motif_positions.txt
+      hash: md5
+      md5: 5f8979c331ae3c588aac095ca7e2c8b2
+      size: 64382
+    - path: output/motifs/test/positive/control_positions.txt
+      hash: md5
+      md5: 43853105fca8e07833d9eb158f063e51
+      size: 65769
+    - path: output/motifs/test/positive/motif_positions.txt
+      hash: md5
+      md5: 63ed6b31086e676a7fad14fdd54557ea
+      size: 20212
+    - path: scripts/microRNABindingEnrichment.py
+      hash: md5
+      md5: dd717d00fe3bce9d872aecf478f395c1
+      size: 13972
+    params:
+      params.yaml:
+        microRNABindingEnrichment:
+          mirna_file: data/microRNA/Predicted_Targets_Info.default_predictions.txt
+          output_dir: output/microRNA
+    outs:
+    - path: output/microRNA/test/test_neg3_mannwhitneyu_results.csv
+      hash: md5
+      md5: 18ff6e23038bf075d98d324ed74aedd1
+      size: 4768
+    - path: output/microRNA/test/test_pos3_mannwhitneyu_results.csv
+      hash: md5
+      md5: dcaf4bfdd97a059fc7ec490d88aabb4e
+      size: 6358
+  microRNABindingEnrichment@dev:
+    cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --name dev
+      --highSHAP output/motifs/dev/positive/control_positions.txt --highControl output/motifs/dev/positive/motif_positions.txt
+      --lowSHAP output/motifs/dev/negative/control_positions.txt --lowControl output/motifs/dev/negative/motif_positions.txt
+      --output_dir output/microRNA/dev
+    deps:
+    - path: output/motifs/dev/negative/control_positions.txt
+      hash: md5
+      md5: 39347c9fb13f6a2cb28440fd87024921
+      size: 49293
+    - path: output/motifs/dev/negative/motif_positions.txt
+      hash: md5
+      md5: 547b5261a4ce5deb75cf49a667141bbb
+      size: 62856
+    - path: output/motifs/dev/positive/control_positions.txt
+      hash: md5
+      md5: 7ccbb00158fe47cec2a4694ad5201fb0
+      size: 67698
+    - path: output/motifs/dev/positive/motif_positions.txt
+      hash: md5
+      md5: c3f1c25c26907e1d050be63f91a825fb
+      size: 21484
+    - path: scripts/microRNABindingEnrichment.py
+      hash: md5
+      md5: dd717d00fe3bce9d872aecf478f395c1
+      size: 13972
+    params:
+      params.yaml:
+        microRNABindingEnrichment:
+          mirna_file: data/microRNA/Predicted_Targets_Info.default_predictions.txt
+          output_dir: output/microRNA
+    outs:
+    - path: output/microRNA/dev/dev_neg3_mannwhitneyu_results.csv
+      hash: md5
+      md5: 889c745e8a8656b572e30eb47edf25a4
+      size: 4842
+    - path: output/microRNA/dev/dev_pos3_mannwhitneyu_results.csv
+      hash: md5
+      md5: e75d956767942ad0592ba5eabe02f8b9
+      size: 5760

@@ -510,7 +510,7 @@ For now I will use the transcript level expression data that I have from Mike to
   <summary><B>2025.09.16 - basically rerun everything after training to fly UTRs</B></summary>
 
 - Somehow the model and the downstream SHAP scores got disconnected, so I simply needed to rerun almost everything to make sure it was on track. As i was getting that set up, I noticed that the ray tune runs were not actually using the attention and hidden layer dropout rates.
-- I also was using ChatGPT to understand why there was so much mean bias in my MLP. It suggested a few improvements so I added those:
+- I also was using ChatGPT to understand why there was so much mean bias in my MLP. I was interested in this because I had an idea on what the proper "naive" AME analysis should be. Basically, split into high and low TE based on the residuals of the MLP codons only prediction.This should remove the codons impact and group transcripts together based on if the UTRs are pulling the TE higher or lower than the base codon frequencies would set. Unfortunately, the MLP is so biased that the residuals are very correlated with the actual TE values. This means the residual splits would be no more informative than the raw TE splits. It suggested a few improvements so I added those:
   - leakyRELU instead of ReLU
   - more layers
   - more hyperparameters to ray tune:

@@ -10,7 +10,8 @@
 #####################################################
 source ~/.bashrc
 conda activate rayTune
-~/.local/share/mamba/bin/dvc repro motifEnrichment_highLowDecay
+python scripts/manualTokenShuffle.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/ --data_dir output/data/decay --output_dir output/predict --scaler output/ftModel/best_spearmanr/scaler.joblib --label tokenShuffle --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+#~/.local/share/mamba/bin/dvc repro motifEnrichment_highLowDecay
 #~/.local/share/mamba/bin/dvc repro codonOnlyClassificationMLP
 #~/.local/share/mamba/bin/dvc repro allExtraFeaturesClassificationMLP
 #~/.local/share/mamba/bin/dvc repro extraFeaturesAndMotifCountsClassificationMLP

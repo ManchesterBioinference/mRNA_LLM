@@ -26,47 +26,47 @@ if args.params:
 
 args = parser.parse_args()
 
-def _reorder_lengths_median_alternating(lengths_list):
-    """
-    Reorders a list of numbers to have the middle number first,
-    then alternates one lower and one higher, so that the median
-    number is first and the extreme values come last.
-    """
-    if not lengths_list:
-        return []
-
-    # Sort the list to easily find the median and subsequent elements
-    sorted_lengths = sorted(lengths_list)
-    n = len(sorted_lengths)
-    
-    new_order_lengths = []
-    
-    # Determine the starting middle index.
-    # For odd n, (n-1)//2 is the exact middle.
-    # For even n, (n-1)//2 is the lower of the two middle elements, which will be picked first.
-    mid_idx = (n - 1) // 2
-    
-    # Add the first middle element
-    new_order_lengths.append(sorted_lengths[mid_idx])
-    
-    # Initialize pointers for elements to the left and right of the initial middle element
-    l_ptr = mid_idx - 1
-    r_ptr = mid_idx + 1
-    
-    # Loop until all elements from sorted_lengths are added to new_order_lengths,
-    # alternating between picking from the left and right sides of the initial middle.
-    while l_ptr >= 0 or r_ptr < n:
-        # Add element from the left side (lower than current median elements)
-        if l_ptr >= 0:
-            new_order_lengths.append(sorted_lengths[l_ptr])
-            l_ptr -= 1
-        
-        # Add element from the right side (higher than current median elements)
-        if r_ptr < n: 
-            new_order_lengths.append(sorted_lengths[r_ptr])
-            r_ptr += 1
-            
-    return new_order_lengths
+# def _reorder_lengths_median_alternating(lengths_list):
+#     """
+#     Reorders a list of numbers to have the middle number first,
+#     then alternates one lower and one higher, so that the median
+#     number is first and the extreme values come last.
+#     """
+#     if not lengths_list:
+#         return []
+# 
+#     # Sort the list to easily find the median and subsequent elements
+#     sorted_lengths = sorted(lengths_list)
+#     n = len(sorted_lengths)
+#     
+#     new_order_lengths = []
+#     
+#     # Determine the starting middle index.
+#     # For odd n, (n-1)//2 is the exact middle.
+#     # For even n, (n-1)//2 is the lower of the two middle elements, which will be picked first.
+#     mid_idx = (n - 1) // 2
+#     
+#     # Add the first middle element
+#     new_order_lengths.append(sorted_lengths[mid_idx])
+#     
+#     # Initialize pointers for elements to the left and right of the initial middle element
+#     l_ptr = mid_idx - 1
+#     r_ptr = mid_idx + 1
+#     
+#     # Loop until all elements from sorted_lengths are added to new_order_lengths,
+#     # alternating between picking from the left and right sides of the initial middle.
+#     while l_ptr >= 0 or r_ptr < n:
+#         # Add element from the left side (lower than current median elements)
+#         if l_ptr >= 0:
+#             new_order_lengths.append(sorted_lengths[l_ptr])
+#             l_ptr -= 1
+#         
+#         # Add element from the right side (higher than current median elements)
+#         if r_ptr < n: 
+#             new_order_lengths.append(sorted_lengths[r_ptr])
+#             r_ptr += 1
+#             
+#     return new_order_lengths
 
 #try:
 #    df = pd.read_csv('output/mast_out/dev_mast_results.txt', sep='\s+', skiprows=2, skipfooter=1, engine='python')
@@ -105,21 +105,21 @@ highControl_5utr, highControl_3utr = split_by_utr(highControl)
 lowSHAP_5utr, lowSHAP_3utr = split_by_utr(lowSHAP)
 lowControl_5utr, lowControl_3utr = split_by_utr(lowControl)
 
-# Helper to get reordered motif lengths
-
-def get_reordered_lengths(motif_df: pd.DataFrame):
-    if motif_df.empty:
-        return []
-    lengths = (motif_df['end'] - motif_df['start']).astype(int)
-    lengths = lengths[lengths > 0].tolist()
-    return _reorder_lengths_median_alternating(lengths)
-
-pos5_lengths = get_reordered_lengths(highSHAP_5utr)
-pos3_lengths = get_reordered_lengths(highSHAP_3utr)
-neg5_lengths = get_reordered_lengths(lowSHAP_5utr)
-neg3_lengths = get_reordered_lengths(lowSHAP_3utr)
-
-print("Length counts (motif): pos5", len(pos5_lengths), "pos3", len(pos3_lengths), "neg5", len(neg5_lengths), "neg3", len(neg3_lengths))
+# # Helper to get reordered motif lengths
+# 
+# def get_reordered_lengths(motif_df: pd.DataFrame):
+#     if motif_df.empty:
+#         return []
+#     lengths = (motif_df['end'] - motif_df['start']).astype(int)
+#     lengths = lengths[lengths > 0].tolist()
+#     return _reorder_lengths_median_alternating(lengths)
+# 
+# pos5_lengths = get_reordered_lengths(highSHAP_5utr)
+# pos3_lengths = get_reordered_lengths(highSHAP_3utr)
+# neg5_lengths = get_reordered_lengths(lowSHAP_5utr)
+# neg3_lengths = get_reordered_lengths(lowSHAP_3utr)
+# 
+# print("Length counts (motif): pos5", len(pos5_lengths), "pos3", len(pos3_lengths), "neg5", len(neg5_lengths), "neg3", len(neg3_lengths))
 
 # Function to split control regions into segments matching motif length distribution (proportion-controlled, lookahead)
 import random

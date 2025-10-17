@@ -469,39 +469,43 @@ stages:
 
   microRNABindingEnrichment:
     foreach:
-    - positive
-    - negative
+    - train
+    - dev
+    - test
     do:
-      cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file
-        ${findMotifs.output_dir}/${item}/${findMotifs.control_positions} --interest_file
-        ${findMotifs.output_dir}/${item}/${findMotifs.motif_positions} --output_dir
-        ${microRNABindingEnrichment.output_dir}/${item} --mirna_file ${microRNABindingEnrichment.mirna_file}
+      cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --name ${item} 
+        --highSHAP ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions} 
+        --highControl ${findMotifs.output_dir}/${item}/positive/${findMotifs.motif_positions} 
+        --lowSHAP ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions} 
+        --lowControl ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_positions} 
+        --output_dir ${microRNABindingEnrichment.output_dir}/${item} 
       deps:
       - scripts/microRNABindingEnrichment.py
-      - ${findMotifs.output_dir}/${item}/${findMotifs.control_positions}
-      - ${findMotifs.output_dir}/${item}/${findMotifs.motif_positions}
+      - ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions}
+      - ${findMotifs.output_dir}/${item}/positive/${findMotifs.motif_positions}
+      - ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions}
+      - ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_positions}
       outs:
-      - ${microRNABindingEnrichment.output_dir}/${item}/${microRNABindingEnrichment.control_overlap_file}
-      - ${microRNABindingEnrichment.output_dir}/${item}/${microRNABindingEnrichment.interest_overlap_file}
-      - ${microRNABindingEnrichment.output_dir}/${item}/${microRNABindingEnrichment.fisher_file}
+      - ${microRNABindingEnrichment.output_dir}/${item}/${item}_pos3_mannwhitneyu_results.csv
+      - ${microRNABindingEnrichment.output_dir}/${item}/${item}_neg3_mannwhitneyu_results.csv
       params:
       - microRNABindingEnrichment
 
-  microRNABindingEnrichment_posVSneg:
-    cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file
-      ${findMotifs.output_dir}/negative/${findMotifs.motif_positions} --interest_file
-      ${findMotifs.output_dir}/positive/${findMotifs.motif_positions} --output_dir
-      ${microRNABindingEnrichment.output_dir}/positiveVSnegative --mirna_file ${microRNABindingEnrichment.mirna_file}
-    deps:
-    - scripts/microRNABindingEnrichment.py
-    - ${findMotifs.output_dir}/negative/${findMotifs.motif_positions}
-    - ${findMotifs.output_dir}/positive/${findMotifs.motif_positions}
-    outs:
-    - ${microRNABindingEnrichment.output_dir}/positiveVSnegative/${microRNABindingEnrichment.control_overlap_file}
-    - ${microRNABindingEnrichment.output_dir}/positiveVSnegative/${microRNABindingEnrichment.interest_overlap_file}
-    - ${microRNABindingEnrichment.output_dir}/positiveVSnegative/${microRNABindingEnrichment.fisher_file}
-    params:
-    - microRNABindingEnrichment
+#   microRNABindingEnrichment_posVSneg:
+#     cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --control_file
+#       ${findMotifs.output_dir}/negative/${findMotifs.motif_positions} --interest_file
+#       ${findMotifs.output_dir}/positive/${findMotifs.motif_positions} --output_dir
+#       ${microRNABindingEnrichment.output_dir}/positiveVSnegative --mirna_file ${microRNABindingEnrichment.mirna_file}
+#     deps:
+#     - scripts/microRNABindingEnrichment.py
+#     - ${findMotifs.output_dir}/negative/${findMotifs.motif_positions}
+#     - ${findMotifs.output_dir}/positive/${findMotifs.motif_positions}
+#     outs:
+#     - ${microRNABindingEnrichment.output_dir}/positiveVSnegative/${microRNABindingEnrichment.control_overlap_file}
+#     - ${microRNABindingEnrichment.output_dir}/positiveVSnegative/${microRNABindingEnrichment.interest_overlap_file}
+#     - ${microRNABindingEnrichment.output_dir}/positiveVSnegative/${microRNABindingEnrichment.fisher_file}
+#     params:
+#     - microRNABindingEnrichment
   # correctAME_pvalues:
   #   foreach:
   #     - positive
