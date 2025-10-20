@@ -333,9 +333,9 @@ stages:
     - test
     do:
       cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
-        ${fineTuneModel.output_dir}/best_spearmanr/ --save_path ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
-        --extraFeatures ${getDecayResiduals.extraFeatures} --sequence_file ${preprocessData.output_dir}/${item}.fasta
-        --mfe ${runViennaRNA.output_csv}                                                                                                             #test.fasta
+        ${fineTuneModel.output_dir}_no_codons/best_spearmanr/ --save_path ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
+        --sequence_file ${preprocessData.output_dir}/${item}.fasta --mfe ${runViennaRNA.output_csv}
+        --extraFeatures ${ablate_features.output_dir}/no_codons.csv #${getDecayResiduals.extraFeatures}
       deps:
       - scripts/importanceAnalysis.py
       - ${fineTuneModel.output_dir}
@@ -883,7 +883,6 @@ plots:
 - dvclive/TE/plots/metrics:
     x: step
 - dvclive/TE/plots/images
-- dvclive/findMotifs/plots/images
 - dvclive/TE/seq_only/plots/metrics:
     x: step
 - dvclive/TE/seq_only/plots/images
@@ -902,6 +901,7 @@ plots:
 - dvclive/TE/no_mfe/plots/metrics:
     x: step
 - dvclive/TE/no_mfe/plots/images
+- dvclive/findMotifs/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
