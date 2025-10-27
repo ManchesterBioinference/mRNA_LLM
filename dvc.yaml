@@ -374,6 +374,7 @@ stages:
     - test
     do:
       cmd: python scripts/find_motifs.py --SHAP ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
+        --trainSHAP ${importanceAnalysis.output_dir}/train_${importanceAnalysis.pickle_file}
         --save_file_dir ${findMotifs.output_dir}/${item}
       deps:
       - scripts/find_motifs.py
@@ -429,6 +430,7 @@ stages:
       - ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions}
       - ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_positions}
       - ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions}
+      - ${runMAST.output_dir}/${item}_${runMAST.output_file}
       outs:
       - ${motifEnrichment.output_dir}/${item}_pos5_mannwhitneyu_results.csv
       - ${motifEnrichment.output_dir}/${item}_pos3_mannwhitneyu_results.csv
@@ -473,12 +475,12 @@ stages:
     - dev
     - test
     do:
-      cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --name ${item} 
-        --highSHAP ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions} 
-        --highControl ${findMotifs.output_dir}/${item}/positive/${findMotifs.motif_positions} 
-        --lowSHAP ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions} 
-        --lowControl ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_positions} 
-        --output_dir ${microRNABindingEnrichment.output_dir}/${item} 
+      cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --name
+        ${item} --highSHAP ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions}
+        --highControl ${findMotifs.output_dir}/${item}/positive/${findMotifs.motif_positions}
+        --lowSHAP ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions}
+        --lowControl ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_positions}
+        --output_dir ${microRNABindingEnrichment.output_dir}/${item}
       deps:
       - scripts/microRNABindingEnrichment.py
       - ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions}
@@ -590,6 +592,16 @@ stages:
       cmd: python scripts/motifEnrichment_highLow.py --params params.yaml --name ${item}
         --motifLocations ${runMAST.output_dir}/${item}_${runMAST.output_file} --highTE
         ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.high} --lowTE ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.low}
+      deps:
+      - scripts/motifEnrichment_highLow.py
+      - ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.high}
+      - ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.low}
+      - ${runMAST.output_dir}/${item}_${runMAST.output_file}
+      outs:
+      - ${motifEnrichment.output_dir}/${item}_utr5_mannwhitneyu_results.csv
+      - ${motifEnrichment.output_dir}/${item}_utr3_mannwhitneyu_results.csv
+      params:
+      - motifEnrichment_highLowDecay
 
   runAME_highLowDecay:
     foreach:
@@ -878,13 +890,13 @@ plots:
 - dvclive/TE/plots/metrics:
     x: step
 - dvclive/TE/plots/images
-- dvclive/findMotifs/plots/images
 - dvclive/TE/seq_only/plots/metrics:
     x: step
 - dvclive/TE/seq_only/plots/images
 - dvclive/TE/only_codons/plots/metrics:
     x: step
 - dvclive/TE/only_codons/plots/images
+- dvclive/findMotifs/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json

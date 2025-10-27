@@ -83,45 +83,6 @@ def filterWithLOWESS(importance, frac=0.3, save_file_dir=None):
 
     return [importance[i] for i in range(len(importance)) if i not in outlier_indices]
 
-def kmer2seq(kmers):
-    """
-    Convert kmers to original sequence
-    
-    Arguments:
-    kmers -- str, kmers separated by space.
-    
-    Returns:
-    seq -- str, original sequence.
-
-    """
-    kmers_list = kmers.split(" ")
-    print(kmers_list)
-    bases = [kmer[0] for kmer in kmers_list[0:-1]]
-    bases.append(kmers_list[-1])
-    print(bases)
-    seq = "".join(bases)
-    print(len(seq))
-    print(seq)
-    print(len(kmers_list))
-    assert len(seq) == len(kmers_list) + len(kmers_list[0]) - 1
-    return seq
-
-def seq2kmer(seq, k):
-    """
-    Convert original sequence to kmers
-    
-    Arguments:
-    seq -- str, original sequence.
-    k -- int, kmer of length k specified.
-    
-    Returns:
-    kmers -- str, kmers separated by space
-
-    """
-    kmer = [seq[x:x+k] for x in range(len(seq)+1-k)]
-    kmers = " ".join(kmer)
-    return kmers
-
 def get_minimal_supersets(sequence_list):
     """
     Filters a list of sequences, returning only those that are not
@@ -150,7 +111,6 @@ def get_minimal_supersets(sequence_list):
             minimal_supersets.append(current_seq)
         
     return minimal_supersets
-
 
 def _update_sequences_in_dict(target_dict, current_processing_key, new_sequences_raw):
     """
@@ -323,7 +283,7 @@ def contiguous_regions(imp, condition, len_thres=6, max_len=15):
     seq_idx = [(int(sum(imp.lengths[:tokenCoord[0]])), int(sum(imp.lengths[:tokenCoord[1]]))) for tokenCoord in new_idx]
     return np.array(seq_idx)
 
-def find_high_attention(imp, min_len=5, positive = True, **kwargs):
+def find_high_attention(imp, min_len=5, positive = True, trainSHAPmean=0.0, trainSHAPstd=1.0, numStds=1.25, **kwargs):
     """
     With an array of attention scores as input, finds contiguous high attention 
     sub-regions indices having length greater than min_len.
@@ -342,39 +302,27 @@ def find_high_attention(imp, min_len=5, positive = True, **kwargs):
     motif_regions -- indices of high attention regions in sequence
 
     """
-
-    if positive:
-        score = [x if x > 0 else 0 for x in imp.scores.flatten().tolist()] # only positive attention scores
-    else:
-        score = [abs(x) if x < 0 else 0 for x in imp.scores.flatten().tolist()] # only negative attention scores
-    score = np.asarray(score)
-
-    if sum(score) == 0:
+    scores = imp.scores.flatten()*len(imp.tokens)
+    if np.sum(scores) == 0:
         return [], [], [], [], [], []
-    tmpMean = np.mean([x for x in score if x > 0])
-    tmpStd = np.std([x for x in score if x > 0])
-    cond1 = (score > tmpMean+tmpStd) #(score > np.mean([x for x in score if x > 0]))
-    cond2 = (score > 2*np.min([x for x in score if x > 0])) # threshold for high attention
+    if positive:
+        cond1 = (scores > trainSHAPmean + numStds*trainSHAPstd)
+        cond2 = (scores > 0)
+        controlCond = (scores < trainSHAPmean)
+    else:
+        cond1 = (scores < trainSHAPmean - numStds*trainSHAPstd)
+        cond2 = (scores < 0)
+        controlCond = (scores > trainSHAPmean)
 
-
-    cond = [cond1, cond2]
-    
-    cond = list(map(all, zip(*cond)))
-    
-    if 'cond' in kwargs: 
-        cond = kwargs['cond']
-        if any(isinstance(x, list) for x in cond): 
-            cond = list(map(all, zip(*cond)))
-    
-    cond = np.asarray(cond)
+    cond = np.asarray(list(map(all, zip(cond1, cond2))))
 
     # find important contiguous region with high attention
     motif_regions = contiguous_regions(imp,cond,min_len,max_len=None)
 
     # isolate regions of interest and control for motif enrichment analysis
     #TODO - confirm that these thresholds work well
-    interestIdx = contiguous_regions(imp,score > 0,10,max_len=None)
-    controlIdx = contiguous_regions(imp,score == 0,10,max_len=None)
+    interestIdx = [] #contiguous_regions(imp,score > 0,10,max_len=None)
+    controlIdx = contiguous_regions(imp,controlCond,10,max_len=None)
 
     fullSeq = ''.join(imp.tokens)
 
@@ -415,215 +363,6 @@ def find_high_attention(imp, min_len=5, positive = True, **kwargs):
             motif_seqs.append(seq)
 
     return motif_regions, controlRegions, interestRegions, motif_seqs, motifPositions, controlPositions
-
-def count_motif_instances(seqs, motifs, allow_multi_match=False):
-    
-    import ahocorasick 
-    from operator import itemgetter
-    
-    motif_count = {}
-    
-    A = ahocorasick.Automaton()
-    for idx, key in enumerate(motifs):
-        A.add_word(key, (idx, key))
-        motif_count[key] = set()
-    A.make_automaton()
-    
-    for i, seq in enumerate(seqs):
-        matches = sorted(map(itemgetter(1), A.iter(seq)))
-        matched_seqs = []
-        for match in matches:
-            match_seq = match[1]
-            assert match_seq in motifs
-            if allow_multi_match:
-                motif_count[match_seq].add(i) # add seq index
-            else: # for a particular seq, count only once if multiple matches were found
-                if match_seq not in matched_seqs:
-                    motif_count[match_seq].add(i)
-                    matched_seqs.append(match_seq)
-    
-    return motif_count
-
-def motifs_hypergeom_test(pos_seqs, neg_seqs, motifs, p_adjust = 'fdr_bh', alpha = 0.05, verbose=False, 
-                          allow_multi_match=False, **kwargs):
-    
-    from scipy.stats import hypergeom
-    import statsmodels.stats.multitest as multi
-    
-    
-    pvals = []
-    N = len(pos_seqs) + len(neg_seqs)
-    K = len(pos_seqs)
-    motif_count_all = count_motif_instances(pos_seqs+neg_seqs, motifs, allow_multi_match=allow_multi_match)
-    motif_count_pos = count_motif_instances(pos_seqs, motifs, allow_multi_match=allow_multi_match)
-    
-    for motif in motifs:
-        n = motif_count_all[motif]
-        x = motif_count_pos[motif]
-
-        pval = hypergeom.sf(x-1, N, K, n)
-        if verbose:
-            if pval < 1e-5:
-                print("motif {}: N={}; K={}; n={}; x={}; p={}".format(motif, N, K, n, x, pval))
-
-        pvals.append(pval)
-    
-    # adjust p-value
-    if p_adjust is not None:
-        pvals = list(multi.multipletests(pvals,alpha=alpha,method=p_adjust)[1])
-    return pvals
-
-def filter_motifs(pos_seqs, neg_seqs, motifs, cutoff=0.05, return_idx=False, **kwargs):
-    
-    pvals = motifs_hypergeom_test(pos_seqs, neg_seqs, motifs, **kwargs) 
-    #print(pvals)
-    if return_idx:
-        return [i for i, pval in enumerate(pvals) if pval < cutoff]
-    else:
-        return [motifs[i] for i, pval in enumerate(pvals) if pval < cutoff]
-
-def merge_motifs(motif_seqs, min_len=5, align_all_ties=True, **kwargs):
-    
-    from Bio import Align
-    
-
-    aligner = Align.PairwiseAligner()
-    aligner.internal_gap_score = -10000.0 # prohibit internal gaps
-    
-    merged_motif_seqs = {}
-    motifGroups = {}
-
-    for motif in sorted(motif_seqs, key=len): 
-
-
-        if not merged_motif_seqs: # if empty
-            merged_motif_seqs[motif] = motif_seqs[motif] # add first one
-            motifGroups[motif] = [motif] # add to group
-        else:
-
-            alignments = []
-            key_motifs = []
-            for key_motif in merged_motif_seqs.keys(): # key motif
-                if motif != key_motif: 
-                    alignment=aligner.align(motif, key_motif)[0] 
-                    
-                    
-                    # condition to declare successful alignment
-                    cond = max((min_len -1), 0.5 * min(len(motif), len(key_motif))) 
-                    
-                    if 'cond' in kwargs:
-                        cond = kwargs['cond'] # override
-                        
-                    if alignment.score >= cond:
-                        alignments.append(alignment)
-                        key_motifs.append(key_motif)
-                        if key_motif not in motifGroups:
-                            motifGroups[key_motif] = []
-
-            if alignments: # if aligned, find out alignment with maximum score and proceed
-                best_score = max(alignments, key=lambda alignment: alignment.score)
-                best_idx = [i for i, score in enumerate(alignments) if score == best_score]
- 
-                if align_all_ties: # bool, whether to keep all best alignments when ties encountered (default True)
-                    for i in best_idx:
-                        alignment = alignments[i]
-                        key_motif = key_motifs[i] 
-
-                        # calculate offset to be added/subtracted from atten_region_pos
-                        left_offset = alignment.aligned[0][0][0] - alignment.aligned[1][0][0] # always query - key
-            
-                        if (alignment.aligned[0][0][1] <= len(motif)) & \
-                            (alignment.aligned[1][0][1] == len(key_motif)): # inside
-                            right_offset = len(motif) - alignment.aligned[0][0][1]
-                        elif (alignment.aligned[0][0][1] == len(motif)) & \
-                            (alignment.aligned[1][0][1] < len(key_motif)): # left shift
-                            right_offset = alignment.aligned[1][0][1] - len(key_motif)
-                        elif (alignment.aligned[0][0][1] < len(motif)) & \
-                            (alignment.aligned[1][0][1] == len(key_motif)): # right shift
-                            right_offset = len(motif) - alignment.aligned[0][0][1]
-                       
-                        merged_motif_seqs[key_motif]['seq_idx'].extend(motif_seqs[motif]['seq_idx'])
-
-                        # calculate new atten_region_pos after adding/subtracting offset 
-                        new_atten_region_pos = [(pos[0]+left_offset, pos[1]-right_offset) \
-                                                for pos in motif_seqs[motif]['atten_region_pos']]
-               
-                        merged_motif_seqs[key_motif]['atten_region_pos'].extend(new_atten_region_pos)
-                        if key_motif not in motifGroups:
-                            motifGroups[key_motif] = []
-                        motifGroups[key_motif].append(motif)
-                   
-                else:
-                    alignment = alignments[best_idx[0]]
-                    key_motif = key_motifs[best_idx[0]]
-
-                    # calculate offset to be added/subtracted from atten_region_pos
-                    left_offset = alignment.aligned[0][0][0] - alignment.aligned[1][0][0] # always query - key
-                    if (alignment.aligned[0][0][1] <= len(motif)) & \
-                        (alignment.aligned[1][0][1] == len(key_motif)): # inside
-                        right_offset = len(motif) - alignment.aligned[0][0][1]
-                    elif (alignment.aligned[0][0][1] == len(motif)) & \
-                        (alignment.aligned[1][0][1] < len(key_motif)): # left shift
-                        right_offset = alignment.aligned[1][0][1] - len(key_motif)
-                    elif (alignment.aligned[0][0][1] < len(motif)) & \
-                        (alignment.aligned[1][0][1] == len(key_motif)): # right shift
-                        right_offset = len(motif) - alignment.aligned[0][0][1]
-                    
-
-                    # add seq_idx back to new merged dict
-                    merged_motif_seqs[key_motif]['seq_idx'].extend(motif_seqs[motif]['seq_idx'])
-
-                    # calculate new atten_region_pos after adding/subtracting offset 
-                    new_atten_region_pos = [(pos[0]+left_offset, pos[1]-right_offset) \
-                                            for pos in motif_seqs[motif]['atten_region_pos']]
-                    merged_motif_seqs[key_motif]['atten_region_pos'].extend(new_atten_region_pos)
-                    if key_motif not in motifGroups:
-                        motifGroups[key_motif] = []
-                    motifGroups[key_motif].append(motif)
-
-            else: # cannot align to anything, add to new dict as independent key
-                merged_motif_seqs[motif] = motif_seqs[motif] # add new one
-                motifGroups[motif] = [motif]
-    
-
-    return merged_motif_seqs, motifGroups
-
-
-#def make_window(motif_seqs, pos_seqs, window_size=24):
-def make_window(motif_seqs, importances, window_size=24):
-  
-    new_motif_seqs = {}
-    
-    # extract fixed-length sequences based on window_size
-    for motif, instances in motif_seqs.items():
-        new_motif_seqs[motif] = {'seq_idx':[], 'atten_region_pos':[], 'seqs': []}
-        for i, coord in enumerate(instances['atten_region_pos']):
-            if coord[0] >= coord[1]: # empty region
-                continue
-            atten_len = coord[1] - coord[0]
-            #atten_len = sum(importances[instances['seq_idx'][i]].lengths[tokenCoord[0]:tokenCoord[1]])
-            if (window_size - atten_len) % 2 == 0: # even
-                offset = (window_size - atten_len) / 2 
-                #seqCoord = (int(sum(importances[instances['seq_idx'][i]].lengths[:tokenCoord[0]])), int(sum(importances[instances['seq_idx'][i]].lengths[:tokenCoord[1]])))
-                new_coord = (int(coord[0] - offset), int(coord[1] + offset))
-                #if (new_coord[0] >=0) & (new_coord[1] < len(pos_seqs[instances['seq_idx'][i]])): 
-                if (new_coord[0] >=0) & (new_coord[1] < len(''.join(importances[instances['seq_idx'][i]].tokens))): 
-                    # append
-                    new_motif_seqs[motif]['seq_idx'].append(instances['seq_idx'][i]) 
-                    new_motif_seqs[motif]['atten_region_pos'].append((new_coord[0], new_coord[1]))
-                    new_motif_seqs[motif]['seqs'].append(''.join(importances[instances['seq_idx'][i]].tokens)[new_coord[0]:new_coord[1]])
-            else: # odd
-                offset1 = (window_size - atten_len) // 2
-                offset2 = (window_size - atten_len) // 2 + 1
-                #seqCoord = (int(sum(importances[instances['seq_idx'][i]].lengths[:tokenCoord[0]])), int(sum(importances[instances['seq_idx'][i]].lengths[:tokenCoord[1]])))
-                new_coord = (int(coord[0] - offset1), int(coord[1] + offset2))
-                if (new_coord[0] >=0) & (new_coord[1] < len(''.join(importances[instances['seq_idx'][i]].tokens))):
-                    # append
-                    new_motif_seqs[motif]['seq_idx'].append(instances['seq_idx'][i])
-                    new_motif_seqs[motif]['atten_region_pos'].append((new_coord[0], new_coord[1]))
-                    new_motif_seqs[motif]['seqs'].append(''.join(importances[instances['seq_idx'][i]].tokens)[new_coord[0]:new_coord[1]])
-
-    return new_motif_seqs
 
 def _reorder_lengths_median_alternating(lengths_list):
     """
@@ -678,6 +417,8 @@ def motif_analysis(importances,
                    align_all_ties = True,
                    save_file_dir = None,
                    positive = True,
+                   trainSHAPmean = None,
+                   trainSHAPstd = None,
                    args = None,
                    **kwargs
                   ):
@@ -711,9 +452,9 @@ def motif_analysis(importances,
     for i, imp in enumerate(importances):
         # handle kwargs
         if 'atten_cond' in kwargs:
-            motif_regions, controlRegions, interestRegions, current_motif_s_list, motifPositions, controlPositions = find_high_attention(imp, min_len=min_len, positive=positive, cond=kwargs['atten_cond'])
+            motif_regions, controlRegions, interestRegions, current_motif_s_list, motifPositions, controlPositions = find_high_attention(imp, min_len=min_len, positive=positive, trainSHAPmean=trainSHAPmean, trainSHAPstd=trainSHAPstd, cond=kwargs['atten_cond'])
         else:
-            motif_regions, controlRegions, interestRegions, current_motif_s_list, motifPositions, controlPositions = find_high_attention(imp, min_len=min_len, positive=positive)
+            motif_regions, controlRegions, interestRegions, current_motif_s_list, motifPositions, controlPositions = find_high_attention(imp, min_len=min_len, positive=positive, trainSHAPmean=trainSHAPmean, trainSHAPstd=trainSHAPstd)
         
         # Collect control and interest sequences (regions) using the new helper function
         if controlRegions: # Check if the list is not empty
@@ -799,6 +540,17 @@ def motif_analysis(importances,
                 f.write(f"{k}\t{s[0]}\t{s[1]}\t{s[2]}\t{s[3]}\n")
     return
 
+def getTrainSHAPStats(trainSHAPpath):
+    importances = pickle.load(open(trainSHAPpath, 'rb'))
+    all_scores = []
+    for imp in importances:
+        scores = imp.scores.flatten()*len(imp.tokens)
+        all_scores.extend(scores)
+    all_scores = np.array(all_scores)
+    mean_score = np.mean(all_scores)
+    std_score = np.std(all_scores)
+    return mean_score, std_score
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--params", default='params.yaml', type=str, help="Path to the YAML file containing parameters.",)
@@ -819,6 +571,7 @@ def main():
     parser.add_argument( "--interest_file", default='.', type=str, help="Path to save outputs",)
     parser.add_argument( "--verbose", action='store_true', help="Verbosity controller",)
     parser.add_argument("--SHAP", default="output/importance/shap.pkl", type=str, help="The path to the pickled SHAP data for each sample")
+    parser.add_argument("--trainSHAP", default=None, type=str, help="The path to the pickled SHAP data for the training set")
     parser.add_argument("--allow_multi_match", action='store_true', help="Allow multiple matches of a motif within a single sequence during counting for hypergeometric test.")
 
 
@@ -833,6 +586,8 @@ def main():
                 parser.set_defaults(**{key: value})
 
     args = parser.parse_args()
+
+    trainSHAPmean, trainSHAPstd = getTrainSHAPStats(args.trainSHAP)
 
     importance = pickle.load(open(args.SHAP, 'rb'))
     iWithLen = []
@@ -871,6 +626,8 @@ def main():
                                     positive = pos,
                                     p_adjust = args.p_adjust, # Pass p_adjust method
                                     allow_multi_match=args.allow_multi_match,
+                                    trainSHAPmean=trainSHAPmean,
+                                    trainSHAPstd=trainSHAPstd,
                                     args = args # Pass counting option
                                 )
         # label = 'positive' if pos else 'negative'

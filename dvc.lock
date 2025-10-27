@@ -2890,8 +2890,8 @@ stages:
       nfiles: 26
     - path: scripts/importanceAnalysis.py
       hash: md5
-      md5: 676e920dc203087653ddbbe84562ed62
-      size: 19221
+      md5: d85e680c658df654fe6b18fd6289574e
+      size: 19924
     params:
       params.yaml:
         importanceAnalysis:
@@ -2901,7 +2901,7 @@ stages:
     outs:
     - path: output/importance/dev_shap.pkl
       hash: md5
-      md5: 63776a8cddc57660a6ed40fd85268efe
+      md5: 8ac30d335c702f88e04ed8025afbe727
       size: 1681715
   visualizeImportance@dev:
     cmd: python scripts/visualizeImportance.py --params params.yaml --kmer 4 --SHAP
@@ -2911,7 +2911,7 @@ stages:
     deps:
     - path: output/importance/dev_shap.pkl
       hash: md5
-      md5: 63776a8cddc57660a6ed40fd85268efe
+      md5: 8ac30d335c702f88e04ed8025afbe727
       size: 1681715
     - path: scripts/visualizeImportance.py
       hash: md5
@@ -2926,8 +2926,8 @@ stages:
     outs:
     - path: output/importance/dev_visualizeImportance.html
       hash: md5
-      md5: 8774e05d28554ba01ef516256a633a42
-      size: 7380361
+      md5: 69ce0ab23a6bb83fa1afadd9176ce607
+      size: 7380367
   fineTuneModel_ablations@no_codons:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_codons
@@ -3129,8 +3129,8 @@ stages:
       nfiles: 26
     - path: scripts/importanceAnalysis.py
       hash: md5
-      md5: 676e920dc203087653ddbbe84562ed62
-      size: 19221
+      md5: c6e11b7eb20fb97ed0a86ebea0fd95c5
+      size: 19920
     params:
       params.yaml:
         importanceAnalysis:
@@ -3140,7 +3140,7 @@ stages:
     outs:
     - path: output/importance/test_shap.pkl
       hash: md5
-      md5: 7db756168c442e76e0938969f05a83c4
+      md5: 6e33df543879ed8920673ba31138bceb
       size: 1700997
   visualizeImportance@test:
     cmd: python scripts/visualizeImportance.py --params params.yaml --kmer 4 --SHAP
@@ -3150,7 +3150,7 @@ stages:
     deps:
     - path: output/importance/test_shap.pkl
       hash: md5
-      md5: 7db756168c442e76e0938969f05a83c4
+      md5: 6e33df543879ed8920673ba31138bceb
       size: 1700997
     - path: scripts/visualizeImportance.py
       hash: md5
@@ -3165,20 +3165,20 @@ stages:
     outs:
     - path: output/importance/test_visualizeImportance.html
       hash: md5
-      md5: 44228f19e775e18d27f0651dde926134
-      size: 7472498
+      md5: 26763c631bc20be84dafc6ce9ce48691
+      size: 7472500
   findMotifs@test:
-    cmd: python scripts/find_motifs.py --SHAP output/importance/test_shap.pkl --save_file_dir
-      output/motifs/test
+    cmd: python scripts/find_motifs.py --SHAP output/importance/test_shap.pkl --trainSHAP
+      output/importance/train_shap.pkl --save_file_dir output/motifs/test
     deps:
     - path: output/importance/test_visualizeImportance.html
       hash: md5
-      md5: 44228f19e775e18d27f0651dde926134
-      size: 7472498
+      md5: 26763c631bc20be84dafc6ce9ce48691
+      size: 7472500
     - path: scripts/find_motifs.py
       hash: md5
-      md5: ab8c8dd90d38d1aaf842c6f28cc249f7
-      size: 40136
+      md5: 4802cb1386c2ce6fe493dc25eaa254e1
+      size: 29367
     params:
       params.yaml:
         findMotifs:
@@ -3191,36 +3191,36 @@ stages:
     outs:
     - path: output/motifs/test/negative/control_positions.txt
       hash: md5
-      md5: 455cda25f520ef7950c92f29979ac338
-      size: 46403
+      md5: 8f3980c4205e9751631c6165e1cef4c1
+      size: 57650
     - path: output/motifs/test/negative/control_seqs.fasta
       hash: md5
-      md5: 4e80bdfbf8943fca23373a60a6da508f
-      size: 186997
+      md5: b19deec5ebc147770f1322490cd4887e
+      size: 221218
     - path: output/motifs/test/negative/motif_positions.txt
       hash: md5
-      md5: 5f8979c331ae3c588aac095ca7e2c8b2
-      size: 64382
+      md5: 29c20d7595befc02607c2c8b4338458d
+      size: 105458
     - path: output/motifs/test/negative/motif_seqs.fasta
       hash: md5
-      md5: 705d5d55ba1b6e6ff9e8bfda47ed6c2b
-      size: 121927
+      md5: d1f7504bb2c6ba44e1ec9f92252e6f1a
+      size: 221088
     - path: output/motifs/test/positive/control_positions.txt
       hash: md5
-      md5: 43853105fca8e07833d9eb158f063e51
-      size: 65769
+      md5: b5a4beb0623b0ec61ec4e49547a94ff5
+      size: 76097
     - path: output/motifs/test/positive/control_seqs.fasta
       hash: md5
-      md5: b96de1047725a2c6c82cf436eceb6059
-      size: 1271052
+      md5: efeed5f3965d89d1bf4514c4ea831406
+      size: 1071203
     - path: output/motifs/test/positive/motif_positions.txt
       hash: md5
-      md5: 63ed6b31086e676a7fad14fdd54557ea
-      size: 20212
+      md5: 5abe1a5a369b5ae576c8493fda3c8a11
+      size: 24369
     - path: output/motifs/test/positive/motif_seqs.fasta
       hash: md5
-      md5: c1a51740bc73e1b32620e1ff2032ed26
-      size: 26996
+      md5: 94a3c408559787694dc6fc0f3a51ac7a
+      size: 39648
   importanceAnalysis@train:
     cmd: python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
       output/ftModel/best_spearmanr/ --save_path output/importance/train_shap.pkl
@@ -3234,8 +3234,8 @@ stages:
       nfiles: 26
     - path: scripts/importanceAnalysis.py
       hash: md5
-      md5: 676e920dc203087653ddbbe84562ed62
-      size: 19221
+      md5: c6e11b7eb20fb97ed0a86ebea0fd95c5
+      size: 19920
     params:
       params.yaml:
         importanceAnalysis:
@@ -3245,7 +3245,7 @@ stages:
     outs:
     - path: output/importance/train_shap.pkl
       hash: md5
-      md5: 9734b13e19ed5afa5cb0abb856619aef
+      md5: dca737cfe70aaf2706d4d76bbf2f7fc0
       size: 7723172
   visualizeImportance@train:
     cmd: python scripts/visualizeImportance.py --params params.yaml --kmer 4 --SHAP
@@ -3255,7 +3255,7 @@ stages:
     deps:
     - path: output/importance/train_shap.pkl
       hash: md5
-      md5: 9734b13e19ed5afa5cb0abb856619aef
+      md5: dca737cfe70aaf2706d4d76bbf2f7fc0
       size: 7723172
     - path: scripts/visualizeImportance.py
       hash: md5
@@ -3270,20 +3270,20 @@ stages:
     outs:
     - path: output/importance/train_visualizeImportance.html
       hash: md5
-      md5: 98b2df496ca98935a547e9848f48fb6e
-      size: 33548215
+      md5: 29a463684f710781bd13f2e578a07138
+      size: 33548237
   findMotifs@train:
-    cmd: python scripts/find_motifs.py --SHAP output/importance/train_shap.pkl --save_file_dir
-      output/motifs/train
+    cmd: python scripts/find_motifs.py --SHAP output/importance/train_shap.pkl --trainSHAP
+      output/importance/train_shap.pkl --save_file_dir output/motifs/train
     deps:
     - path: output/importance/train_visualizeImportance.html
       hash: md5
-      md5: 98b2df496ca98935a547e9848f48fb6e
-      size: 33548215
+      md5: 29a463684f710781bd13f2e578a07138
+      size: 33548237
     - path: scripts/find_motifs.py
       hash: md5
-      md5: ab8c8dd90d38d1aaf842c6f28cc249f7
-      size: 40136
+      md5: 4802cb1386c2ce6fe493dc25eaa254e1
+      size: 29367
     params:
       params.yaml:
         findMotifs:
@@ -3296,48 +3296,48 @@ stages:
     outs:
     - path: output/motifs/train/negative/control_positions.txt
       hash: md5
-      md5: 548cda4c56fe9ac51f745ccbeae73314
-      size: 221667
+      md5: 0005098d1f56f317ea49ab30e2eb8478
+      size: 264837
     - path: output/motifs/train/negative/control_seqs.fasta
       hash: md5
-      md5: 430c3866977c7ed06c79916f01c25866
-      size: 897365
+      md5: 1fd157a52fd6f1d910412c6916cdb032
+      size: 997654
     - path: output/motifs/train/negative/motif_positions.txt
       hash: md5
-      md5: 7724f88f6ee2af84efc690c7ddb259df
-      size: 293705
+      md5: 34cde1d3a93632919235938b48452222
+      size: 479907
     - path: output/motifs/train/negative/motif_seqs.fasta
       hash: md5
-      md5: 83e3074fac15ea753485bef25157ad3a
-      size: 537690
+      md5: ca5851f42453021b7cd5cb6931f46183
+      size: 969676
     - path: output/motifs/train/positive/control_positions.txt
       hash: md5
-      md5: 3895bc343588f161add7d9f44848c58d
-      size: 308402
+      md5: 9d0c4ed94fc4e7a3279566eed83122c5
+      size: 344359
     - path: output/motifs/train/positive/control_seqs.fasta
       hash: md5
-      md5: 27c20ec3ae765b8fb1702ab2d90e5107
-      size: 5314844
+      md5: d213c03c4427accedc8396c6b70d1b14
+      size: 4592863
     - path: output/motifs/train/positive/motif_positions.txt
       hash: md5
-      md5: 98f8ee1896e60166db1413fcedb73aab
-      size: 99065
+      md5: 39a388bd8b8252ac831eeebfe136466e
+      size: 112877
     - path: output/motifs/train/positive/motif_seqs.fasta
       hash: md5
-      md5: c4cebd1d3f25342c65a61849ac89d3b3
-      size: 124439
+      md5: 26e9c6c1aad775ff050ef90bc294f695
+      size: 177559
   findMotifs@dev:
-    cmd: python scripts/find_motifs.py --SHAP output/importance/dev_shap.pkl --save_file_dir
-      output/motifs/dev
+    cmd: python scripts/find_motifs.py --SHAP output/importance/dev_shap.pkl --trainSHAP
+      output/importance/train_shap.pkl --save_file_dir output/motifs/dev
     deps:
     - path: output/importance/dev_visualizeImportance.html
       hash: md5
-      md5: 8774e05d28554ba01ef516256a633a42
-      size: 7380361
+      md5: 69ce0ab23a6bb83fa1afadd9176ce607
+      size: 7380367
     - path: scripts/find_motifs.py
       hash: md5
-      md5: ab8c8dd90d38d1aaf842c6f28cc249f7
-      size: 40136
+      md5: 4802cb1386c2ce6fe493dc25eaa254e1
+      size: 29367
     params:
       params.yaml:
         findMotifs:
@@ -3350,36 +3350,36 @@ stages:
     outs:
     - path: output/motifs/dev/negative/control_positions.txt
       hash: md5
-      md5: 39347c9fb13f6a2cb28440fd87024921
-      size: 49293
+      md5: 972d30a99be55bb898e3eccf9572fc6c
+      size: 58655
     - path: output/motifs/dev/negative/control_seqs.fasta
       hash: md5
-      md5: 8c2ba93793d190e06918d7b9017e9e16
-      size: 213500
+      md5: dba23609d51ff1996230628d7ec2c634
+      size: 229384
     - path: output/motifs/dev/negative/motif_positions.txt
       hash: md5
-      md5: 547b5261a4ce5deb75cf49a667141bbb
-      size: 62856
+      md5: 812cf335638e13daed3ecac6fe5774b1
+      size: 102141
     - path: output/motifs/dev/negative/motif_seqs.fasta
       hash: md5
-      md5: d3d2c4519a162125a2b3c169eb78961c
-      size: 119450
+      md5: dd5ae08d31251785a8d473ca43ad7898
+      size: 213084
     - path: output/motifs/dev/positive/control_positions.txt
       hash: md5
-      md5: 7ccbb00158fe47cec2a4694ad5201fb0
-      size: 67698
+      md5: 6374f005513df07a1e34b37940b5cda0
+      size: 75411
     - path: output/motifs/dev/positive/control_seqs.fasta
       hash: md5
-      md5: e0b88c6eb35c89d97a1a88c9dc0f6247
-      size: 1131926
+      md5: 12ec8d44937848a6968d9af947ca74c6
+      size: 1012874
     - path: output/motifs/dev/positive/motif_positions.txt
       hash: md5
-      md5: c3f1c25c26907e1d050be63f91a825fb
-      size: 21484
+      md5: 03098f61fa95fad40e1e9380afe5fcd3
+      size: 24778
     - path: output/motifs/dev/positive/motif_seqs.fasta
       hash: md5
-      md5: 8ce9af04e1fce4d74f837b1c05dbb586
-      size: 30449
+      md5: a91dfaf5c5b8ccb51f57288ff0d73f9e
+      size: 41639
   runAME@test-negative:
     cmd: singularity exec -B $(readlink output/motifs/test/negative/control_seqs.fasta):/tmp/control_seqs.fasta
       -B $(readlink output/motifs/test/negative/motif_seqs.fasta):/tmp/motif_seqs.fasta
@@ -5945,26 +5945,30 @@ stages:
       --highControl output/motifs/dev/positive/control_positions.txt --lowSHAP output/motifs/dev/negative/motif_positions.txt
       --lowControl output/motifs/dev/negative/control_positions.txt
     deps:
+    - path: output/mast_out/dev_mast_results.txt
+      hash: md5
+      md5: 0a29e966179113e24ff41ef37b35dacd
+      size: 4050370
     - path: output/motifs/dev/negative/control_positions.txt
       hash: md5
-      md5: 39347c9fb13f6a2cb28440fd87024921
-      size: 49293
+      md5: 972d30a99be55bb898e3eccf9572fc6c
+      size: 58655
     - path: output/motifs/dev/negative/motif_positions.txt
       hash: md5
-      md5: 547b5261a4ce5deb75cf49a667141bbb
-      size: 62856
+      md5: 812cf335638e13daed3ecac6fe5774b1
+      size: 102141
     - path: output/motifs/dev/positive/control_positions.txt
       hash: md5
-      md5: 7ccbb00158fe47cec2a4694ad5201fb0
-      size: 67698
+      md5: 6374f005513df07a1e34b37940b5cda0
+      size: 75411
     - path: output/motifs/dev/positive/motif_positions.txt
       hash: md5
-      md5: c3f1c25c26907e1d050be63f91a825fb
-      size: 21484
+      md5: 03098f61fa95fad40e1e9380afe5fcd3
+      size: 24778
     - path: scripts/motifEnrichment.py
       hash: md5
-      md5: dc7efb2e5a4e23aa5fc5be2776b3bbe9
-      size: 17050
+      md5: 54fa6cbc369dd8863ee3cf7899fb4426
+      size: 17162
     params:
       params.yaml:
         motifEnrichment:
@@ -5972,20 +5976,20 @@ stages:
     outs:
     - path: output/motifEnrichment/dev_neg3_mannwhitneyu_results.csv
       hash: md5
-      md5: e332f5c76c14e659530a465ab6e0815c
-      size: 4985
+      md5: 2c691c88ee3eac14ce93eec6728da92f
+      size: 5060
     - path: output/motifEnrichment/dev_neg5_mannwhitneyu_results.csv
       hash: md5
-      md5: 1308d316c884f2553062385b442941ad
-      size: 5000
+      md5: 779c2e4a7a115c44bbdabeef602e5dc4
+      size: 5050
     - path: output/motifEnrichment/dev_pos3_mannwhitneyu_results.csv
       hash: md5
-      md5: c98f3ed4173b3f26c068db663babbbf9
-      size: 4882
+      md5: 0eab4cab0744a2f409b71c668905dc60
+      size: 4913
     - path: output/motifEnrichment/dev_pos5_mannwhitneyu_results.csv
       hash: md5
-      md5: 3cd46cd30086d45797c00196f5f8927d
-      size: 4994
+      md5: dd1bb131b634c43d305b67a68ca423db
+      size: 5015
   motifEnrichment_highLowDecay@test:
     cmd: python scripts/motifEnrichment_highLow.py --params params.yaml --name test
       --motifLocations output/mast_out/test_mast_results.txt --highTE output/splitDecay/test_highDecay.fasta
@@ -6004,26 +6008,30 @@ stages:
       --highControl output/motifs/test/positive/control_positions.txt --lowSHAP output/motifs/test/negative/motif_positions.txt
       --lowControl output/motifs/test/negative/control_positions.txt
     deps:
+    - path: output/mast_out/test_mast_results.txt
+      hash: md5
+      md5: ab9bded4cc211fab5d2f0e8efc12c325
+      size: 4006108
     - path: output/motifs/test/negative/control_positions.txt
       hash: md5
-      md5: 455cda25f520ef7950c92f29979ac338
-      size: 46403
+      md5: 8f3980c4205e9751631c6165e1cef4c1
+      size: 57650
     - path: output/motifs/test/negative/motif_positions.txt
       hash: md5
-      md5: 5f8979c331ae3c588aac095ca7e2c8b2
-      size: 64382
+      md5: 29c20d7595befc02607c2c8b4338458d
+      size: 105458
     - path: output/motifs/test/positive/control_positions.txt
       hash: md5
-      md5: 43853105fca8e07833d9eb158f063e51
-      size: 65769
+      md5: b5a4beb0623b0ec61ec4e49547a94ff5
+      size: 76097
     - path: output/motifs/test/positive/motif_positions.txt
       hash: md5
-      md5: 63ed6b31086e676a7fad14fdd54557ea
-      size: 20212
+      md5: 5abe1a5a369b5ae576c8493fda3c8a11
+      size: 24369
     - path: scripts/motifEnrichment.py
       hash: md5
-      md5: dc7efb2e5a4e23aa5fc5be2776b3bbe9
-      size: 17050
+      md5: 54fa6cbc369dd8863ee3cf7899fb4426
+      size: 17162
     params:
       params.yaml:
         motifEnrichment:
@@ -6031,46 +6039,50 @@ stages:
     outs:
     - path: output/motifEnrichment/test_neg3_mannwhitneyu_results.csv
       hash: md5
-      md5: 79f3bbc18523e1b5918ffc28070545d0
-      size: 4995
+      md5: d6ef77980d741abd4e47c73740646598
+      size: 5103
     - path: output/motifEnrichment/test_neg5_mannwhitneyu_results.csv
       hash: md5
-      md5: cf1e6434e41ecd87e463ed76d686b23c
-      size: 4942
+      md5: 4580d9dc8cecc57070826a0afe2ffac1
+      size: 5066
     - path: output/motifEnrichment/test_pos3_mannwhitneyu_results.csv
       hash: md5
-      md5: e8b94531e536d8b8819b9e619f72ed13
-      size: 4838
+      md5: 0c45ce0616d9820eb4dd2f6bc851d911
+      size: 4953
     - path: output/motifEnrichment/test_pos5_mannwhitneyu_results.csv
       hash: md5
-      md5: cada02b7bbee1c75657329a3c9330c0b
-      size: 5011
+      md5: e93f40b1962bf6d4e1eeb269f242fb39
+      size: 5030
   motifEnrichment@train:
     cmd: python scripts/motifEnrichment.py --params params.yaml --name train --motifLocations
       output/mast_out/train_mast_results.txt --highSHAP output/motifs/train/positive/motif_positions.txt
       --highControl output/motifs/train/positive/control_positions.txt --lowSHAP output/motifs/train/negative/motif_positions.txt
       --lowControl output/motifs/train/negative/control_positions.txt
     deps:
+    - path: output/mast_out/train_mast_results.txt
+      hash: md5
+      md5: c3ea8102c0e4805169fb0912deba8823
+      size: 18127330
     - path: output/motifs/train/negative/control_positions.txt
       hash: md5
-      md5: 548cda4c56fe9ac51f745ccbeae73314
-      size: 221667
+      md5: 0005098d1f56f317ea49ab30e2eb8478
+      size: 264837
     - path: output/motifs/train/negative/motif_positions.txt
       hash: md5
-      md5: 7724f88f6ee2af84efc690c7ddb259df
-      size: 293705
+      md5: 34cde1d3a93632919235938b48452222
+      size: 479907
     - path: output/motifs/train/positive/control_positions.txt
       hash: md5
-      md5: 3895bc343588f161add7d9f44848c58d
-      size: 308402
+      md5: 9d0c4ed94fc4e7a3279566eed83122c5
+      size: 344359
     - path: output/motifs/train/positive/motif_positions.txt
       hash: md5
-      md5: 98f8ee1896e60166db1413fcedb73aab
-      size: 99065
+      md5: 39a388bd8b8252ac831eeebfe136466e
+      size: 112877
     - path: scripts/motifEnrichment.py
       hash: md5
-      md5: dc7efb2e5a4e23aa5fc5be2776b3bbe9
-      size: 17050
+      md5: 54fa6cbc369dd8863ee3cf7899fb4426
+      size: 17162
     params:
       params.yaml:
         motifEnrichment:
@@ -6078,20 +6090,20 @@ stages:
     outs:
     - path: output/motifEnrichment/train_neg3_mannwhitneyu_results.csv
       hash: md5
-      md5: 73a834e0a835c918cd442e628a6fe0e5
-      size: 5181
+      md5: d249fa16c60be37c6879a9d5e3c14b7a
+      size: 5164
     - path: output/motifEnrichment/train_neg5_mannwhitneyu_results.csv
       hash: md5
-      md5: 95ecc5849f90f277bd1bc0676e537895
-      size: 5135
+      md5: 75034ecb2b28d67c8067e061f0903d75
+      size: 5140
     - path: output/motifEnrichment/train_pos3_mannwhitneyu_results.csv
       hash: md5
-      md5: 2a801101465e5369f7d109f25b3e42a9
-      size: 5021
+      md5: 4f4f8f2fb062d2387e07c41640f9fb99
+      size: 5128
     - path: output/motifEnrichment/train_pos5_mannwhitneyu_results.csv
       hash: md5
-      md5: aff1832d27cec3cd981d984e3656a5c8
-      size: 5158
+      md5: 10729cc44cc557a651800c9c3772082c
+      size: 5162
   microRNABindingEnrichment@train:
     cmd: python scripts/microRNABindingEnrichment.py --params params.yaml --name train
       --highSHAP output/motifs/train/positive/control_positions.txt --highControl
