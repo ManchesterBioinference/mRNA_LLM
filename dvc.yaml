@@ -1,30 +1,22 @@
 stages:
-  #setupEnv:
-  #  cmd: conda create --name rmt python=3.10 pytorch=2.5.0 torchvision=0.20.0 torchaudio=2.5.0 pytorch-cuda=12.4 -c pytorch -c nvidia ipython dvclive=3.48.0 dvc=3.55.2 && \
-  #    conda activate rmt && \
-  #    git clone https://github.com/yangyn533/3UTRBERT.git && \
-  #    cd 3UTRBERT && \
-  #    python3 -m pip install --editable . && \
-  #    python3 -m pip install -r requirements.txt && \
-  #    cd .. && \
-  #    conda deactivate && \
-  #    git clone -n --depth=1 --filter=tree:0 https://github.com/booydar/recurrent-memory-transformer.git && \
-  #    cd recurrent-memory-transformer && \
-  #    git sparse-checkout set --no-cone lm_experiments_tools modeling_rmt requirements.txt requirements-lm-tools.txt setup.py && \
-  #    git checkout && \
-  #    conda activate rmt && \
-  #    pip install -e .
-  #  deps:
-  #    - envs/3UTRBERT.yaml
-  #  outs:
-  #    - envs/3UTRBERT.yaml
-  #  params:
-  #    - setupEnv
+  setupEnv:
+    cmd: conda env create --name ${setupEnv.name} -f env.yaml && \
+      conda activate ${setupEnv.name} && \
+      pip install -r requirements.txt --no-deps && \
+      echo "Conda environment '${setupEnv.name}' created and dependencies installed." >> setupEnv.log
+    deps:
+      - env.yaml
+      - requirements.txt
+    outs:
+      - setupEnv.log
+    params:
+      - setupEnv
 
   downloadSpeciesData:
     cmd: python scripts/downloadSpeciesData.py ${downloadSpeciesData.output_dir}
     deps:
     - scripts/downloadSpeciesData.py
+    - setupEnv.log
     outs:
     - ${downloadSpeciesData.output_dir}
     params:

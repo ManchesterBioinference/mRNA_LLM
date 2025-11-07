@@ -1,5 +1,5 @@
 setupEnv:
-  conda_env: envs/3UTRBERT.yaml
+  name: rayTune
 
 downloadSpeciesData:
   output_dir: data/downloaded

@@ -1,17 +1,18 @@
 #!/bin/bash --login
 
 #SBATCH -p gpuL # multicore #
-#SBATCH -G 2
-#SBATCH -n 4 #--cpus-per-task=10  # Use this instead of -n for Ray Tune #SBATCH --ntasks=1          # Single task (Ray will handle parallelization)
-#SBATCH -t 24:00:00
+#SBATCH -G 1
+#SBATCH -n 1 #--cpus-per-task=10  # Use this instead of -n for Ray Tune #SBATCH --ntasks=1          # Single task (Ray will handle parallelization)
+#SBATCH -t 1:00
 
 #####################################################
 ### run command
 #####################################################
-source ~/.bashrc
-conda activate rayTune
-python scripts/manualTokenShuffle.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/ --data_dir output/data/decay --output_dir output/predict --scaler output/ftModel/best_spearmanr/scaler.joblib --label tokenShuffle --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
-#~/.local/share/mamba/bin/dvc repro motifEnrichment_highLowDecay
+echo "Running on host $(hostname)"
+#source ~/.bashrc
+#conda activate raytune
+#python scripts/manualTokenShuffle.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/ --data_dir output/data/decay --output_dir output/predict --scaler output/ftModel/best_spearmanr/scaler.joblib --label tokenShuffle --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+#~/miniconda3/bin/dvc repro motifEnrichment
 #~/.local/share/mamba/bin/dvc repro codonOnlyClassificationMLP
 #~/.local/share/mamba/bin/dvc repro allExtraFeaturesClassificationMLP
 #~/.local/share/mamba/bin/dvc repro extraFeaturesAndMotifCountsClassificationMLP
