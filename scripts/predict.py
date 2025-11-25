@@ -60,7 +60,7 @@ def set_seed(args):
     if args.n_gpu > 0:
         torch.cuda.manual_seed_all(args.seed)
 
-def plotPredictions(preds, out_label_ids, results, label=None, eval_output_dir=None):
+def plotPredictions(preds, out_label_ids, results, label=None, eval_output_dir=None, split='test'):
     import matplotlib.pyplot as plt
     from scipy.stats import pearsonr, spearmanr
     
@@ -86,8 +86,8 @@ def plotPredictions(preds, out_label_ids, results, label=None, eval_output_dir=N
     # Annotate the plot with the correlation coefficients
     plt.annotate(f'Pearson: {pearson_corr:.2f}', xy=(0.05, 0.95), xycoords='axes fraction')
     plt.annotate(f'Spearman: {spearman_corr:.2f}', xy=(0.05, 0.90), xycoords='axes fraction')
-    plt.savefig(os.path.join(eval_output_dir, f'predictions_vs_true_labels{label}.svg'))
-    pd.DataFrame({'True Labels': out_label_ids, 'Predictions': preds}).to_csv(os.path.join(eval_output_dir, f'predictions_vs_true_labels{label}.csv'), index=False)
+    plt.savefig(os.path.join(eval_output_dir, f'{split}_predictions_vs_true_labels{label}.svg'))
+    pd.DataFrame({'True Labels': out_label_ids, 'Predictions': preds}).to_csv(os.path.join(eval_output_dir, f'{split}_predictions_vs_true_labels{label}.csv'), index=False)
 
 def load_data(args, tokenizer, test_run=False, split='train.fasta'):
     from Bio import SeqIO
@@ -114,12 +114,12 @@ def load_data(args, tokenizer, test_run=False, split='train.fasta'):
 
     return torch.tensor(labels), torch.tensor(seqs), torch.tensor(attention_masks), tr_ids
 
-def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False, extraFeatures=None, scaler=None):
+def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False, split="test.fasta", extraFeatures=None, scaler=None):
     eval_task = args.task_name
     eval_output_dir = args.output_dir
 
     results = {}
-    labels, seqs, atten_masks, tr_ids = load_data(args, tokenizer, split='test.fasta')
+    labels, seqs, atten_masks, tr_ids = load_data(args, tokenizer, split=split)
     #train_dataset = mask_tokens(torch.tensor(seqs), labels, tokenizer)
     # Create tr_ids_index for the evaluation dataset
     if extraFeatures is not None:
@@ -188,9 +188,9 @@ def evaluate(args, model, tokenizer, prefix="", evaluate=True, val=False, extraF
 
     results = compute_metrics('sts-b', preds, out_label_ids)
     results['eval_loss'] = eval_loss
-    plotPredictions(preds, out_label_ids, results, args.label, eval_output_dir)
+    plotPredictions(preds, out_label_ids, results, args.label, eval_output_dir, split=args.split)
 
-    output_eval_file = os.path.join(eval_output_dir, prefix, "test_results.json")
+    output_eval_file = os.path.join(eval_output_dir, prefix, args.split + "_results.json")
     with open(output_eval_file, "w") as writer:
         json.dump({**{k: (v.item() if isinstance(v, (np.float32, np.int32, np.int64)) else v) for k, v in results.items()}}, writer, indent=4)
 
@@ -263,16 +263,13 @@ def main():
     parser.add_argument("--neptune_description", type=str, default="TRIAL minilm fine-tuning", help="Neptune description")
     parser.add_argument("--neptune_token", type=str, default=None, help="Neptune API token")
     parser.add_argument("--neptune_project", type=str, default=None, help="Neptune project")
-    parser.add_argument("--memory_size", type=int, default=None, help="number of memory tokens to use in RMT.",)
-    parser.add_argument("--block_size", type=int, default=None, help="Total token input size of base model.",)
-    parser.add_argument("--max_n_segments", type=int, default=None, help="Maximun number of segments to include from long input.",)
-    
 
 
     # OTHER
     parser.add_argument("--cache_dir", default="", type=str, help="Where do you want to store the pre-trained models downloaded from s3",)
     parser.add_argument("--overwrite_cache", action="store_true", help="Overwrite the cached training and evaluation sets",)
     parser.add_argument("--do_lower_case", action="store_true", help="Set this flag if you are using an uncased model.",)
+    parser.add_argument("--split", default="test", type=str, help="Which data split to predict on (train, dev, test)")
 
 
     args = parser.parse_known_args()[0]
@@ -284,8 +281,6 @@ def main():
             for key, value in yaml_params['predict'].items():
                 parser.set_defaults(**{key: value})
             for key, value in yaml_params['modelParams'].items():
-                parser.set_defaults(**{key: value})
-            for key, value in yaml_params['RMT'].items():
                 parser.set_defaults(**{key: value})
 
     args = parser.parse_args()
@@ -431,7 +426,7 @@ def main():
 
     scaledVals = scaler.transform(extraFeatures_df) if extraFeatures_df is not None else extraFeatures_df
     extraFeatures_df = pd.DataFrame(scaledVals, index=extraFeatures_df.index, columns=extraFeatures_df.columns) if extraFeatures_df is not None else None
-    result = evaluate(args, model, tokenizer, extraFeatures=extraFeatures_df, scaler=scaler) # Results saved in file eval_results.txt
+    result = evaluate(args, model, tokenizer, extraFeatures=extraFeatures_df, scaler=scaler, split=args.split+'.fasta') # Results saved in file eval_results.txt
 
 
 if __name__ == "__main__":

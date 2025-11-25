@@ -10,9 +10,9 @@ from functools import partial
 import yaml
 
 # Define a worker function for multiprocessing - MOVED TO GLOBAL SCOPE
-def process_sequence(seq_data, condaPath_arg, condaEnv_arg, RNAfold_path_arg):
+def process_sequence(seq_data, RNAfold_path_arg):
     seq_id, sequence = seq_data
-    structure, mfe = run_rnafold(sequence, condaPath=condaPath_arg, condaEnv=condaEnv_arg, RNAfold_path=RNAfold_path_arg)
+    structure, mfe = run_rnafold(sequence, RNAfold_path=RNAfold_path_arg)
     return {
     "id": seq_id,
     "sequence_length": len(sequence),
@@ -20,7 +20,7 @@ def process_sequence(seq_data, condaPath_arg, condaEnv_arg, RNAfold_path_arg):
     "mfe": mfe
     }
 
-def run_rnafold(sequence, condaPath,condaEnv,RNAfold_path):
+def run_rnafold(sequence, RNAfold_path):
     """
     Runs RNAfold on a given RNA sequence and returns the structure and MFE.
     """
@@ -28,8 +28,6 @@ def run_rnafold(sequence, condaPath,condaEnv,RNAfold_path):
         # Use full path to RNAfold or ensure it's in your PATH
         process = subprocess.run(
             [RNAfold_path, '-b','200'],
-            #[condaPath, 'run','-n',condaEnv, RNAfold_path, '-b','200'], # Update this path to where RNAfold is installed
-            #[condaPath, 'run','-n',condaEnv, RNAfold_path, "--maxBPspan=200"], # Update this path to where RNAfold is installed
             input=sequence,
             text=True,
             capture_output=True,
@@ -66,8 +64,6 @@ def main():
     parser = argparse.ArgumentParser(description="Run ViennaRNA RNAfold on sequences in a FASTA file and extract MFE and secondary structure.")
     parser.add_argument('--params', default='params.yaml', help='Path to the parameters YAML file')
     parser.add_argument( "--input_fasta", type=str, default="/mnt/mr01-home01/m65338lb/projects/mRNA_LLM-worktrees/translationEfficiency/data/dmel-all-three_prime_UTR-r6.59.fasta", help="Path to the input FASTA file.")
-    parser.add_argument("--condaPath",type=str, help="Path to the conda executable.")
-    parser.add_argument("--condaEnv",type=str, help="Name of the conda environment.")
     parser.add_argument("--RNAfold_path",type=str, help="Path to the RNAfold executable.")
     parser.add_argument("--maxWorkers",type=int, default = 4, help="Maximum number of workers for parallel processing.")
     parser.add_argument( "--output_csv", type=str, default="data/vienna_features.csv", help="Path to save the output CSV file.")
@@ -114,10 +110,7 @@ def main():
     print(f"Processing {len(all_sequence_data)} sequences in parallel using {num_cores} cores.")
 
     # Create a partial function with fixed arguments for the global process_sequence
-    partial_process_func = partial(process_sequence, 
-                                   condaPath_arg=args.condaPath, 
-                                   condaEnv_arg=args.condaEnv, 
-                                   RNAfold_path_arg=args.RNAfold_path)
+    partial_process_func = partial(process_sequence, RNAfold_path_arg=args.RNAfold_path)
     
     results = []
     # Process all sequences in parallel using a single pool

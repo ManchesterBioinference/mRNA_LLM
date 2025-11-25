@@ -3750,10 +3750,11 @@ stages:
       size: 1330207813
       nfiles: 21
   predict@seq_only:
-    cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_seq_only/best_spearmanr/
-      --data_dir output/data/decay --output_dir output/predict_seq_only --scaler output/ftModel_seq_only/best_spearmanr/scaler.joblib
-      $( if [ -n "_seq_only" ]; then echo "--label _seq_only"; fi ) $( if [ -n ""
-      ]; then echo "--extraFeatures "; fi ) '
+    cmd: 'conda run -n rayTune python scripts/predict.py --params params.yaml --model_name_or_path
+      output/ftModel_seq_only/best_spearmanr/ --data_dir output/data/decay --output_dir
+      output/predict_seq_only --scaler output/ftModel_seq_only/best_spearmanr/scaler.joblib
+      --split test $( if [ -n "_seq_only" ]; then echo "--label _seq_only"; fi ) $(
+      if [ -n "" ]; then echo "--extraFeatures "; fi ) '
     deps:
     - path: output/data/decay
       hash: md5
@@ -3767,8 +3768,8 @@ stages:
       nfiles: 6
     - path: scripts/predict.py
       hash: md5
-      md5: 21ba656167303956d02b2ecc24cdb6ab
-      size: 24058
+      md5: 94dd3ce34af6cc6e2ac264dbc799cb8d
+      size: 23803
     params:
       params.yaml:
         modelParams:
@@ -3777,18 +3778,10 @@ stages:
           should_continue: false
           evaluate_during_training: true
           do_visualize_during_training: false
-          hidden_dropout_prob: 0.45255999948991715
-          attention_probs_dropout_prob: 0.45255999948991715
-          projector_dropout: 0.24955501667701577
-          classifier_dropout_prob: 0.2836668357639133
-          learning_rate: 2.7197500975257185e-06
-          classifier_lr: 0.0003087317652943953
           patience: 5
           per_gpu_train_batch_size: 48
           per_gpu_eval_batch_size: 48
           num_train_epochs: 50
-          weight_decay: 0.06577969639864487
-          classifier_decay: 0.02952629653430042
           warmup_percent: 0.1
           seed: 6
           eval_all_checkpoints: false
@@ -3801,7 +3794,6 @@ stages:
           neptune_project:
           overwrite_cache: false
           do_lower_case: false
-          curriculumLearning: false
         predict:
           output_dir: output/predict
           do_train: false
@@ -3809,11 +3801,18 @@ stages:
           do_predict: true
           do_visualize: false
     outs:
-    - path: output/predict_seq_only
+    - path: output/predict_seq_only/test_predictions_vs_true_labels_seq_only.csv
       hash: md5
-      md5: bb723493fb03d92ad6deb10ec2cdb605.dir
-      size: 180262
-      nfiles: 3
+      md5: 2f0715e3870643aee589128ced69e03e
+      size: 18957
+    - path: output/predict_seq_only/test_predictions_vs_true_labels_seq_only.svg
+      hash: md5
+      md5: 243e7c56b514d5256ec81899e4fe6dd4
+      size: 161159
+    - path: output/predict_seq_only/test_results.json
+      hash: md5
+      md5: fe679a5b5102dbe74ee3665927273811
+      size: 146
   fineTuneModel_ablations@only_codons:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_only_codons
@@ -4004,10 +4003,12 @@ stages:
       size: 1330575531
       nfiles: 24
   predict@no_mfe:
-    cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_mfe/best_spearmanr/
-      --data_dir output/data/decay --output_dir output/predict_no_mfe --scaler output/ftModel_no_mfe/best_spearmanr/scaler.joblib
-      $( if [ -n "_no_mfe" ]; then echo "--label _no_mfe"; fi ) $( if [ -n "output/data/codons/extraFeatures.csv"
-      ]; then echo "--extraFeatures output/data/codons/extraFeatures.csv"; fi ) '
+    cmd: 'conda run -n rayTune python scripts/predict.py --params params.yaml --model_name_or_path
+      output/ftModel_no_mfe/best_spearmanr/ --data_dir output/data/decay --output_dir
+      output/predict_no_mfe --scaler output/ftModel_no_mfe/best_spearmanr/scaler.joblib
+      --split test $( if [ -n "_no_mfe" ]; then echo "--label _no_mfe"; fi ) $( if
+      [ -n "output/data/codons/extraFeatures.csv" ]; then echo "--extraFeatures output/data/codons/extraFeatures.csv";
+      fi ) '
     deps:
     - path: output/data/decay
       hash: md5
@@ -4021,8 +4022,8 @@ stages:
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
-      md5: 21ba656167303956d02b2ecc24cdb6ab
-      size: 24058
+      md5: 94dd3ce34af6cc6e2ac264dbc799cb8d
+      size: 23803
     params:
       params.yaml:
         modelParams:
@@ -4031,18 +4032,10 @@ stages:
           should_continue: false
           evaluate_during_training: true
           do_visualize_during_training: false
-          hidden_dropout_prob: 0.45255999948991715
-          attention_probs_dropout_prob: 0.45255999948991715
-          projector_dropout: 0.24955501667701577
-          classifier_dropout_prob: 0.2836668357639133
-          learning_rate: 2.7197500975257185e-06
-          classifier_lr: 0.0003087317652943953
           patience: 5
           per_gpu_train_batch_size: 48
           per_gpu_eval_batch_size: 48
           num_train_epochs: 50
-          weight_decay: 0.06577969639864487
-          classifier_decay: 0.02952629653430042
           warmup_percent: 0.1
           seed: 6
           eval_all_checkpoints: false
@@ -4055,7 +4048,6 @@ stages:
           neptune_project:
           overwrite_cache: false
           do_lower_case: false
-          curriculumLearning: false
         predict:
           output_dir: output/predict
           do_train: false
@@ -4063,11 +4055,18 @@ stages:
           do_predict: true
           do_visualize: false
     outs:
-    - path: output/predict_no_mfe
+    - path: output/predict_no_mfe/test_predictions_vs_true_labels_no_mfe.csv
       hash: md5
-      md5: bb268431d7bb2ad3be07e5cf95b36247.dir
-      size: 180788
-      nfiles: 3
+      md5: ac5f651814b1383667a8634c6c624c08
+      size: 19039
+    - path: output/predict_no_mfe/test_predictions_vs_true_labels_no_mfe.svg
+      hash: md5
+      md5: 5c7fbec7eb40415a5f4f82ff9db39efc
+      size: 161603
+    - path: output/predict_no_mfe/test_results.json
+      hash: md5
+      md5: 4f3184a41a87af3685f130787a8a264a
+      size: 146
   prepForMAST@dev:
     cmd: python scripts/prepForMAST.py --input_fasta output/data/decay/dev.fasta --output_fasta
       output/data/MEME_suite/dev_TEseqs_split_by_utr.fasta
@@ -4561,12 +4560,12 @@ stages:
       size: 1330518708
       nfiles: 22
   predict@no_gc_content:
-    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_gc_content/best_spearmanr/
-      --data_dir output/data/decay --output_dir output/predict_no_gc_content --scaler
-      output/ftModel_no_gc_content/best_spearmanr/scaler.joblib $( if [ -n "_no_gc_content"
-      ]; then echo "--label _no_gc_content"; fi ) $( if [ -n "output/data/ablations/no_gc_content.csv"
-      ]; then echo "--extraFeatures output/data/ablations/no_gc_content.csv"; fi )
-      --mfe output/data/codons/vienna_features.csv
+    cmd: conda run -n rayTune python scripts/predict.py --params params.yaml --model_name_or_path
+      output/ftModel_no_gc_content/best_spearmanr/ --data_dir output/data/decay --output_dir
+      output/predict_no_gc_content --scaler output/ftModel_no_gc_content/best_spearmanr/scaler.joblib
+      --split test $( if [ -n "_no_gc_content" ]; then echo "--label _no_gc_content";
+      fi ) $( if [ -n "output/data/ablations/no_gc_content.csv" ]; then echo "--extraFeatures
+      output/data/ablations/no_gc_content.csv"; fi ) --mfe output/data/codons/vienna_features.csv
     deps:
     - path: output/data/decay
       hash: md5
@@ -4580,8 +4579,8 @@ stages:
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
-      md5: 21ba656167303956d02b2ecc24cdb6ab
-      size: 24058
+      md5: 94dd3ce34af6cc6e2ac264dbc799cb8d
+      size: 23803
     params:
       params.yaml:
         modelParams:
@@ -4590,18 +4589,10 @@ stages:
           should_continue: false
           evaluate_during_training: true
           do_visualize_during_training: false
-          hidden_dropout_prob: 0.45255999948991715
-          attention_probs_dropout_prob: 0.45255999948991715
-          projector_dropout: 0.24955501667701577
-          classifier_dropout_prob: 0.2836668357639133
-          learning_rate: 2.7197500975257185e-06
-          classifier_lr: 0.0003087317652943953
           patience: 5
           per_gpu_train_batch_size: 48
           per_gpu_eval_batch_size: 48
           num_train_epochs: 50
-          weight_decay: 0.06577969639864487
-          classifier_decay: 0.02952629653430042
           warmup_percent: 0.1
           seed: 6
           eval_all_checkpoints: false
@@ -4614,7 +4605,6 @@ stages:
           neptune_project:
           overwrite_cache: false
           do_lower_case: false
-          curriculumLearning: false
         predict:
           output_dir: output/predict
           do_train: false
@@ -4622,11 +4612,18 @@ stages:
           do_predict: true
           do_visualize: false
     outs:
-    - path: output/predict_no_gc_content
+    - path: output/predict_no_gc_content/test_predictions_vs_true_labels_no_gc_content.csv
       hash: md5
-      md5: 4dbed7987d7fd29d50a51c831bf63d2a.dir
-      size: 180578
-      nfiles: 3
+      md5: 54c072eff01007974c2874a039777729
+      size: 18997
+    - path: output/predict_no_gc_content/test_predictions_vs_true_labels_no_gc_content.svg
+      hash: md5
+      md5: 209d8207176bb43925af4b9f2a05b077
+      size: 161439
+    - path: output/predict_no_gc_content/test_results.json
+      hash: md5
+      md5: be564fe88447f9aff010de901db43542
+      size: 146
   run_fineTuneModel_ablations@no_codons:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_no_codons
@@ -4723,12 +4720,12 @@ stages:
       size: 1330276034
       nfiles: 24
   predict@no_codons:
-    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_codons/best_spearmanr/
-      --data_dir output/data/decay --output_dir output/predict_no_codons --scaler
-      output/ftModel_no_codons/best_spearmanr/scaler.joblib $( if [ -n "_no_codons"
-      ]; then echo "--label _no_codons"; fi ) $( if [ -n "output/data/ablations/no_codons.csv"
-      ]; then echo "--extraFeatures output/data/ablations/no_codons.csv"; fi ) --mfe
-      output/data/codons/vienna_features.csv
+    cmd: conda run -n rayTune python scripts/predict.py --params params.yaml --model_name_or_path
+      output/ftModel_no_codons/best_spearmanr/ --data_dir output/data/decay --output_dir
+      output/predict_no_codons --scaler output/ftModel_no_codons/best_spearmanr/scaler.joblib
+      --split test $( if [ -n "_no_codons" ]; then echo "--label _no_codons"; fi )
+      $( if [ -n "output/data/ablations/no_codons.csv" ]; then echo "--extraFeatures
+      output/data/ablations/no_codons.csv"; fi ) --mfe output/data/codons/vienna_features.csv
     deps:
     - path: output/data/decay
       hash: md5
@@ -4742,8 +4739,8 @@ stages:
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
-      md5: 21ba656167303956d02b2ecc24cdb6ab
-      size: 24058
+      md5: 94dd3ce34af6cc6e2ac264dbc799cb8d
+      size: 23803
     params:
       params.yaml:
         modelParams:
@@ -4752,18 +4749,10 @@ stages:
           should_continue: false
           evaluate_during_training: true
           do_visualize_during_training: false
-          hidden_dropout_prob: 0.45255999948991715
-          attention_probs_dropout_prob: 0.45255999948991715
-          projector_dropout: 0.24955501667701577
-          classifier_dropout_prob: 0.2836668357639133
-          learning_rate: 2.7197500975257185e-06
-          classifier_lr: 0.0003087317652943953
           patience: 5
           per_gpu_train_batch_size: 48
           per_gpu_eval_batch_size: 48
           num_train_epochs: 50
-          weight_decay: 0.06577969639864487
-          classifier_decay: 0.02952629653430042
           warmup_percent: 0.1
           seed: 6
           eval_all_checkpoints: false
@@ -4776,7 +4765,6 @@ stages:
           neptune_project:
           overwrite_cache: false
           do_lower_case: false
-          curriculumLearning: false
         predict:
           output_dir: output/predict
           do_train: false
@@ -4784,11 +4772,18 @@ stages:
           do_predict: true
           do_visualize: false
     outs:
-    - path: output/predict_no_codons
+    - path: output/predict_no_codons/test_predictions_vs_true_labels_no_codons.csv
       hash: md5
-      md5: 9910ee52763597056f4ce85d9edfb1f6.dir
-      size: 180387
-      nfiles: 3
+      md5: 580ab869631cf8d90cb7e8b2dad4d406
+      size: 19051
+    - path: output/predict_no_codons/test_predictions_vs_true_labels_no_codons.svg
+      hash: md5
+      md5: 394082286042799b65fc582fad43d3fc
+      size: 161189
+    - path: output/predict_no_codons/test_results.json
+      hash: md5
+      md5: ea19a6192a38a1e41da18f54551b28cf
+      size: 146
   run_fineTuneModel_ablations@only_codons:
     cmd: python scripts/train.py --params params.yaml  --model_name_or_path output/flyTrained/best_checkpoint/
       --max_seq_length 512 --data_dir output/data/decay  --output_dir output/ftModel_only_codons
@@ -4885,11 +4880,12 @@ stages:
       size: 1330492804
       nfiles: 22
   predict@only_codons:
-    cmd: 'python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_only_codons/best_spearmanr/
-      --data_dir output/data/decay --output_dir output/predict_only_codons --scaler
-      output/ftModel_only_codons/best_spearmanr/scaler.joblib $( if [ -n "_only_codons"
-      ]; then echo "--label _only_codons"; fi ) $( if [ -n "output/data/ablations/no_lengths_gc.csv"
-      ]; then echo "--extraFeatures output/data/ablations/no_lengths_gc.csv"; fi ) '
+    cmd: 'conda run -n rayTune python scripts/predict.py --params params.yaml --model_name_or_path
+      output/ftModel_only_codons/best_spearmanr/ --data_dir output/data/decay --output_dir
+      output/predict_only_codons --scaler output/ftModel_only_codons/best_spearmanr/scaler.joblib
+      --split test $( if [ -n "_only_codons" ]; then echo "--label _only_codons";
+      fi ) $( if [ -n "output/data/ablations/no_lengths_gc.csv" ]; then echo "--extraFeatures
+      output/data/ablations/no_lengths_gc.csv"; fi ) '
     deps:
     - path: output/data/decay
       hash: md5
@@ -4903,8 +4899,8 @@ stages:
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
-      md5: 21ba656167303956d02b2ecc24cdb6ab
-      size: 24058
+      md5: 94dd3ce34af6cc6e2ac264dbc799cb8d
+      size: 23803
     params:
       params.yaml:
         modelParams:
@@ -4913,18 +4909,10 @@ stages:
           should_continue: false
           evaluate_during_training: true
           do_visualize_during_training: false
-          hidden_dropout_prob: 0.45255999948991715
-          attention_probs_dropout_prob: 0.45255999948991715
-          projector_dropout: 0.24955501667701577
-          classifier_dropout_prob: 0.2836668357639133
-          learning_rate: 2.7197500975257185e-06
-          classifier_lr: 0.0003087317652943953
           patience: 5
           per_gpu_train_batch_size: 48
           per_gpu_eval_batch_size: 48
           num_train_epochs: 50
-          weight_decay: 0.06577969639864487
-          classifier_decay: 0.02952629653430042
           warmup_percent: 0.1
           seed: 6
           eval_all_checkpoints: false
@@ -4937,7 +4925,6 @@ stages:
           neptune_project:
           overwrite_cache: false
           do_lower_case: false
-          curriculumLearning: false
         predict:
           output_dir: output/predict
           do_train: false
@@ -4945,11 +4932,18 @@ stages:
           do_predict: true
           do_visualize: false
     outs:
-    - path: output/predict_only_codons
+    - path: output/predict_only_codons/test_predictions_vs_true_labels_only_codons.csv
       hash: md5
-      md5: 3dc5cb0610b13e0204dda925c7e7778c.dir
-      size: 180521
-      nfiles: 3
+      md5: 3b31b6d6957292a4e021d6e3429313a8
+      size: 18934
+    - path: output/predict_only_codons/test_predictions_vs_true_labels_only_codons.svg
+      hash: md5
+      md5: 69e97dee2205c2ba9e940de72449f3aa
+      size: 161441
+    - path: output/predict_only_codons/test_results.json
+      hash: md5
+      md5: bc6ea0c10882d7fb9caed54d44220e15
+      size: 147
   run_fineTuneModel:
     cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && python scripts/train.py --params params.yaml
       --model_name_or_path output/flyTrained/best_checkpoint/ --max_seq_length 512
@@ -5042,9 +5036,10 @@ stages:
       size: 2216503491
       nfiles: 26
   predict@fullLLM:
-    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel/best_spearmanr/
-      --data_dir output/data/decay --output_dir output/predict --scaler output/ftModel/best_spearmanr/scaler.joblib
-      $( if [ -n "" ]; then echo "--label "; fi ) $( if [ -n "output/data/codons/extraFeatures.csv"
+    cmd: conda run -n rayTune python scripts/predict.py --params params.yaml --model_name_or_path
+      output/ftModel/best_spearmanr/ --data_dir output/data/decay --output_dir output/predict
+      --scaler output/ftModel/best_spearmanr/scaler.joblib --split test $( if [ -n
+      "" ]; then echo "--label "; fi ) $( if [ -n "output/data/codons/extraFeatures.csv"
       ]; then echo "--extraFeatures output/data/codons/extraFeatures.csv"; fi ) --mfe
       output/data/codons/vienna_features.csv
     deps:
@@ -5060,8 +5055,8 @@ stages:
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
-      md5: 21ba656167303956d02b2ecc24cdb6ab
-      size: 24058
+      md5: 94dd3ce34af6cc6e2ac264dbc799cb8d
+      size: 23803
     params:
       params.yaml:
         modelParams:
@@ -5070,18 +5065,10 @@ stages:
           should_continue: false
           evaluate_during_training: true
           do_visualize_during_training: false
-          hidden_dropout_prob: 0.45255999948991715
-          attention_probs_dropout_prob: 0.45255999948991715
-          projector_dropout: 0.24955501667701577
-          classifier_dropout_prob: 0.2836668357639133
-          learning_rate: 2.7197500975257185e-06
-          classifier_lr: 0.0003087317652943953
           patience: 5
           per_gpu_train_batch_size: 48
           per_gpu_eval_batch_size: 48
           num_train_epochs: 50
-          weight_decay: 0.06577969639864487
-          classifier_decay: 0.02952629653430042
           warmup_percent: 0.1
           seed: 6
           eval_all_checkpoints: false
@@ -5094,7 +5081,6 @@ stages:
           neptune_project:
           overwrite_cache: false
           do_lower_case: false
-          curriculumLearning: false
         predict:
           output_dir: output/predict
           do_train: false
@@ -5102,11 +5088,18 @@ stages:
           do_predict: true
           do_visualize: false
     outs:
-    - path: output/predict
+    - path: output/predict/test_predictions_vs_true_labels.csv
       hash: md5
-      md5: 107b948a18999067361bf5dc6404886e.dir
-      size: 180780
-      nfiles: 3
+      md5: dd4c4c84b91133f789b6491161f1f06f
+      size: 19037
+    - path: output/predict/test_predictions_vs_true_labels.svg
+      hash: md5
+      md5: 70284ad52642db1e7edc706e2df7dd0b
+      size: 161634
+    - path: output/predict/test_results.json
+      hash: md5
+      md5: 7120104acbd210ae66138a4dbc601666
+      size: 142
   rayTune:
     cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && python scripts/train.py --params params.yaml
       --model_name_or_path output/flyTrained/best_checkpoint/ --max_seq_length 512
@@ -5856,12 +5849,12 @@ stages:
       size: 1330561510
       nfiles: 24
   predict@no_lengths:
-    cmd: python scripts/predict.py --params params.yaml --model_name_or_path output/ftModel_no_lengths/best_spearmanr/
-      --data_dir output/data/decay --output_dir output/predict_no_lengths --scaler
-      output/ftModel_no_lengths/best_spearmanr/scaler.joblib $( if [ -n "_no_lengths"
-      ]; then echo "--label _no_lengths"; fi ) $( if [ -n "output/data/ablations/no_lengths.csv"
-      ]; then echo "--extraFeatures output/data/ablations/no_lengths.csv"; fi ) --mfe
-      output/data/codons/vienna_features.csv
+    cmd: conda run -n rayTune python scripts/predict.py --params params.yaml --model_name_or_path
+      output/ftModel_no_lengths/best_spearmanr/ --data_dir output/data/decay --output_dir
+      output/predict_no_lengths --scaler output/ftModel_no_lengths/best_spearmanr/scaler.joblib
+      --split test $( if [ -n "_no_lengths" ]; then echo "--label _no_lengths"; fi
+      ) $( if [ -n "output/data/ablations/no_lengths.csv" ]; then echo "--extraFeatures
+      output/data/ablations/no_lengths.csv"; fi ) --mfe output/data/codons/vienna_features.csv
     deps:
     - path: output/data/decay
       hash: md5
@@ -5875,8 +5868,8 @@ stages:
       nfiles: 7
     - path: scripts/predict.py
       hash: md5
-      md5: 21ba656167303956d02b2ecc24cdb6ab
-      size: 24058
+      md5: 94dd3ce34af6cc6e2ac264dbc799cb8d
+      size: 23803
     params:
       params.yaml:
         modelParams:
@@ -5885,18 +5878,10 @@ stages:
           should_continue: false
           evaluate_during_training: true
           do_visualize_during_training: false
-          hidden_dropout_prob: 0.45255999948991715
-          attention_probs_dropout_prob: 0.45255999948991715
-          projector_dropout: 0.24955501667701577
-          classifier_dropout_prob: 0.2836668357639133
-          learning_rate: 2.7197500975257185e-06
-          classifier_lr: 0.0003087317652943953
           patience: 5
           per_gpu_train_batch_size: 48
           per_gpu_eval_batch_size: 48
           num_train_epochs: 50
-          weight_decay: 0.06577969639864487
-          classifier_decay: 0.02952629653430042
           warmup_percent: 0.1
           seed: 6
           eval_all_checkpoints: false
@@ -5909,7 +5894,6 @@ stages:
           neptune_project:
           overwrite_cache: false
           do_lower_case: false
-          curriculumLearning: false
         predict:
           output_dir: output/predict
           do_train: false
@@ -5917,11 +5901,18 @@ stages:
           do_predict: true
           do_visualize: false
     outs:
-    - path: output/predict_no_lengths
+    - path: output/predict_no_lengths/test_predictions_vs_true_labels_no_lengths.csv
       hash: md5
-      md5: 743149f6ce2d543272c313f075d44ad5.dir
-      size: 180580
-      nfiles: 3
+      md5: 3923597fdc78c5374668b98ecc4a320b
+      size: 19008
+    - path: output/predict_no_lengths/test_predictions_vs_true_labels_no_lengths.svg
+      hash: md5
+      md5: d26d3c8fad59860fb7fdff20f31bc071
+      size: 161422
+    - path: output/predict_no_lengths/test_results.json
+      hash: md5
+      md5: fe2414eef09e6d89bf50aad0f08bed48
+      size: 147
   getMASTBackgroundFile:
     cmd: singularity exec -B $(readlink output/data/decay/train.fasta):/tmp/train.fasta
       docker://memesuite/memesuite:5.5.7 fasta-get-markov /tmp/train.fasta output/data/MEME_suite/nucFrequencies.txt
@@ -6224,3 +6215,154 @@ stages:
       hash: md5
       md5: e75d956767942ad0592ba5eabe02f8b9
       size: 5760
+  setupEnv:
+    cmd: "conda env create --name rayTune -f environment.yaml\necho \"Conda environment
+      'rayTune' created and dependencies installed.\" >> setupEnv.log\n"
+    deps:
+    - path: environment.yaml
+      hash: md5
+      md5: c11f23ccc957fdae3a40e24d3bcd7797
+      size: 13369
+    - path: requirements.txt
+      hash: md5
+      md5: 80e6fca5b90e64018b0255d7ead47bff
+      size: 1662
+    params:
+      params.yaml:
+        setupEnv:
+          name: rayTune
+    outs:
+    - path: setupEnv.log
+      hash: md5
+      md5: df1d3e1167aed27dd6167d342c9e621f
+      size: 64
+  predict@fullLLM_dev:
+    cmd: conda run -n rayTune python scripts/predict.py --params params.yaml --model_name_or_path
+      output/ftModel/best_spearmanr/ --data_dir output/data/decay --output_dir output/predict
+      --scaler output/ftModel/best_spearmanr/scaler.joblib --split dev $( if [ -n
+      "" ]; then echo "--label "; fi ) $( if [ -n "output/data/codons/extraFeatures.csv"
+      ]; then echo "--extraFeatures output/data/codons/extraFeatures.csv"; fi ) --mfe
+      output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/ftModel/best_spearmanr
+      hash: md5
+      md5: a23c9b153bbc9a8ddc0bf0b067f66fd8.dir
+      size: 443511845
+      nfiles: 7
+    - path: scripts/predict.py
+      hash: md5
+      md5: 94dd3ce34af6cc6e2ac264dbc799cb8d
+      size: 23803
+    params:
+      params.yaml:
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+        predict:
+          output_dir: output/predict
+          do_train: false
+          do_eval: false
+          do_predict: true
+          do_visualize: false
+    outs:
+    - path: output/predict/dev_predictions_vs_true_labels.csv
+      hash: md5
+      md5: 10ebb9ebfdff6b637c9b86f1bba46e0f
+      size: 18970
+    - path: output/predict/dev_predictions_vs_true_labels.svg
+      hash: md5
+      md5: 62dd7fa371c164d307418e7b44f99d69
+      size: 160610
+    - path: output/predict/dev_results.json
+      hash: md5
+      md5: 2c698f79f7063134d61cdc8354289fbb
+      size: 145
+  predict@fullLLM_train:
+    cmd: conda run -n rayTune python scripts/predict.py --params params.yaml --model_name_or_path
+      output/ftModel/best_spearmanr/ --data_dir output/data/decay --output_dir output/predict
+      --scaler output/ftModel/best_spearmanr/scaler.joblib --split train $( if [ -n
+      "" ]; then echo "--label "; fi ) $( if [ -n "output/data/codons/extraFeatures.csv"
+      ]; then echo "--extraFeatures output/data/codons/extraFeatures.csv"; fi ) --mfe
+      output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/decay
+      hash: md5
+      md5: b20ee60bfc13a9c94438f227943ad9b9.dir
+      size: 4345349
+      nfiles: 3
+    - path: output/ftModel/best_spearmanr
+      hash: md5
+      md5: a23c9b153bbc9a8ddc0bf0b067f66fd8.dir
+      size: 443511845
+      nfiles: 7
+    - path: scripts/predict.py
+      hash: md5
+      md5: 94dd3ce34af6cc6e2ac264dbc799cb8d
+      size: 23803
+    params:
+      params.yaml:
+        modelParams:
+          model_type: 3utrfly
+          task_name: rnadecay
+          should_continue: false
+          evaluate_during_training: true
+          do_visualize_during_training: false
+          patience: 5
+          per_gpu_train_batch_size: 48
+          per_gpu_eval_batch_size: 48
+          num_train_epochs: 50
+          warmup_percent: 0.1
+          seed: 6
+          eval_all_checkpoints: false
+          no_cuda: false
+          logging_steps: 100
+          save_steps: 100000
+          save_total_limit: 10
+          overwrite_output_dir: true
+          neptune_token:
+          neptune_project:
+          overwrite_cache: false
+          do_lower_case: false
+        predict:
+          output_dir: output/predict
+          do_train: false
+          do_eval: false
+          do_predict: true
+          do_visualize: false
+    outs:
+    - path: output/predict/train_predictions_vs_true_labels.csv
+      hash: md5
+      md5: bfd6c24537de967e2be551ceb713498a
+      size: 88585
+    - path: output/predict/train_predictions_vs_true_labels.svg
+      hash: md5
+      md5: 7ad62462d6a4b61a2398d932e08b1fa9
+      size: 646008
+    - path: output/predict/train_results.json
+      hash: md5
+      md5: 75a6301be336fd79ef2b2cce3cf63189
+      size: 145

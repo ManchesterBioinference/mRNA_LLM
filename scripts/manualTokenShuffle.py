@@ -456,11 +456,6 @@ def main():
     parser.add_argument("--neptune_description", type=str, default="TRIAL minilm fine-tuning", help="Neptune description")
     parser.add_argument("--neptune_token", type=str, default=None, help="Neptune API token")
     parser.add_argument("--neptune_project", type=str, default=None, help="Neptune project")
-    parser.add_argument("--memory_size", type=int, default=None, help="number of memory tokens to use in RMT.",)
-    parser.add_argument("--block_size", type=int, default=None, help="Total token input size of base model.",)
-    parser.add_argument("--max_n_segments", type=int, default=None, help="Maximun number of segments to include from long input.",)
-    
-
 
     # OTHER
     parser.add_argument("--cache_dir", default="", type=str, help="Where do you want to store the pre-trained models downloaded from s3",)
@@ -477,8 +472,6 @@ def main():
             for key, value in yaml_params['predict'].items():
                 parser.set_defaults(**{key: value})
             for key, value in yaml_params['modelParams'].items():
-                parser.set_defaults(**{key: value})
-            for key, value in yaml_params['RMT'].items():
                 parser.set_defaults(**{key: value})
 
     args = parser.parse_args()

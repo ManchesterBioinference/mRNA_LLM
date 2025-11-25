@@ -30,19 +30,6 @@ from data_loaders import visualize
 
 from dvclive import Live
 
-#from src.transformers import (
-#    RNATokenizer,
-#    BertConfig,
-#    WEIGHTS_NAME,
-#    AdamW,
-#    BertForMaskedLM,
-#    get_linear_schedule_with_warmup,
-#    glue_convert_examples_to_features as convert_examples_to_features,
-#    glue_compute_metrics as compute_metrics,
-#    glue_output_modes as output_modes,
-#    glue_processors as processors
-#) 
-#from modeling_rmt.language_modeling import MemoryCell, RecurrentWrapper
 from transformers import AdamW, get_linear_schedule_with_warmup, BertConfig, BertForMaskedLM
 from src.transformers import RNATokenizer
 # from modeling_rmt.token_classification import RMTEncoderForMaskedLM
@@ -354,12 +341,6 @@ def train(args, train_dataset, val_dataset, model, tokenizer):
                 continue
 
             model.train()
-            #data, attention_mask, masked_lm_labels = mask_tokens(batch, tokenizer)
-            # data, attention_mask, labels = mask_tokens(batch, tokenizer)
-            # data = data.to(args.device)
-            # labels = labels.to(args.device)
-            # attention_mask = attention_mask.to(args.device)
-            #masked_lm_labels = masked_lm_labels.to(args.device)
             inputs = data_collator(batch[0])
             inputs["attention_mask"] =  batch[1]#"masked_lm_labels": masked_lm_labels}
             for k in inputs.keys():
@@ -403,29 +384,7 @@ def train(args, train_dataset, val_dataset, model, tokenizer):
                     ax.set_xlabel('Coordinate', fontsize=14)
                     ax.set_ylabel('Sequence', fontsize=14)
                     live.log_image("train/attention", fig)
-#                if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
-#                    logs = {}
-#                    if (
-#                        args.local_rank == -1 and args.evaluate_during_training
-#                    ):  # Only evaluate when single GPU otherwise metrics may not average well
-#                        results = evaluate(args, model, tokenizer, evaluate=False, val=True)
-#                        for key, value in results.items():
-#                            live.log_metric(f"val/{key}", value)
-#
-#                        live.next_step()
-#
-#                        for key, value in results.items():
-#                            eval_key = "eval_{}".format(key)
-#                            logs[eval_key] = value
-#
-#                    loss_scalar = (tr_loss - logging_loss) / args.logging_steps
-#                    learning_rate_scalar = scheduler.get_lr()[0]
-#                    logs["learning_rate"] = learning_rate_scalar
-#                    logs["loss"] = loss_scalar
-#                    logging_loss = tr_loss
-#
-#                    print(json.dumps({**logs, **{"step": global_step}}))
-#
+                
                 # Save Checkpoint
                 if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
                     checkpoint_prefix = "checkpoint"
@@ -462,12 +421,6 @@ def train(args, train_dataset, val_dataset, model, tokenizer):
             model.eval()
             for batch in tqdm(val_dataloader, desc="Validation"):
                 with torch.no_grad():
-                    # #data, attention_mask, masked_lm_labels = mask_tokens(batch, tokenizer)
-                    # data, attention_mask, labels = mask_tokens(batch, tokenizer)
-                    # data = data.to(args.device)
-                    # labels = labels.to(args.device)
-                    # attention_mask = attention_mask.to(args.device)
-                    # #masked_lm_labels = masked_lm_labels.to(args.device)
                     inputs = data_collator(batch[0])
                     inputs["attention_mask"] =  batch[1]#"masked_lm_labels": masked_lm_labels}
                     for k in inputs.keys():
@@ -578,13 +531,7 @@ def main():
     parser.add_argument("--neptune_description", type=str, default="TRIAL minilm fine-tuning", help="Neptune description")
     parser.add_argument("--neptune_token", type=str, default=None, help="Neptune API token")
     parser.add_argument("--neptune_project", type=str, default=None, help="Neptune project")
-    parser.add_argument("--memory_size", type=int, default=None, help="number of memory tokens to use in RMT.",)
-    parser.add_argument("--block_size", type=int, default=None, help="Total token input size of base model.",)
-    parser.add_argument("--max_n_segments", type=int, default=None, help="Maximun number of segments to include from long input.",)
     parser.add_argument("--curriculumLearning", default=False,  help="Whether or not to apply curriculum training.",)
-
-
-
 
     # OTHER
     parser.add_argument("--cache_dir", default="", type=str, help="Where do you want to store the pre-trained models downloaded from s3",)
@@ -600,8 +547,6 @@ def main():
         with open(args.params, 'r') as file:
             yaml_params = yaml.safe_load(file)
             for key, value in yaml_params['trainToFlyUTRs'].items():
-                parser.set_defaults(**{key: value})
-            for key, value in yaml_params['RMT'].items():
                 parser.set_defaults(**{key: value})
 
     args = parser.parse_args()
@@ -670,46 +615,6 @@ def main():
 
 
     if not args.do_visualize:
-        # config = config_class.from_pretrained(
-        #     args.config_name if args.config_name else args.model_name_or_path,
-        #     #finetuning_task=args.task_name,
-        #     cache_dir=args.cache_dir if args.cache_dir else None,
-        # )
-        # config.output_attentions=True
-        # config.hidden_dropout_prob = args.hidden_dropout_prob
-        # config.attention_probs_dropout_prob = args.attention_probs_dropout_prob
-        # #config.split = int(args.max_seq_length / 512)
-        # config.output_hidden_states = True
-
-
-        # tokenizer = tokenizer_class.from_pretrained(
-        #     args.tokenizer_name if args.tokenizer_name else args.model_name_or_path,
-        #     do_lower_case=args.do_lower_case,
-        #     cache_dir=args.cache_dir if args.cache_dir else None,
-        # )
-
-        # # ### remove the special tokens from the vocabulary so that they are not predicted ###
-        # # # Retrieve special tokens
-        # # special_tokens = [tokenizer.pad_token, tokenizer.unk_token, tokenizer.cls_token, tokenizer.sep_token, tokenizer.mask_token]
-        # # special_tokens_dict = {token: idx for token,idx in [(t,tokenizer.vocab.get(t)) for t in special_tokens]}
-
-        # # # Remove special tokens from the vocabulary
-        # # vocab = tokenizer.vocab
-        # # new_vocab = {token: idx for token, idx in vocab.items() if token not in special_tokens}
-        # # tokenizer.vocab = new_vocab
-        # # tokenizer.added_tokens_encoder.update(special_tokens_dict)
-        # # ###################################################################################
-
-        # model = model_class.from_pretrained(
-        #     args.model_name_or_path,
-        #     from_tf=bool(".ckpt" in args.model_name_or_path),
-        #     config=config,
-        #     cache_dir=args.cache_dir if args.cache_dir else None,
-        # )
-        # model = RMTEncoderForMaskedLM(model, num_mem_tokens=args.memory_size, max_n_segments=args.max_n_segments, input_size=args.block_size, tokenizer=tokenizer, bptt_depth=-1, segment_alignment='center')
-        # # cell = MemoryCell(model, num_mem_tokens=args.memory_size)
-        # # model = RecurrentWrapper(cell,segment_size=args.block_size, max_n_segments=args.max_n_segments)
-
         tokenizer = AutoTokenizer.from_pretrained('AIRI-Institute/gena-lm-bert-base-fly')
         model = AutoModel.from_pretrained('AIRI-Institute/gena-lm-bert-base-fly', trust_remote_code=True)
 

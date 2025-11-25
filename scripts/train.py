@@ -682,10 +682,6 @@ def main():
     parser.add_argument("--neptune_description", type=str, default="TRIAL minilm fine-tuning", help="Neptune description")
     parser.add_argument("--neptune_token", type=str, default=None, help="Neptune API token")
     parser.add_argument("--neptune_project", type=str, default=None, help="Neptune project")
-    parser.add_argument("--memory_size", type=int, default=None, help="number of memory tokens to use in RMT.",)
-    parser.add_argument("--block_size", type=int, default=None, help="Total token input size of base model.",)
-    parser.add_argument("--max_n_segments", type=int, default=None, help="Maximun number of segments to include from long input.",)
-    parser.add_argument("--curriculumLearning", default=False,  help="Whether or not to apply curriculum training.",)
     
     # Ray Tune arguments
     parser.add_argument("--use_ray_tune", action="store_true", help="Use Ray Tune for hyperparameter optimization.")
