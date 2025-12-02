@@ -165,9 +165,6 @@ splitHighLowDecay:
   high: highDecay.fasta
   low: lowDecay.fasta
 
-runAME_highLowDecay:
-  output_dir: ame_output
-
 prepForMAST:
   output_dir: output/data/MEME_suite
   output_fasta: TEseqs_split_by_utr.fasta
@@ -178,7 +175,7 @@ getMASTBackgroundFile:
 runMAST:
   output_dir: output/mast_out
   output_file: mast_results.txt
-  motif_file: data/MEME_suite/Ray2013_rbp_Drosophila_melanogaster.meme
+  motif_file: /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
   mast_pvalue_threshold: 0.05
 
 codonOnlyClassificationMLP:

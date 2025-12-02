@@ -5,7 +5,6 @@ stages:
       echo "Conda environment '${setupEnv.name}' created and dependencies installed." >> setupEnv.log
     deps:
       - environment.yaml
-      - requirements.txt
     outs:
       - setupEnv.log
     params:
@@ -46,7 +45,6 @@ stages:
     deps:
     - scripts/trainToFlyUTRs.py
     - ${preprocessFlyUTRs.output_dir}
-    - data/4-new-12w-0/pytorch_model.bin
     outs:
     - ${trainToFlyUTRs.output_dir}/pytorch_model.bin
     - ${trainToFlyUTRs.output_dir}/checkpoints
@@ -374,7 +372,9 @@ stages:
       - ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
       outs:
       # - ${importanceAnalysis.output_dir}/${visualizeImportance.scoresOnly}
-      - ${importanceAnalysis.output_dir}/${item}_${visualizeImportance.save_path}
+      - ${importanceAnalysis.output_dir}/${item}_${visualizeImportance.save_path}:
+          cache: false
+          persist: true
       params:
       - visualizeImportance
 
@@ -421,10 +421,18 @@ stages:
       - ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions}
       - ${runMAST.output_dir}/${item}_${runMAST.output_file}
       outs:
-      - ${motifEnrichment.output_dir}/${item}_pos5_mannwhitneyu_results.csv
-      - ${motifEnrichment.output_dir}/${item}_pos3_mannwhitneyu_results.csv
-      - ${motifEnrichment.output_dir}/${item}_neg5_mannwhitneyu_results.csv
-      - ${motifEnrichment.output_dir}/${item}_neg3_mannwhitneyu_results.csv
+      - ${motifEnrichment.output_dir}/${item}_pos5_mannwhitneyu_results.csv:
+          cache: false
+          persist: true
+      - ${motifEnrichment.output_dir}/${item}_pos3_mannwhitneyu_results.csv:
+          cache: false
+          persist: true
+      - ${motifEnrichment.output_dir}/${item}_neg5_mannwhitneyu_results.csv:
+          cache: false
+          persist: true
+      - ${motifEnrichment.output_dir}/${item}_neg3_mannwhitneyu_results.csv:
+          cache: false
+          persist: true
       params:
       - motifEnrichment
 
@@ -500,8 +508,12 @@ stages:
       - ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.low}
       - ${runMAST.output_dir}/${item}_${runMAST.output_file}
       outs:
-      - ${motifEnrichment.output_dir}/${item}_utr5_mannwhitneyu_results.csv
-      - ${motifEnrichment.output_dir}/${item}_utr3_mannwhitneyu_results.csv
+      - ${motifEnrichment.output_dir}/${item}_utr5_mannwhitneyu_results.csv:
+          cache: false
+          persist: true
+      - ${motifEnrichment.output_dir}/${item}_utr3_mannwhitneyu_results.csv:
+          cache: false
+          persist: true
       params:
       - motifEnrichment_highLowDecay
 

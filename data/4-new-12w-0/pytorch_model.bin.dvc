@@ -1,5 +1,0 @@
-outs:
-- md5: 9a028bb7af2951ca2c0e4df28b4ea1f4
-  size: 347423195
-  hash: md5
-  path: pytorch_model.bin
