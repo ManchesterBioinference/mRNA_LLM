@@ -9,9 +9,9 @@
 ### run command
 #####################################################
 source ~/.bashrc
-conda activate rayTune
- python scripts/manualTokenShuffle.py --params params.yaml --model_name_or_path output/ftModel_no_codons/best_spearmanr/ --data_dir output/data/decay --output_dir output/predict --scaler output/ftModel_no_codons/best_spearmanr/scaler.joblib --label tokenShuffle --extraFeatures output/data/ablations/no_codons.csv --mfe output/data/codons/vienna_features.csv
-#~/.local/share/mamba/bin/dvc repro motifEnrichment
+conda activate raytune
+#python scripts/manualTokenShuffle.py --params params.yaml --model_name_or_path output/ftModel_no_codons/best_spearmanr/ --data_dir output/data/decay --output_dir output/predict --scaler output/ftModel_no_codons/best_spearmanr/scaler.joblib --label tokenShuffle --extraFeatures output/data/ablations/no_codons.csv --mfe output/data/codons/vienna_features.csv
+~/.local/share/mamba/bin/dvc repro motifEnrichment
 # ~/.local/share/mamba/bin/dvc repro predict
 # ~/.local/share/mamba/bin/dvc repro motifEnrichment_highLowDecay
 # ~/.local/share/mamba/bin/dvc repro codonOnlyClassificationMLP

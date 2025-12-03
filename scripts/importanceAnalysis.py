@@ -42,7 +42,8 @@ class SHAPExplainer(BaseExplainer):
                 return outputs[1].cpu().numpy()  # Return raw outputs for regression
 
         # Set up the masker and explainer
-        masker = TextMasker(self.tokenizer)
+        #print("Baseline token for SHAP:", explainer_args['baselineToken'])
+        masker = TextMasker(self.tokenizer,mask_token=explainer_args['baselineToken'])
         explainer_partition = Explainer(model=func, masker=masker, **init_args)
         
         # Compute SHAP values
@@ -85,6 +86,17 @@ def set_seed(args):
     torch.manual_seed(args.seed)
     if args.n_gpu > 0:
         torch.cuda.manual_seed_all(args.seed)
+
+def getBaselineToken(tokenizer, model):
+    embeddings = model.model.embeddings.word_embeddings.weight.detach().cpu().numpy()
+    average_embedding = np.mean(embeddings, axis=0)
+    # Compute distances to average embedding
+    distances = np.linalg.norm(embeddings - average_embedding, axis=1)
+    # Find the token ID with the smallest distance
+    baseline_token_id = int(np.argmin(distances))
+    baseline_token = tokenizer.convert_ids_to_tokens(baseline_token_id)
+    print(f"Baseline token determined: {baseline_token} (ID: {baseline_token_id})")
+    return baseline_token
 
 parser = argparse.ArgumentParser()
 
@@ -278,6 +290,7 @@ explanations_list = []
 decay = []
 predDecay = []
 myShap = SHAPExplainer(model, t)
+baseLineToken = getBaselineToken(t, model)
 for seq in tqdm(SeqIO.parse(args.sequence_file, 'fasta')):
     seq.seq = str(seq.seq).replace('U', "T")
     # Check seq length after tokenization
@@ -304,7 +317,7 @@ for seq in tqdm(SeqIO.parse(args.sequence_file, 'fasta')):
 
     if not args.debug:
         # Pass extra_features to the compute_feature_importance method
-        e = myShap(str(seq.seq), target=None, extra_features=torch.tensor(tmp_extraFeatures, dtype=torch.float32).to(device), show_progress=True, ID = seq_id, actual = actualDecayRate, predicted = predictedDecayRate)
+        e = myShap(str(seq.seq), target=None, extra_features=torch.tensor(tmp_extraFeatures, dtype=torch.float32).to(device), show_progress=True, ID = seq_id, actual = actualDecayRate, predicted = predictedDecayRate, **{'baselineToken':baseLineToken})
         new_e = copy.copy(e)
         new_e.scores /= np.linalg.norm(e.scores, ord=1) #L1 normalization axis=-1, 
         explanations_list.append(new_e)

@@ -372,6 +372,7 @@ stages:
     - test
     do:
       cmd: python scripts/find_motifs.py --SHAP ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
+        --trainSHAP ${importanceAnalysis.output_dir}/train_${importanceAnalysis.pickle_file}
         --save_file_dir ${findMotifs.output_dir}/${item}
       deps:
       - scripts/find_motifs.py
@@ -883,24 +884,6 @@ plots:
 - dvclive/TE/plots/metrics:
     x: step
 - dvclive/TE/plots/images
-- dvclive/TE/seq_only/plots/metrics:
-    x: step
-- dvclive/TE/seq_only/plots/images
-- dvclive/TE/no_lengths/plots/metrics:
-    x: step
-- dvclive/TE/no_lengths/plots/images
-- dvclive/TE/no_codons/plots/metrics:
-    x: step
-- dvclive/TE/no_codons/plots/images
-- dvclive/TE/only_codons/plots/metrics:
-    x: step
-- dvclive/TE/only_codons/plots/images
-- dvclive/TE/no_gc_content/plots/metrics:
-    x: step
-- dvclive/TE/no_gc_content/plots/images
-- dvclive/TE/no_mfe/plots/metrics:
-    x: step
-- dvclive/TE/no_mfe/plots/images
 - dvclive/findMotifs/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
@@ -912,9 +895,3 @@ metrics:
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/metrics.json
 - dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/metrics.json
 - dvclive/TE/metrics.json
-- dvclive/TE/seq_only/metrics.json
-- dvclive/TE/no_lengths/metrics.json
-- dvclive/TE/no_codons/metrics.json
-- dvclive/TE/only_codons/metrics.json
-- dvclive/TE/no_gc_content/metrics.json
-- dvclive/TE/no_mfe/metrics.json
