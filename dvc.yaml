@@ -92,8 +92,7 @@ stages:
 
   runViennaRNA:
     cmd: conda run -n ${setupEnv.name} python scripts/runViennaRNA.py --input_fasta ${isolateFullTranscripts.output_file}
-      --output_csv ${runViennaRNA.output_csv} --condaPath ${runViennaRNA.condaPath}
-      --condaEnv inseq --RNAfold_path linearfold                                                                                                                                                                                                                                                                                                                                      #$( which RNAfold )
+      --output_csv ${runViennaRNA.output_csv} --RNAfold_path linearfold                                                                                                                                                                                                                                                                                                                                      #$( which RNAfold )
     deps:
     - scripts/runViennaRNA.py
     - ${isolateFullTranscripts.output_file} #output/data/utrDecayRates.fasta

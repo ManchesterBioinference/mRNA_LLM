@@ -224,7 +224,7 @@ def train(args, train_dataset, model, tokenizer, extraFeatures=None, scaler=None
                 p for n, p in model.named_parameters() 
                 if not any(nd in n for nd in no_decay) and (n.startswith("classifier") or n.startswith("extraFeaturesProjector"))
             ],
-            "weight_decay": args.classifier_decay,  # From your tested classifier setup
+            "weight_decay": args.classifier_weight_decay,  # From your tested classifier setup
             "lr": args.classifier_lr,  # Faster LR for classifier
         },
         # Classifier parameters without weight decay (e.g., biases)
