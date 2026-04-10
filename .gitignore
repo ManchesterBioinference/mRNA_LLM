@@ -26,3 +26,4 @@ data/Kallisto_DESeq2_15August25.csv
 output/ray_ablations/
 output/motifEnrichment/*parquet
 /setupEnv.log
+/setupRIPseqEnv.log

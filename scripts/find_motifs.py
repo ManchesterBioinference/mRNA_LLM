@@ -60,6 +60,8 @@ def filterWithLOWESS(importance, frac=0.3, save_file_dir=None):
     print(f"Number of points flagged as outliers: {len(outlier_indices)}")
     print(f"Standard deviation of deviations from LOESS: {std_dev_of_deviations:.4f}")
     print(f"Threshold for outliers (2*std_dev): {threshold:.4f}")
+    for i in outlier_indices:
+        print(f"  Filtered out sequence: {importance[i].id}")
 
     # Plotting
     fig = plt.figure(figsize=(12, 7))
@@ -78,8 +80,13 @@ def filterWithLOWESS(importance, frac=0.3, save_file_dir=None):
     plt.axhline(0, color='gray', linestyle=':', linewidth=0.8)
     plt.legend()
     plt.grid(True, linestyle='--', alpha=0.7)
-    with dvclive.Live(os.path.join(os.getcwd(), 'dvclive/findMotifs')) as live:
-        live.log_image("residuals_with_loess_fit.png", fig)
+    if save_file_dir is not None:
+        os.makedirs(save_file_dir, exist_ok=True)
+        fig.savefig(os.path.join(save_file_dir, "residuals_with_loess_fit.png"))
+    else:
+        with dvclive.Live(os.path.join(os.getcwd(), 'dvclive/findMotifs')) as live:
+            live.log_image("residuals_with_loess_fit.png", fig)
+    plt.close(fig)
 
     return [importance[i] for i in range(len(importance)) if i not in outlier_indices]
 
@@ -590,13 +597,13 @@ def main():
     trainSHAPmean, trainSHAPstd = getTrainSHAPStats(args.trainSHAP)
 
     importance = pickle.load(open(args.SHAP, 'rb'))
+    importance = filterWithLOWESS(importance, save_file_dir=args.save_file_dir)
     iWithLen = []
     for x in importance:
         x.tokens = [t.replace('T','U') for t in x.tokens] # Ensure U instead of T
         x.lengths = [len(token) for token in x.tokens]
         iWithLen.append(x)
 
-    importance = filterWithLOWESS(importance)
 
     # Removed loading of unused data (atten_scores, pred, dev)
     # pos_atten_scores = atten_scores[dev_pos.index.values]

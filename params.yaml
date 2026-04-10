@@ -165,6 +165,16 @@ splitHighLowDecay:
   high: highDecay.fasta
   low: lowDecay.fasta
 
+evaluateMLM:
+  model_dir: output/flyTrained/best_checkpoint
+  data_dir: output/data/flyUTRs
+  split: test.fasta
+  batch_size: 32
+  max_seq_length: 512
+  seed: 42
+  compare_base: true   # set true to also evaluate base GENA-LM for comparison
+  output_file: dvclive/flyUTRs/mlm_eval_metrics.json
+
 prepForMAST:
   output_dir: output/data/MEME_suite
   output_fasta: TEseqs_split_by_utr.fasta
@@ -201,4 +211,32 @@ rayTuneClassificationMLP:
   ray_tune_cpu_per_trial: 1      # CPUs allocated per trial
   ray_tune_gpu_per_trial: 0    # GPUs allocated per trial
   ray_tune_local_dir: "output/ray_results_MLP"  # Directory for Ray Tune results
-  train_final_model: true        # Whether to train final model with best hyperparameters
+  train_final_model: true        # Whether to train final model with best hyperp
+
+setupRIPseqEnv:
+  name: ripseq_validation
+
+downloadRIPseq:
+  output_dir: data/RIPseq
+
+processRIPseq:
+  output_dir: data/RIPseq
+
+validateFMR1withRIPseq:
+  output_dir: output/ripseqValidation/fmr1
+  enrichment_dir: output/motifEnrichment
+  gene_map: data/GeneID_to_FlybaseID.txt
+  padj_threshold: 0.05
+  lfc_threshold: 1.0
+
+downloadORB2RIPseq:
+  output_dir: data/RIPseq
+
+processORB2RIPseq:
+  output_dir: data/RIPseq
+
+validateORB2withRIPseq:
+  output_dir: output/ripseqValidation/orb2
+  enrichment_dir: output/motifEnrichment
+  gene_map: data/GeneID_to_FlybaseID.txt
+  fold_change_threshold: 1.5

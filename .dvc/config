@@ -1,5 +1,7 @@
 [cache]
-    dir = /net/scratch/m65338lb/projects/rnaDecay/cache
+    dir = /mnt/mr01-home01/m65338lb/dvcCache/mRNA_LLM
     type = symlink
 [core]
     autostage = true
+['remote "scratch-backup"']
+    url = /net/scratch/m65338lb/projects/rnaDecay/cache
