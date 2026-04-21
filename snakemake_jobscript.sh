@@ -9,8 +9,6 @@
 ### run command
 #####################################################
 source ~/.bashrc
-#~/miniconda3/bin/dvc repro -s findMotifs
-#~/miniconda3/bin/dvc repro motifEnrichment
 ~/miniconda3/bin/dvc repro -sf evaluateMLM
 
 #conda activate raytune
