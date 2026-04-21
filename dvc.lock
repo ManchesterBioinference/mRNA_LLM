@@ -997,8 +997,7 @@ stages:
       size: 15870067
   runViennaRNA:
     cmd: conda run -n rayTune python scripts/runViennaRNA.py --input_fasta output/data/full_transcripts/Dmela-full_transcripts.fa
-      --output_csv output/data/codons/vienna_features.csv --condaPath /mnt/mr01-home01/m65338lb/.local/bin/micromamba
-      --condaEnv inseq --RNAfold_path linearfold
+      --output_csv output/data/codons/vienna_features.csv --RNAfold_path linearfold
     deps:
     - path: output/data/full_transcripts/Dmela-full_transcripts.fa
       hash: md5
@@ -2720,8 +2719,8 @@ stages:
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: 8de9b7614313017e15bbfe29e2359532
-      size: 35121
+      md5: e1b156eca685584a01aa256b49157cf8
+      size: 35107
     params:
       params.yaml:
         codonOnlyClassificationMLP:
@@ -2733,13 +2732,13 @@ stages:
     outs:
     - path: output/codonOnlyClassificationMLP/codonOnly/best_spearmanr
       hash: md5
-      md5: 0f42d3ca5301a287d05f95e758ee6c23.dir
-      size: 71964
+      md5: ed7552fe076678bebf9d510123af2faa.dir
+      size: 103403
       nfiles: 4
     - path: output/ray_results_MLP/codonOnly
       hash: md5
-      md5: 0b649ceac872ed7e7889d3267988f84e.dir
-      size: 11001346
+      md5: 1f93cb83722dddfb6baac3c9556e7654.dir
+      size: 11922713
       nfiles: 1505
   codonOnlyClassificationMLP@codonOnly:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
@@ -2826,8 +2825,8 @@ stages:
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: 8de9b7614313017e15bbfe29e2359532
-      size: 35121
+      md5: e1b156eca685584a01aa256b49157cf8
+      size: 35107
     params:
       params.yaml:
         allExtraFeaturesClassificationMLP:
@@ -2835,13 +2834,13 @@ stages:
     outs:
     - path: output/codonOnlyClassificationMLP/allExtraFeatures/best_spearmanr
       hash: md5
-      md5: 91fcc51d522ee1a2211647a3e685b1ab.dir
-      size: 82748
+      md5: e5d729fecd55d1bff636f4631c963a0d.dir
+      size: 124939
       nfiles: 4
     - path: output/ray_results_MLP/allExtraFeatures
       hash: md5
-      md5: c5e780951526ea2ae4868bcae0e72aa8.dir
-      size: 12286542
+      md5: 98b96ba56ad5d8584e72e008d3782ba3.dir
+      size: 11950574
       nfiles: 1505
   extraFeaturesAndMotifCountsClassificationMLP:
     cmd: conda run -n rayTune python scripts/codonOnlyClassificationMLP.py --params
@@ -2865,8 +2864,8 @@ stages:
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: 8de9b7614313017e15bbfe29e2359532
-      size: 35121
+      md5: e1b156eca685584a01aa256b49157cf8
+      size: 35107
     params:
       params.yaml:
         extraFeaturesAndMotifCountsClassificationMLP:
@@ -2874,13 +2873,13 @@ stages:
     outs:
     - path: output/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts/best_spearmanr
       hash: md5
-      md5: 6a865eca576e6b065b4d2ba5ca8e1492.dir
-      size: 114813
+      md5: 5d18b6e524173e534f3c514b45d21e20.dir
+      size: 198475
       nfiles: 4
     - path: output/ray_results_MLP/extraFeaturesAndMotifCounts
       hash: md5
-      md5: 070fcf65f9d52ddd9127b0aa9d29e4b3.dir
-      size: 10219023
+      md5: 3cda556dc35183bb704c5a6a7b239e5c.dir
+      size: 11110810
       nfiles: 1505
   importanceAnalysis@dev:
     cmd: conda run -n rayTune python scripts/importanceAnalysis.py --params params.yaml

@@ -4,11 +4,11 @@ stages:
       conda env create --name ${setupEnv.name} -f environment.yaml
       echo "Conda environment '${setupEnv.name}' created and dependencies installed." >> setupEnv.log
     deps:
-      - environment.yaml
+    - environment.yaml
     outs:
-      - setupEnv.log
+    - setupEnv.log
     params:
-      - setupEnv
+    - setupEnv
 
   downloadSpeciesData:
     cmd: conda run -n ${setupEnv.name} python scripts/downloadSpeciesData.py ${downloadSpeciesData.output_dir}
@@ -21,7 +21,8 @@ stages:
     - downloadSpeciesData
 
   isolate3UTRs:
-    cmd: conda run -n ${setupEnv.name} python scripts/isolate3UTRs.py --params params.yaml --data_dir ${downloadSpeciesData.output_dir}
+    cmd: conda run -n ${setupEnv.name} python scripts/isolate3UTRs.py --params params.yaml
+      --data_dir ${downloadSpeciesData.output_dir}
     deps:
     - scripts/isolate3UTRs.py
     - ${downloadSpeciesData.output_dir}
@@ -31,7 +32,8 @@ stages:
     - isolate3UTRs
 
   preprocessFlyUTRs:
-    cmd: conda run -n ${setupEnv.name} python scripts/preprocessFlyUTRs.py --params params.yaml --data_dir ${isolate3UTRs.output_dir}
+    cmd: conda run -n ${setupEnv.name} python scripts/preprocessFlyUTRs.py --params
+      params.yaml --data_dir ${isolate3UTRs.output_dir}
     deps:
     - scripts/preprocessFlyUTRs.py
     - ${isolate3UTRs.output_dir}
@@ -41,7 +43,8 @@ stages:
     - preprocessFlyUTRs
 
   trainToFlyUTRs:
-    cmd: conda run -n ${setupEnv.name} python scripts/trainToFlyUTRs.py --params params.yaml --data_dir ${preprocessFlyUTRs.output_dir}
+    cmd: conda run -n ${setupEnv.name} python scripts/trainToFlyUTRs.py --params params.yaml
+      --data_dir ${preprocessFlyUTRs.output_dir}
     deps:
     - scripts/trainToFlyUTRs.py
     - ${preprocessFlyUTRs.output_dir}
@@ -53,8 +56,8 @@ stages:
     - trainToFlyUTRs
 
   mergeUTRsAndDecayRates:
-    cmd: conda run -n ${setupEnv.name} python scripts/mergeUTRsAndDecayRates.py --params params.yaml --fasta ${preprocessFlyUTRs.output_dir}
-      --gtf_file 
+    cmd: conda run -n ${setupEnv.name} python scripts/mergeUTRsAndDecayRates.py --params
+      params.yaml --fasta ${preprocessFlyUTRs.output_dir} --gtf_file 
       ${downloadSpeciesData.output_dir}/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
     deps:
     - scripts/mergeUTRsAndDecayRates.py
@@ -66,8 +69,8 @@ stages:
     - mergeUTRsAndDecayRates
 
   isolateFullTranscripts:
-    cmd: conda run -n ${setupEnv.name} python scripts/isolateFullTranscripts.py --params params.yaml --data_dir
-      ${isolate3UTRs.output_dir} --target_ids_fasta ${mergeUTRsAndDecayRates.output_file}
+    cmd: conda run -n ${setupEnv.name} python scripts/isolateFullTranscripts.py --params
+      params.yaml --data_dir ${isolate3UTRs.output_dir} --target_ids_fasta ${mergeUTRsAndDecayRates.output_file}
     deps:
     - scripts/isolateFullTranscripts.py
     - ${mergeUTRsAndDecayRates.output_file}
@@ -78,8 +81,9 @@ stages:
     - isolateFullTranscripts
 
   getDecayResiduals:
-    cmd: conda run -n ${setupEnv.name} python scripts/getDecayResiduals.py --params params.yaml --decay_file ${mergeUTRsAndDecayRates.decay_rates}
-      --utr_fasta ${mergeUTRsAndDecayRates.output_file} --CDS_fasta ${isolate3UTRs.output_dir}/Drosophila_melanogaster-cds.fa
+    cmd: conda run -n ${setupEnv.name} python scripts/getDecayResiduals.py --params
+      params.yaml --decay_file ${mergeUTRsAndDecayRates.decay_rates} --utr_fasta ${mergeUTRsAndDecayRates.output_file}
+      --CDS_fasta ${isolate3UTRs.output_dir}/Drosophila_melanogaster-cds.fa
     deps:
     - scripts/getDecayResiduals.py
     - ${isolate3UTRs.output_dir}/Drosophila_melanogaster-cds.fa
@@ -91,8 +95,9 @@ stages:
     - getDecayResiduals
 
   runViennaRNA:
-    cmd: conda run -n ${setupEnv.name} python scripts/runViennaRNA.py --input_fasta ${isolateFullTranscripts.output_file}
-      --output_csv ${runViennaRNA.output_csv} --RNAfold_path linearfold                                                                                                                                                                                                                                                                                                                                      #$( which RNAfold )
+    cmd: conda run -n ${setupEnv.name} python scripts/runViennaRNA.py --input_fasta
+      ${isolateFullTranscripts.output_file} --output_csv ${runViennaRNA.output_csv}
+      --RNAfold_path linearfold                                                                                                                                                                                                                                                                                                                                                                              #$( which RNAfold )
     deps:
     - scripts/runViennaRNA.py
     - ${isolateFullTranscripts.output_file} #output/data/utrDecayRates.fasta
@@ -102,9 +107,9 @@ stages:
     - runViennaRNA
 
   preprocessData:
-    cmd: conda run -n ${setupEnv.name} python scripts/preprocess.py --params params.yaml --data_dir ${mergeUTRsAndDecayRates.output_file}
-      --ncbi_geneID_map ${preprocessFlyUTRs.ncbi_geneID_map} --geneID_flybase_map
-      ${preprocessFlyUTRs.geneID_flybase_map}                                                                                                                                                                                   #${getDecayResiduals.residuals} #
+    cmd: conda run -n ${setupEnv.name} python scripts/preprocess.py --params params.yaml
+      --data_dir ${mergeUTRsAndDecayRates.output_file} --ncbi_geneID_map ${preprocessFlyUTRs.ncbi_geneID_map}
+      --geneID_flybase_map ${preprocessFlyUTRs.geneID_flybase_map}                                                                                                                                                              #${getDecayResiduals.residuals} #
     deps:
     - scripts/preprocess.py
     - ${mergeUTRsAndDecayRates.output_file} #${getDecayResiduals.residuals} #
@@ -115,10 +120,10 @@ stages:
     - preprocessFlyUTRs
 
   rayTune:
-    cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && conda run -n ${setupEnv.name} python scripts/train.py --params params.yaml
-      --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/ --max_seq_length
-      512 --data_dir ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
-      --mfe ${runViennaRNA.output_csv} --use_ray_tune #--train_final_model
+    cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && conda run -n ${setupEnv.name} python
+      scripts/train.py --params params.yaml --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
+      --max_seq_length 512 --data_dir ${preprocessData.output_dir} --extraFeatures
+      ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv} --use_ray_tune #--train_final_model
     deps:
     - scripts/train.py
     - scripts/GenaLMWithExtraFeatures.py
@@ -138,10 +143,10 @@ stages:
     - rayTune
 
   run_fineTuneModel:
-    cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && conda run -n ${setupEnv.name} python scripts/train.py --params params.yaml
-      --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/ --max_seq_length
-      512 --data_dir ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
-      --mfe ${runViennaRNA.output_csv}
+    cmd: export RAY_PICKLE_VERBOSE_DEBUG=1 && conda run -n ${setupEnv.name} python
+      scripts/train.py --params params.yaml --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
+      --max_seq_length 512 --data_dir ${preprocessData.output_dir} --extraFeatures
+      ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv}
     deps:
     - scripts/train.py
     - scripts/GenaLMWithExtraFeatures.py
@@ -171,7 +176,8 @@ stages:
       ablate_flags: --ablate_lengths --ablate_gc_content
     do:
       cmd: >
-        conda run -n ${setupEnv.name} python scripts/ablate_features.py --input_file ${getDecayResiduals.extraFeatures}
+        conda run -n ${setupEnv.name} python scripts/ablate_features.py --input_file
+        ${getDecayResiduals.extraFeatures}
         --output_file ${ablate_features.output_dir}/no_${item.name}.csv
         ${item.ablate_flags}
       deps:
@@ -203,11 +209,12 @@ stages:
         extra_features: ${ablate_features.output_dir}/no_lengths_gc.csv
         mfe_flag: ''
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/train.py --params params.yaml  --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
-        --max_seq_length 512 --data_dir ${preprocessData.output_dir}  --output_dir
-        ${fineTuneModel.output_dir}_${key} --ray_tune_local_dir output/ray_ablations/${key}
-        $( if [ "${item.extra_features}" != "scripts/train.py" ]; then echo "--extraFeatures
-        ${item.extra_features}"; fi ) ${item.mfe_flag} --use_ray_tune --runName ${key}
+      cmd: conda run -n ${setupEnv.name} python scripts/train.py --params params.yaml  --model_name_or_path
+        ${trainToFlyUTRs.output_dir}/best_checkpoint/ --max_seq_length 512 --data_dir
+        ${preprocessData.output_dir}  --output_dir ${fineTuneModel.output_dir}_${key}
+        --ray_tune_local_dir output/ray_ablations/${key} $( if [ "${item.extra_features}"
+        != "scripts/train.py" ]; then echo "--extraFeatures ${item.extra_features}";
+        fi ) ${item.mfe_flag} --use_ray_tune --runName ${key}
       deps:
       - scripts/train.py
       - scripts/GenaLMWithExtraFeatures.py
@@ -247,11 +254,12 @@ stages:
         extra_features: ${ablate_features.output_dir}/no_lengths_gc.csv
         mfe_flag: ''
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/train.py --params params.yaml  --model_name_or_path ${trainToFlyUTRs.output_dir}/best_checkpoint/
-        --max_seq_length 512 --data_dir ${preprocessData.output_dir}  --output_dir
-        ${fineTuneModel.output_dir}_${key} --ray_tune_local_dir output/ray_ablations/${key}
-        $( if [ "${item.extra_features}" != "scripts/train.py" ]; then echo "--extraFeatures
-        ${item.extra_features}"; fi ) ${item.mfe_flag} --runName ${key}
+      cmd: conda run -n ${setupEnv.name} python scripts/train.py --params params.yaml  --model_name_or_path
+        ${trainToFlyUTRs.output_dir}/best_checkpoint/ --max_seq_length 512 --data_dir
+        ${preprocessData.output_dir}  --output_dir ${fineTuneModel.output_dir}_${key}
+        --ray_tune_local_dir output/ray_ablations/${key} $( if [ "${item.extra_features}"
+        != "scripts/train.py" ]; then echo "--extraFeatures ${item.extra_features}";
+        fi ) ${item.mfe_flag} --runName ${key}
       deps:
       - scripts/train.py
       - scripts/GenaLMWithExtraFeatures.py
@@ -317,12 +325,12 @@ stages:
         mfe_flag: --mfe ${runViennaRNA.output_csv}
         split: train
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/predict.py --params params.yaml --model_name_or_path ${fineTuneModel.output_dir}${item.name}/best_spearmanr/
+      cmd: conda run -n ${setupEnv.name} python scripts/predict.py --params params.yaml
+        --model_name_or_path ${fineTuneModel.output_dir}${item.name}/best_spearmanr/
         --data_dir ${preprocessData.output_dir} --output_dir ${predict.output_dir}${item.name}
         --scaler ${fineTuneModel.output_dir}${item.name}/best_spearmanr/scaler.joblib
-        --split ${item.split}
-        $( if [ -n "${item.name}" ]; then echo "--label ${item.name}"; fi ) $( if
-        [ -n "${item.extra_features}" ]; then echo "--extraFeatures ${item.extra_features}";
+        --split ${item.split} $( if [ -n "${item.name}" ]; then echo "--label ${item.name}";
+        fi ) $( if [ -n "${item.extra_features}" ]; then echo "--extraFeatures ${item.extra_features}";
         fi ) ${item.mfe_flag}
       deps:
       - scripts/predict.py
@@ -342,8 +350,9 @@ stages:
     - dev
     - test
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/importanceAnalysis.py --params params.yaml --model_name_or_path
-        ${fineTuneModel.output_dir}/best_spearmanr/ --save_path ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
+      cmd: conda run -n ${setupEnv.name} python scripts/importanceAnalysis.py --params
+        params.yaml --model_name_or_path ${fineTuneModel.output_dir}/best_spearmanr/
+        --save_path ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
         --extraFeatures ${getDecayResiduals.extraFeatures} --sequence_file ${preprocessData.output_dir}/${item}.fasta
         --mfe ${runViennaRNA.output_csv}                                                                                                             #test.fasta
       deps:
@@ -360,8 +369,8 @@ stages:
     - dev
     - test
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/visualizeImportance.py --params params.yaml --kmer ${preprocessData.kmer}
-        --SHAP ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
+      cmd: conda run -n ${setupEnv.name} python scripts/visualizeImportance.py --params
+        params.yaml --kmer ${preprocessData.kmer} --SHAP ${importanceAnalysis.output_dir}/${item}_${importanceAnalysis.pickle_file}
         --scoresOnly ${importanceAnalysis.output_dir}/${item}_${visualizeImportance.scoresOnly}
         --save_path ${importanceAnalysis.output_dir}/${item}_${visualizeImportance.save_path}
         --save_tokenized_path 
@@ -407,8 +416,9 @@ stages:
     - dev
     - test
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/motifEnrichment.py --params params.yaml --name ${item} --motifLocations
-        ${runMAST.output_dir}/${item}_${runMAST.output_file} --highSHAP ${findMotifs.output_dir}/${item}/positive/${findMotifs.motif_positions}
+      cmd: conda run -n ${setupEnv.name} python scripts/motifEnrichment.py --params
+        params.yaml --name ${item} --motifLocations ${runMAST.output_dir}/${item}_${runMAST.output_file}
+        --highSHAP ${findMotifs.output_dir}/${item}/positive/${findMotifs.motif_positions}
         --highControl ${findMotifs.output_dir}/${item}/positive/${findMotifs.control_positions}
         --lowSHAP ${findMotifs.output_dir}/${item}/negative/${findMotifs.motif_positions}
         --lowControl ${findMotifs.output_dir}/${item}/negative/${findMotifs.control_positions}
@@ -443,8 +453,8 @@ stages:
     - 5UTRImpact
     - 3UTRImpact
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/prepRandomizeSeqsAndExtraFeatures.py --params params.yaml
-        --sequence_file ${preprocessData.output_dir}/${prepRandomizeSeqsAndExtraFeatures.seq_file}.fasta
+      cmd: conda run -n ${setupEnv.name} python scripts/prepRandomizeSeqsAndExtraFeatures.py
+        --params params.yaml --sequence_file ${preprocessData.output_dir}/${prepRandomizeSeqsAndExtraFeatures.seq_file}.fasta
         --process ${item} --output_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
         --importance 
         ${importanceAnalysis.output_dir}/${prepRandomizeSeqsAndExtraFeatures.seq_file}_${importanceAnalysis.pickle_file}
@@ -463,9 +473,9 @@ stages:
     - 5UTRImpact
     - 3UTRImpact
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/sanityCheck_predictions.py --params params.yaml --sequence_file
-        ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta --save_path
-        ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv
+      cmd: conda run -n ${setupEnv.name} python scripts/sanityCheck_predictions.py
+        --params params.yaml --sequence_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
+        --save_path ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv
         --extraFeatures ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv}                                                          #test.fasta
       deps:
       - scripts/sanityCheck_predictions.py
@@ -481,8 +491,9 @@ stages:
     - dev
     - test
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/splitHighLowDecay.py --params params.yaml --input ${preprocessData.output_dir}/${item}.fasta
-        --high ${item}_${splitHighLowDecay.high} --low ${item}_${splitHighLowDecay.low}                                                                                   #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
+      cmd: conda run -n ${setupEnv.name} python scripts/splitHighLowDecay.py --params
+        params.yaml --input ${preprocessData.output_dir}/${item}.fasta --high ${item}_${splitHighLowDecay.high}
+        --low ${item}_${splitHighLowDecay.low}                                                                                                                            #${mergeUTRsAndDecayRates.output_file} #${preprocessData.output_dir}/test.fasta
       deps:
       - scripts/splitHighLowDecay.py
       - ${preprocessData.output_dir}/${item}.fasta
@@ -498,9 +509,10 @@ stages:
     - dev
     - test
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/motifEnrichment_highLow.py --params params.yaml --name ${item}
-        --motifLocations ${runMAST.output_dir}/${item}_${runMAST.output_file} --highTE
-        ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.high} --lowTE ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.low}
+      cmd: conda run -n ${setupEnv.name} python scripts/motifEnrichment_highLow.py
+        --params params.yaml --name ${item} --motifLocations ${runMAST.output_dir}/${item}_${runMAST.output_file}
+        --highTE ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.high} --lowTE
+        ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.low}
       deps:
       - scripts/motifEnrichment_highLow.py
       - ${splitHighLowDecay.output}/${item}_${splitHighLowDecay.high}
@@ -522,8 +534,8 @@ stages:
     - dev
     - test
     do:
-      cmd: conda run -n ${setupEnv.name} python scripts/prepForMAST.py --input_fasta ${preprocessData.output_dir}/${item}.fasta
-        --output_fasta ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}
+      cmd: conda run -n ${setupEnv.name} python scripts/prepForMAST.py --input_fasta
+        ${preprocessData.output_dir}/${item}.fasta --output_fasta ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}
       outs:
       - ${prepForMAST.output_dir}/${item}_${prepForMAST.output_fasta}
       deps:
@@ -568,8 +580,8 @@ stages:
       - runMAST
 
   codonOnlyClassificationMLP:
-    cmd: conda run -n ${setupEnv.name} python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
-      ${preprocessData.output_dir} --output_dir ${codonOnlyClassificationMLP.output_dir}/${codonOnlyClassificationMLP.label}
+    cmd: conda run -n ${setupEnv.name} python scripts/codonOnlyClassificationMLP.py
+      --params params.yaml --data_dir ${preprocessData.output_dir} --output_dir ${codonOnlyClassificationMLP.output_dir}/${codonOnlyClassificationMLP.label}
       --extraFeatures ${getDecayResiduals.extraFeatures} --label ${codonOnlyClassificationMLP.label}
     deps:
     - scripts/codonOnlyClassificationMLP.py
@@ -584,8 +596,8 @@ stages:
     - codonOnlyClassificationMLP
 
   allExtraFeaturesClassificationMLP:
-    cmd: conda run -n ${setupEnv.name} python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
-      ${preprocessData.output_dir} --output_dir 
+    cmd: conda run -n ${setupEnv.name} python scripts/codonOnlyClassificationMLP.py
+      --params params.yaml --data_dir ${preprocessData.output_dir} --output_dir 
       ${codonOnlyClassificationMLP.output_dir}/${allExtraFeaturesClassificationMLP.label}
       --extraFeatures ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv}
       --label ${allExtraFeaturesClassificationMLP.label}
@@ -603,10 +615,10 @@ stages:
     - allExtraFeaturesClassificationMLP
 
   extraFeaturesAndMotifCountsClassificationMLP:
-    cmd: conda run -n ${setupEnv.name} python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
-      ${preprocessData.output_dir} --extraFeatures ${getDecayResiduals.extraFeatures}
-      --mfe ${runViennaRNA.output_csv} --mastResults ${runMAST.output_dir}/train_${runMAST.output_file}
-      --output_dir 
+    cmd: conda run -n ${setupEnv.name} python scripts/codonOnlyClassificationMLP.py
+      --params params.yaml --data_dir ${preprocessData.output_dir} --extraFeatures
+      ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv} --mastResults
+      ${runMAST.output_dir}/train_${runMAST.output_file} --output_dir 
       ${codonOnlyClassificationMLP.output_dir}/${extraFeaturesAndMotifCountsClassificationMLP.label}
       --label ${extraFeaturesAndMotifCountsClassificationMLP.label}
     deps:
@@ -638,15 +650,6 @@ plots:
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/metrics:
     x: step
 - dvclive/codonOnlyClassificationMLP/codonOnly/plots/images
-- dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/metrics:
-    x: step
-- dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/images
-- dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/plots/metrics:
-    x: step
-- dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/plots/images
-- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/metrics:
-    x: step
-- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/images
 - dvclive/TE/plots/metrics:
     x: step
 - dvclive/TE/plots/images
@@ -657,15 +660,24 @@ plots:
     x: step
 - dvclive/TE/only_codons/plots/images
 - dvclive/findMotifs/plots/images
+- dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/plots/metrics:
+    x: step
+- dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/plots/images
+- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/metrics:
+    x: step
+- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/plots/images
+- dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/metrics:
+    x: step
+- dvclive/codonOnlyClassificationMLP/codonOnly_final/plots/images
 metrics:
 - dvclive/flyUTRs/metrics.json
 - dvclive/decay/metrics.json
 - dvclive/codonOnlyClassificationMLP/metrics.json
 - dvclive/codonOnlyClassificationMLP/allExtraFeatures/metrics.json
 - dvclive/codonOnlyClassificationMLP/codonOnly/metrics.json
-- dvclive/codonOnlyClassificationMLP/codonOnly_final/metrics.json
-- dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/metrics.json
-- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/metrics.json
 - dvclive/TE/metrics.json
 - dvclive/TE/seq_only/metrics.json
 - dvclive/TE/only_codons/metrics.json
+- dvclive/codonOnlyClassificationMLP/allExtraFeatures_final/metrics.json
+- dvclive/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts_final/metrics.json
+- dvclive/codonOnlyClassificationMLP/codonOnly_final/metrics.json
