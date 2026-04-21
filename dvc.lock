@@ -3181,8 +3181,8 @@ stages:
       size: 7472500
     - path: scripts/find_motifs.py
       hash: md5
-      md5: 228d56d24c44c47ee5933d835e52ad17
-      size: 29888
+      md5: af801bb469250e0b0efb4cc820bbb7c1
+      size: 29914
     params:
       params.yaml:
         findMotifs:
@@ -3199,7 +3199,7 @@ stages:
       size: 102359
     - path: output/motifs/test/negative/control_seqs.fasta
       hash: md5
-      md5: f0e92ebf0f6fceecc1a57fa85d388ccd
+      md5: 017bf5540e1173b1bdac169b412b4cdd
       size: 640716
     - path: output/motifs/test/negative/motif_positions.txt
       hash: md5
@@ -3207,7 +3207,7 @@ stages:
       size: 46728
     - path: output/motifs/test/negative/motif_seqs.fasta
       hash: md5
-      md5: cf2d2441e626252ea289a04a4866ade4
+      md5: aa476f758ed17f9ada6aacca3ca0ba65
       size: 68567
     - path: output/motifs/test/positive/control_positions.txt
       hash: md5
@@ -3215,7 +3215,7 @@ stages:
       size: 104079
     - path: output/motifs/test/positive/control_seqs.fasta
       hash: md5
-      md5: d6c150177936ed3038a0fed2d26d9db8
+      md5: ec50c3937dc131af500af4452f6e40e9
       size: 636302
     - path: output/motifs/test/positive/motif_positions.txt
       hash: md5
@@ -3223,7 +3223,7 @@ stages:
       size: 26222
     - path: output/motifs/test/positive/motif_seqs.fasta
       hash: md5
-      md5: 08659a17d6f278a21ee2893a2cbbdcd4
+      md5: a72a2187ab48af72103e3dd98230857c
       size: 46029
   importanceAnalysis@train:
     cmd: conda run -n rayTune python scripts/importanceAnalysis.py --params params.yaml
@@ -3286,8 +3286,8 @@ stages:
       size: 33548237
     - path: scripts/find_motifs.py
       hash: md5
-      md5: 228d56d24c44c47ee5933d835e52ad17
-      size: 29888
+      md5: af801bb469250e0b0efb4cc820bbb7c1
+      size: 29914
     params:
       params.yaml:
         findMotifs:
@@ -3304,7 +3304,7 @@ stages:
       size: 466720
     - path: output/motifs/train/negative/control_seqs.fasta
       hash: md5
-      md5: 7f4154d3ea555872c420ace61bc8c19e
+      md5: 521bb6871c041b6495ecc1dcc8e18100
       size: 2883638
     - path: output/motifs/train/negative/motif_positions.txt
       hash: md5
@@ -3312,7 +3312,7 @@ stages:
       size: 217428
     - path: output/motifs/train/negative/motif_seqs.fasta
       hash: md5
-      md5: a971d56de8f0876cd2df3e296241919a
+      md5: 3b5a99390faebc0810ccd204768badfb
       size: 303613
     - path: output/motifs/train/positive/control_positions.txt
       hash: md5
@@ -3320,7 +3320,7 @@ stages:
       size: 469915
     - path: output/motifs/train/positive/control_seqs.fasta
       hash: md5
-      md5: 366fea8f09a122124463b1512901e2e4
+      md5: 5cb33b8c6290305cc45d04dd1e06db70
       size: 2766179
     - path: output/motifs/train/positive/motif_positions.txt
       hash: md5
@@ -3328,7 +3328,7 @@ stages:
       size: 126205
     - path: output/motifs/train/positive/motif_seqs.fasta
       hash: md5
-      md5: ee4f67027ca1642e65155c28d54434d3
+      md5: 763473f12eff214b44eff34f691e12aa
       size: 209420
   findMotifs@dev:
     cmd: conda run -n rayTune python scripts/find_motifs.py --SHAP output/importance/dev_shap.pkl
@@ -3340,8 +3340,8 @@ stages:
       size: 7380367
     - path: scripts/find_motifs.py
       hash: md5
-      md5: 228d56d24c44c47ee5933d835e52ad17
-      size: 29888
+      md5: af801bb469250e0b0efb4cc820bbb7c1
+      size: 29914
     params:
       params.yaml:
         findMotifs:
@@ -3358,7 +3358,7 @@ stages:
       size: 100756
     - path: output/motifs/dev/negative/control_seqs.fasta
       hash: md5
-      md5: 3cf882f1cacc3d952a68f8198779c5ea
+      md5: 26589fca87f992e48c6a8ee190a7c22f
       size: 652128
     - path: output/motifs/dev/negative/motif_positions.txt
       hash: md5
@@ -3366,7 +3366,7 @@ stages:
       size: 47287
     - path: output/motifs/dev/negative/motif_seqs.fasta
       hash: md5
-      md5: 36488190e6481b38ab419c4b63f7e291
+      md5: e1a0ca6dec07088261b0f92ce9410696
       size: 68655
     - path: output/motifs/dev/positive/control_positions.txt
       hash: md5
@@ -3374,7 +3374,7 @@ stages:
       size: 102572
     - path: output/motifs/dev/positive/control_seqs.fasta
       hash: md5
-      md5: cfe8bd7d7635e26a15ddd394b6d6ad20
+      md5: c376f5f246aaa6341c864b14a14d41ad
       size: 609953
     - path: output/motifs/dev/positive/motif_positions.txt
       hash: md5
@@ -3382,7 +3382,7 @@ stages:
       size: 27580
     - path: output/motifs/dev/positive/motif_seqs.fasta
       hash: md5
-      md5: 5a12f2cacafb252df7bf05d8f9b25a48
+      md5: 0a0837030da490ae05ee3866c3ff97e6
       size: 49491
   runAME@test-negative:
     cmd: singularity exec -B $(readlink output/motifs/test/negative/control_seqs.fasta):/tmp/control_seqs.fasta
@@ -6386,8 +6386,8 @@ stages:
     deps:
     - path: environment_ripseq.yaml
       hash: md5
-      md5: ed80b7173f7f73e9e276d2d4b19d1fd8
-      size: 307
+      md5: a7281a3f6096b7893f1501573b157205
+      size: 326
     params:
       params.yaml:
         setupRIPseqEnv:
@@ -6538,3 +6538,211 @@ stages:
       hash: md5
       md5: bcaf85b63e01a64f021a76c365d4a144
       size: 397794
+  processORB2RIPseq:
+    cmd: conda run -n ripseq_validation python scripts/processORB2RIPseq.py --norm_counts
+      data/RIPseq/orb2_RIP_normalized_count.txt.gz --tpm data/RIPseq/orb2_RIP_TPM.txt.gz
+      --output_dir data/RIPseq
+    deps:
+    - path: data/RIPseq/orb2_RIP_TPM.txt.gz
+      hash: md5
+      md5: 2acd74dbb5c8f90546ebea6b70f34e8b
+      size: 333283
+    - path: data/RIPseq/orb2_RIP_normalized_count.txt.gz
+      hash: md5
+      md5: bcaf85b63e01a64f021a76c365d4a144
+      size: 397794
+    - path: scripts/processORB2RIPseq.py
+      hash: md5
+      md5: 5b635e42d48f32f0755451d1b25eb81d
+      size: 8743
+    params:
+      params.yaml:
+        downloadORB2RIPseq:
+          output_dir: data/RIPseq
+        processORB2RIPseq:
+          output_dir: data/RIPseq
+        setupRIPseqEnv:
+          name: ripseq_validation
+    outs:
+    - path: data/RIPseq/orb2_targets.csv
+      hash: md5
+      md5: b43ccfd7bcd66d9559c79db51657ecc7
+      size: 468814
+  validateORB2withRIPseq:
+    cmd: conda run -n ripseq_validation python scripts/validateORB2withRIPseq.py --mast_results
+      output/mast_out/train_mast_results.txt output/mast_out/dev_mast_results.txt
+      output/mast_out/test_mast_results.txt --shap_neg5 output/motifEnrichment/neg5.parquet
+      --shap_neg3 output/motifEnrichment/neg3.parquet --rip_targets data/RIPseq/orb2_ripseq_hits.csv
+      --gene_map data/GeneID_to_FlybaseID.txt --output_dir output/ripseqValidation/orb2
+    deps:
+    - path: data/GeneID_to_FlybaseID.txt
+      hash: md5
+      md5: c818615c44a5868c3a6bc15ca085bc81
+      size: 468693
+    - path: data/RIPseq/orb2_ripseq_hits.csv
+      hash: md5
+      md5: 4321bc269d77a83a516b027723aa88e0
+      size: 475939
+    - path: output/mast_out/dev_mast_results.txt
+      hash: md5
+      md5: 0a29e966179113e24ff41ef37b35dacd
+      size: 4050370
+    - path: output/mast_out/test_mast_results.txt
+      hash: md5
+      md5: ab9bded4cc211fab5d2f0e8efc12c325
+      size: 4006108
+    - path: output/mast_out/train_mast_results.txt
+      hash: md5
+      md5: c3ea8102c0e4805169fb0912deba8823
+      size: 18127330
+    - path: output/motifEnrichment/neg3.parquet
+      hash: md5
+      md5: 7df434950c67b715f59166094cb3ee3b
+      size: 130803
+    - path: output/motifEnrichment/neg5.parquet
+      hash: md5
+      md5: 7291106014f4fc3082a5c1c095633589
+      size: 80481
+    - path: scripts/validateORB2withRIPseq.py
+      hash: md5
+      md5: 554ce1fb0ffb091cac179e1eb874027a
+      size: 21145
+    params:
+      params.yaml:
+        runMAST:
+          output_dir: output/mast_out
+          output_file: mast_results.txt
+          motif_file: 
+            /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+          mast_pvalue_threshold: 0.05
+        setupRIPseqEnv:
+          name: ripseq_validation
+        validateORB2withRIPseq:
+          output_dir: output/ripseqValidation/orb2
+          enrichment_dir: output/motifEnrichment
+          gene_map: data/GeneID_to_FlybaseID.txt
+          fold_change_threshold: 1.5
+    outs:
+    - path: output/ripseqValidation/orb2
+      hash: md5
+      md5: 2f81ddcaa22bd8edb2cf16c9cac423e7.dir
+      size: 245377
+      nfiles: 4
+  downloadORB2CLIPseq:
+    cmd: conda run -n ripseq_validation python scripts/downloadORB2CLIPseq.py --output_dir
+      data/CLIPseq
+    deps:
+    - path: scripts/downloadORB2CLIPseq.py
+      hash: md5
+      md5: 94fe44df992b52a262cc6396b7a38707
+      size: 1679
+    params:
+      params.yaml:
+        downloadORB2CLIPseq:
+          output_dir: data/CLIPseq
+        setupRIPseqEnv:
+          name: ripseq_validation
+    outs:
+    - path: data/CLIPseq/fly_clip.txt.gz
+      hash: md5
+      md5: 11936331dde184223780257c893aea1b
+      size: 8026068
+  processORB2CLIPseq:
+    cmd: conda run -n ripseq_validation python scripts/processORB2CLIPseq.py --clip_file
+      data/CLIPseq/fly_clip.txt.gz --gtf_file data/downloaded/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
+      --output_dir data/CLIPseq --rbp_name ORB2B
+    deps:
+    - path: data/CLIPseq/fly_clip.txt.gz
+      hash: md5
+      md5: 11936331dde184223780257c893aea1b
+      size: 8026068
+    - path: data/downloaded/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
+      hash: md5
+      md5: 841e0e179df626e738b4048ba761e07c
+      size: 7131294
+    - path: scripts/processORB2CLIPseq.py
+      hash: md5
+      md5: 0cda60047a45a778943bb62c58c6c6ca
+      size: 10724
+    params:
+      params.yaml:
+        downloadORB2CLIPseq:
+          output_dir: data/CLIPseq
+        processORB2CLIPseq:
+          output_dir: data/CLIPseq
+          rbp_name: ORB2B
+        setupRIPseqEnv:
+          name: ripseq_validation
+    outs:
+    - path: data/CLIPseq/orb2b_targets.csv
+      hash: md5
+      md5: d109b1c52038c1d20873a1effce866df
+      size: 376069
+  validateORB2withCLIPseq:
+    cmd: conda run -n ripseq_validation python scripts/validateORB2withCLIPseq.py
+      --mast_results output/mast_out/train_mast_results.txt output/mast_out/dev_mast_results.txt
+      output/mast_out/test_mast_results.txt --shap_neg5 output/motifEnrichment/neg5.parquet
+      --shap_neg3 output/motifEnrichment/neg3.parquet --clip_targets data/CLIPseq/orb2b_targets.csv
+      --clip_file data/CLIPseq/fly_clip.txt.gz --gtf_file data/downloaded/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
+      --neg3_motif_positions output/motifs/train/negative/motif_positions.txt --output_dir
+      output/ripseqValidation/orb2_clip
+    deps:
+    - path: data/CLIPseq/fly_clip.txt.gz
+      hash: md5
+      md5: 11936331dde184223780257c893aea1b
+      size: 8026068
+    - path: data/CLIPseq/orb2b_targets.csv
+      hash: md5
+      md5: d109b1c52038c1d20873a1effce866df
+      size: 376069
+    - path: data/downloaded/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
+      hash: md5
+      md5: 841e0e179df626e738b4048ba761e07c
+      size: 7131294
+    - path: output/mast_out/dev_mast_results.txt
+      hash: md5
+      md5: 0a29e966179113e24ff41ef37b35dacd
+      size: 4050370
+    - path: output/mast_out/test_mast_results.txt
+      hash: md5
+      md5: ab9bded4cc211fab5d2f0e8efc12c325
+      size: 4006108
+    - path: output/mast_out/train_mast_results.txt
+      hash: md5
+      md5: c3ea8102c0e4805169fb0912deba8823
+      size: 18127330
+    - path: output/motifEnrichment/neg3.parquet
+      hash: md5
+      md5: 7df434950c67b715f59166094cb3ee3b
+      size: 130803
+    - path: output/motifEnrichment/neg5.parquet
+      hash: md5
+      md5: 7291106014f4fc3082a5c1c095633589
+      size: 80481
+    - path: output/motifs/train/negative/motif_positions.txt
+      hash: md5
+      md5: 7a7f80c5ff398837aacf237020b2a335
+      size: 217428
+    - path: scripts/validateORB2withCLIPseq.py
+      hash: md5
+      md5: 806e105b7db473f9e23ba9d697201a40
+      size: 45790
+    params:
+      params.yaml:
+        runMAST:
+          output_dir: output/mast_out
+          output_file: mast_results.txt
+          motif_file: 
+            /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
+          mast_pvalue_threshold: 0.05
+        setupRIPseqEnv:
+          name: ripseq_validation
+        validateORB2withCLIPseq:
+          output_dir: output/ripseqValidation/orb2_clip
+          enrichment_dir: output/motifEnrichment
+    outs:
+    - path: output/ripseqValidation/orb2_clip
+      hash: md5
+      md5: 664f7ad46f7c0a0567abd768f730dd91.dir
+      size: 2162356
+      nfiles: 22

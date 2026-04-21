@@ -67,7 +67,7 @@ def filterWithLOWESS(importance, frac=0.3, save_file_dir=None):
     fig = plt.figure(figsize=(12, 7))
     plt.scatter(actuals_arr, residuals, label='Residuals (Actual - Predicted)', alpha=0.5, s=10)
     plt.plot(actuals_sorted, loess_y_pred_residuals[np.argsort(loess_x)], color='red', linewidth=2, label='LOESS fit to residuals')
-    plt.scatter(outlier_actuals, outlier_residuals, color='green', s=50, label='Flagged Outliers', edgecolor='black')
+    plt.scatter(outlier_actuals, outlier_residuals, color='green', s=50, label=f'Flagged Outliers ({len(outlier_indices)})', edgecolor='black')
 
     # Plot lines for threshold
     plt.plot(actuals_sorted, loess_y_pred_residuals[np.argsort(loess_x)] + threshold, color='orange', linestyle='--', label=f'+{threshold:.2f} (Threshold)')

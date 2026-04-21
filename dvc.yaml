@@ -722,7 +722,7 @@ stages:
 
   processORB2RIPseq:
     cmd: conda run -n ${setupRIPseqEnv.name} python scripts/processORB2RIPseq.py
-      --normalized_counts ${downloadORB2RIPseq.output_dir}/orb2_RIP_normalized_count.txt.gz
+      --norm_counts ${downloadORB2RIPseq.output_dir}/orb2_RIP_normalized_count.txt.gz
       --tpm ${downloadORB2RIPseq.output_dir}/orb2_RIP_TPM.txt.gz
       --output_dir ${processORB2RIPseq.output_dir}
     deps:
@@ -745,7 +745,7 @@ stages:
       ${runMAST.output_dir}/test_${runMAST.output_file}
       --shap_neg5 ${validateORB2withRIPseq.enrichment_dir}/neg5.parquet
       --shap_neg3 ${validateORB2withRIPseq.enrichment_dir}/neg3.parquet
-      --rip_targets ${processORB2RIPseq.output_dir}/orb2_targets.csv
+      --rip_targets data/RIPseq/orb2_ripseq_hits.csv
       --gene_map ${validateORB2withRIPseq.gene_map}
       --output_dir ${validateORB2withRIPseq.output_dir}
     deps:
@@ -755,7 +755,7 @@ stages:
       - ${runMAST.output_dir}/test_${runMAST.output_file}
       - ${validateORB2withRIPseq.enrichment_dir}/neg5.parquet
       - ${validateORB2withRIPseq.enrichment_dir}/neg3.parquet
-      - ${processORB2RIPseq.output_dir}/orb2_targets.csv
+      - data/RIPseq/orb2_ripseq_hits.csv
       - ${validateORB2withRIPseq.gene_map}
     outs:
       - ${validateORB2withRIPseq.output_dir}:
@@ -764,6 +764,69 @@ stages:
       - setupRIPseqEnv
       - runMAST
       - validateORB2withRIPseq
+
+  downloadORB2CLIPseq:
+    cmd: conda run -n ${setupRIPseqEnv.name} python scripts/downloadORB2CLIPseq.py
+      --output_dir ${downloadORB2CLIPseq.output_dir}
+    deps:
+      - scripts/downloadORB2CLIPseq.py
+    outs:
+      - ${downloadORB2CLIPseq.output_dir}/fly_clip.txt.gz:
+          persist: true
+    params:
+      - setupRIPseqEnv
+      - downloadORB2CLIPseq
+
+  processORB2CLIPseq:
+    cmd: >-
+      conda run -n ${setupRIPseqEnv.name} python scripts/processORB2CLIPseq.py
+      --clip_file ${downloadORB2CLIPseq.output_dir}/fly_clip.txt.gz
+      --gtf_file ${downloadSpeciesData.output_dir}/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
+      --output_dir ${processORB2CLIPseq.output_dir}
+      --rbp_name ${processORB2CLIPseq.rbp_name}
+    deps:
+      - scripts/processORB2CLIPseq.py
+      - ${downloadORB2CLIPseq.output_dir}/fly_clip.txt.gz
+      - ${downloadSpeciesData.output_dir}/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
+    outs:
+      - ${processORB2CLIPseq.output_dir}/orb2b_targets.csv:
+          persist: true
+    params:
+      - setupRIPseqEnv
+      - downloadORB2CLIPseq
+      - processORB2CLIPseq
+
+  validateORB2withCLIPseq:
+    cmd: >-
+      conda run -n ${setupRIPseqEnv.name} python scripts/validateORB2withCLIPseq.py
+      --mast_results ${runMAST.output_dir}/train_${runMAST.output_file}
+      ${runMAST.output_dir}/dev_${runMAST.output_file}
+      ${runMAST.output_dir}/test_${runMAST.output_file}
+      --shap_neg5 ${validateORB2withCLIPseq.enrichment_dir}/neg5.parquet
+      --shap_neg3 ${validateORB2withCLIPseq.enrichment_dir}/neg3.parquet
+      --clip_targets ${processORB2CLIPseq.output_dir}/orb2b_targets.csv
+      --clip_file ${downloadORB2CLIPseq.output_dir}/fly_clip.txt.gz
+      --gtf_file ${downloadSpeciesData.output_dir}/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
+      --neg3_motif_positions ${findMotifs.output_dir}/train/negative/${findMotifs.motif_positions}
+      --output_dir ${validateORB2withCLIPseq.output_dir}
+    deps:
+      - scripts/validateORB2withCLIPseq.py
+      - ${runMAST.output_dir}/train_${runMAST.output_file}
+      - ${runMAST.output_dir}/dev_${runMAST.output_file}
+      - ${runMAST.output_dir}/test_${runMAST.output_file}
+      - ${validateORB2withCLIPseq.enrichment_dir}/neg5.parquet
+      - ${validateORB2withCLIPseq.enrichment_dir}/neg3.parquet
+      - ${processORB2CLIPseq.output_dir}/orb2b_targets.csv
+      - ${downloadORB2CLIPseq.output_dir}/fly_clip.txt.gz
+      - ${downloadSpeciesData.output_dir}/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
+      - ${findMotifs.output_dir}/train/negative/${findMotifs.motif_positions}
+    outs:
+      - ${validateORB2withCLIPseq.output_dir}:
+          persist: true
+    params:
+      - setupRIPseqEnv
+      - runMAST
+      - validateORB2withCLIPseq
 
 plots:
 - dvclive/decayPrediction/plots/images

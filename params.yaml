@@ -240,3 +240,14 @@ validateORB2withRIPseq:
   enrichment_dir: output/motifEnrichment
   gene_map: data/GeneID_to_FlybaseID.txt
   fold_change_threshold: 1.5
+
+downloadORB2CLIPseq:
+  output_dir: data/CLIPseq
+
+processORB2CLIPseq:
+  output_dir: data/CLIPseq
+  rbp_name: ORB2B
+
+validateORB2withCLIPseq:
+  output_dir: output/ripseqValidation/orb2_clip
+  enrichment_dir: output/motifEnrichment
