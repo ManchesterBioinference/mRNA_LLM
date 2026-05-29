@@ -2719,8 +2719,8 @@ stages:
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: 00a24d3a137a4e48559731ff1d6b221b
-      size: 35093
+      md5: 3b0cbacaac09d0948a0edb155f86bb82
+      size: 35079
     params:
       params.yaml:
         codonOnlyClassificationMLP:
@@ -2732,13 +2732,13 @@ stages:
     outs:
     - path: output/codonOnlyClassificationMLP/codonOnly/best_spearmanr
       hash: md5
-      md5: e31efc667c065eb6a6113d8e44ccfea1.dir
-      size: 863401
+      md5: c70b4c9509f7f08198741f221a91d5ea.dir
+      size: 103403
       nfiles: 4
     - path: output/ray_results_MLP/codonOnly
       hash: md5
-      md5: 236aae18e5288c9d8e3ffe5893b9ad81.dir
-      size: 12414968
+      md5: 13f54f697818b7325eab3c809358af5f.dir
+      size: 12384588
       nfiles: 1505
   codonOnlyClassificationMLP@codonOnly:
     cmd: python scripts/codonOnlyClassificationMLP.py --params params.yaml --data_dir
@@ -2825,8 +2825,8 @@ stages:
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: 00a24d3a137a4e48559731ff1d6b221b
-      size: 35093
+      md5: 3b0cbacaac09d0948a0edb155f86bb82
+      size: 35079
     params:
       params.yaml:
         allExtraFeaturesClassificationMLP:
@@ -2834,13 +2834,13 @@ stages:
     outs:
     - path: output/codonOnlyClassificationMLP/allExtraFeatures/best_spearmanr
       hash: md5
-      md5: 63a67fb4988531ae0d76601ea302639b.dir
-      size: 246945
+      md5: 773b3ea3e08a2e0c8451543f09ca82d0.dir
+      size: 124939
       nfiles: 4
     - path: output/ray_results_MLP/allExtraFeatures
       hash: md5
-      md5: b6b84cbbb6a34faef247c29fbfb61383.dir
-      size: 11165982
+      md5: a73cd2d503e3fbddfbcf880ff26ab330.dir
+      size: 11138478
       nfiles: 1505
   extraFeaturesAndMotifCountsClassificationMLP:
     cmd: conda run -n rayTune python scripts/codonOnlyClassificationMLP.py --params
@@ -2864,8 +2864,8 @@ stages:
       nfiles: 3
     - path: scripts/codonOnlyClassificationMLP.py
       hash: md5
-      md5: 00a24d3a137a4e48559731ff1d6b221b
-      size: 35093
+      md5: 3b0cbacaac09d0948a0edb155f86bb82
+      size: 35079
     params:
       params.yaml:
         extraFeaturesAndMotifCountsClassificationMLP:
@@ -2873,13 +2873,13 @@ stages:
     outs:
     - path: output/codonOnlyClassificationMLP/extraFeaturesAndMotifCounts/best_spearmanr
       hash: md5
-      md5: f5ac3d323abfc35f045ac66c48604744.dir
-      size: 73589
+      md5: 40371c2469d4b259a8251b12c8e67721.dir
+      size: 258436
       nfiles: 4
     - path: output/ray_results_MLP/extraFeaturesAndMotifCounts
       hash: md5
-      md5: 9cdd1ee750faf7ba6c91e8a0b7752377.dir
-      size: 9751925
+      md5: ae6b4dcb0d926354041f502755d6aaf4.dir
+      size: 10027896
       nfiles: 1505
   importanceAnalysis@dev:
     cmd: conda run -n rayTune python scripts/importanceAnalysis.py --params params.yaml

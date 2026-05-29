@@ -1,8 +1,7 @@
 {
-  "learning_rate": 0.0015246207672107665,
-  "weight_decay": 0.0633492468274224,
-  "dropout_percent": 0.396511599207238,
-  "num_hidden_layers": 4,
-  "hidden_size": 256,
-  "negative_slope": 0.15174992359573755
+  "learning_rate": 0.004224088087768326,
+  "weight_decay": 0.036950009338657726,
+  "dropout_percent": 0.7649793417394218,
+  "projector_dropout": 0.18501168206437815,
+  "classifier_dropout_prob": 0.5998456280567255
 }

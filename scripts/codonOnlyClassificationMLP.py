@@ -9,30 +9,31 @@ import os
 import json
 
 class myClassifier(nn.Module):
-    def __init__(self, num_extra_features=None, num_labels=1, dropout_percent=0.1, max_length=512, hidden_size=256, num_hidden_layers=0, negative_slope=0.01):
+    def __init__(self, num_extra_features=None, num_labels=1, dropout_percent=0.1, max_length=512, projector_dropout=None, classifier_dropout_prob=None):
         super(myClassifier, self).__init__()
         self.num_extra_features = num_extra_features
         self.num_labels = num_labels
         self.dropout_percent = dropout_percent
         self.device = None
         self.max_length = max_length
-        self.hidden_size = hidden_size #256 is the same size as in the original model
-        self.negative_slope = negative_slope
-        self.num_hidden_layers = num_hidden_layers
+        self.projector_dropout = projector_dropout
+        if classifier_dropout_prob is None:
+            classifier_dropout_prob = dropout_percent
+        self.classifier_dropout_prob = classifier_dropout_prob
 
-        layers = [
-            nn.Linear(self.num_extra_features, self.hidden_size),
-            nn.LeakyReLU(negative_slope=self.negative_slope),
-            nn.Dropout(self.dropout_percent),
-        ]
-        for _ in range(num_hidden_layers - 1):
-            layers.extend([
-                nn.Linear(self.hidden_size, self.hidden_size),
-                nn.LeakyReLU(negative_slope=self.negative_slope),
-                nn.Dropout(self.dropout_percent),
-            ])
-        layers.append(nn.Linear(self.hidden_size, self.num_labels))
-        self.classifier = nn.Sequential( *layers)
+        if self.projector_dropout is not None and self.num_extra_features > 0:
+            self.extraFeaturesProjector = nn.Sequential(
+                nn.Linear(self.num_extra_features, self.num_extra_features),
+                nn.ReLU(),
+                nn.Dropout(self.projector_dropout),
+                nn.Linear(self.num_extra_features, self.num_extra_features)
+            )
+        self.classifier = nn.Sequential(
+            nn.Linear(self.num_extra_features, 256),
+            nn.ReLU(),
+            nn.Dropout(self.classifier_dropout_prob),
+            nn.Linear(256, self.num_labels)
+        )
 
     def forward(
         self,
@@ -40,6 +41,8 @@ class myClassifier(nn.Module):
         labels=None,
     ):
 
+        if hasattr(self, 'extraFeaturesProjector'):
+            extra_features = self.extraFeaturesProjector(extra_features)
         logits = self.classifier(extra_features)
 
         loss = None
@@ -74,10 +77,11 @@ class myClassifier(nn.Module):
         
         # Save configuration as a dictionary
         config = {
-            "hidden_size": self.hidden_size,
             "num_labels": self.num_labels,
             "num_extra_features": self.num_extra_features, # Ensure this is saved correctly
             "dropout_percent": self.dropout_percent,
+            "projector_dropout": self.projector_dropout,
+            "classifier_dropout_prob": self.classifier_dropout_prob,
             "max_length": self.max_length
         }
         
@@ -106,8 +110,9 @@ class myClassifier(nn.Module):
         model = myClassifier(
             num_extra_features=config["num_extra_features"], # Ensure this is loaded correctly
             num_labels=config["num_labels"],
-            hidden_size=config["hidden_size"],
             dropout_percent=config["dropout_percent"],
+            projector_dropout=config.get("projector_dropout"),
+            classifier_dropout_prob=config.get("classifier_dropout_prob"),
             max_length=config["max_length"]
         )
         
@@ -284,9 +289,8 @@ def train_model(config, data_dict=None, args=None):
     args.learning_rate = config["learning_rate"]
     args.weight_decay = config["weight_decay"]
     args.dropout_percent = config["dropout_percent"]
-    args.num_hidden_layers = config["num_hidden_layers"]
-    args.hidden_size = config["hidden_size"]
-    args.negative_slope = config["negative_slope"]
+    args.projector_dropout = config["projector_dropout"]
+    args.classifier_dropout_prob = config["classifier_dropout_prob"]
     
     # Reconstruct DataFrames from serialized format
     def deserialize_dataframe(serialized_df):
@@ -316,9 +320,8 @@ def train_model(config, data_dict=None, args=None):
         num_extra_features=data_dict['num_features'],
         num_labels=1,
         dropout_percent=config["dropout_percent"],
-        num_hidden_layers=config["num_hidden_layers"],
-        hidden_size=config["hidden_size"],
-        negative_slope=config["negative_slope"],
+        projector_dropout=config["projector_dropout"],
+        classifier_dropout_prob=config["classifier_dropout_prob"],
     )
     
     # Set up optimizer with config
@@ -525,12 +528,11 @@ def main():
 
     # Define hyperparameter search space
     config = {
-        "learning_rate": tune.loguniform(1e-5, 5e-3),  # Centered around your best value of 5e-4
-        "weight_decay": tune.uniform(0.001, 0.1),      # Centered around your best value of 0.03
-        "dropout_percent": tune.uniform(0.1, 0.9),     # Centered around your best value of 0.8
-        "num_hidden_layers": tune.randint(0, 5),       # 0 to 4 hidden layers
-        "hidden_size": tune.choice([128, 256, 512, 1024]),  # Common hidden sizes
-        "negative_slope": tune.uniform(0.01, 0.3),     # LeakyReLU negative slope
+        "learning_rate": tune.loguniform(1e-5, 5e-3),
+        "weight_decay": tune.uniform(0.001, 0.1),
+        "dropout_percent": tune.uniform(0.0, 0.9),
+        "projector_dropout": tune.uniform(0.1, 0.9),  # None disables the projector
+        "classifier_dropout_prob": tune.uniform(0.1, 0.9),
     }
 
     # Set up ASHA scheduler
@@ -594,18 +596,16 @@ def main():
         args.learning_rate = best_result.config["learning_rate"]
         args.weight_decay = best_result.config["weight_decay"]
         args.dropout_percent = best_result.config["dropout_percent"]
-        args.num_hidden_layers = best_result.config["num_hidden_layers"]
-        args.hidden_size = best_result.config["hidden_size"]
-        args.negative_slope = best_result.config["negative_slope"]
+        args.projector_dropout = best_result.config["projector_dropout"]
+        args.classifier_dropout_prob = best_result.config["classifier_dropout_prob"]
 
         # Initialize final model
         model = myClassifier(
             num_extra_features=extraFeatures['train'].shape[1],
             num_labels=1,
             dropout_percent=args.dropout_percent,
-            num_hidden_layers=args.num_hidden_layers,
-            hidden_size=args.hidden_size,
-            negative_slope=args.negative_slope,
+            projector_dropout=args.projector_dropout,
+            classifier_dropout_prob=args.classifier_dropout_prob,
         )
 
         # Set up optimizer with best hyperparameters
