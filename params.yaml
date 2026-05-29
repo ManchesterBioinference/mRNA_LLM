@@ -213,33 +213,8 @@ rayTuneClassificationMLP:
   ray_tune_local_dir: "output/ray_results_MLP"  # Directory for Ray Tune results
   train_final_model: true        # Whether to train final model with best hyperp
 
-setupRIPseqEnv:
-  name: ripseq_validation
-
-downloadRIPseq:
-  output_dir: data/RIPseq
-
-processRIPseq:
-  output_dir: data/RIPseq
-
-validateFMR1withRIPseq:
-  output_dir: output/ripseqValidation/fmr1
-  enrichment_dir: output/motifEnrichment
-  gene_map: data/GeneID_to_FlybaseID.txt
-  padj_threshold: 0.05
-  lfc_threshold: 1.0
-
-downloadORB2RIPseq:
-  output_dir: data/RIPseq
-
-processORB2RIPseq:
-  output_dir: data/RIPseq
-
-validateORB2withRIPseq:
-  output_dir: output/ripseqValidation/orb2
-  enrichment_dir: output/motifEnrichment
-  gene_map: data/GeneID_to_FlybaseID.txt
-  fold_change_threshold: 1.5
+setupCLIPseqEnv:
+  name: clipseq_validation
 
 downloadORB2CLIPseq:
   output_dir: data/CLIPseq
@@ -250,4 +225,3 @@ processORB2CLIPseq:
 
 validateORB2withCLIPseq:
   output_dir: output/ripseqValidation/orb2_clip
-  enrichment_dir: output/motifEnrichment

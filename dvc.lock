@@ -6645,7 +6645,7 @@ stages:
       size: 245377
       nfiles: 4
   downloadORB2CLIPseq:
-    cmd: conda run -n ripseq_validation python scripts/downloadORB2CLIPseq.py --output_dir
+    cmd: conda run -n clipseq_validation python scripts/downloadORB2CLIPseq.py --output_dir
       data/CLIPseq
     deps:
     - path: scripts/downloadORB2CLIPseq.py
@@ -6656,15 +6656,15 @@ stages:
       params.yaml:
         downloadORB2CLIPseq:
           output_dir: data/CLIPseq
-        setupRIPseqEnv:
-          name: ripseq_validation
+        setupCLIPseqEnv:
+          name: clipseq_validation
     outs:
     - path: data/CLIPseq/fly_clip.txt.gz
       hash: md5
       md5: 11936331dde184223780257c893aea1b
       size: 8026068
   processORB2CLIPseq:
-    cmd: conda run -n ripseq_validation python scripts/processORB2CLIPseq.py --clip_file
+    cmd: conda run -n clipseq_validation python scripts/processORB2CLIPseq.py --clip_file
       data/CLIPseq/fly_clip.txt.gz --gtf_file data/downloaded/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
       --output_dir data/CLIPseq --rbp_name ORB2B
     deps:
@@ -6687,15 +6687,15 @@ stages:
         processORB2CLIPseq:
           output_dir: data/CLIPseq
           rbp_name: ORB2B
-        setupRIPseqEnv:
-          name: ripseq_validation
+        setupCLIPseqEnv:
+          name: clipseq_validation
     outs:
     - path: data/CLIPseq/orb2b_targets.csv
       hash: md5
       md5: d109b1c52038c1d20873a1effce866df
       size: 376069
   validateORB2withCLIPseq:
-    cmd: conda run -n ripseq_validation python scripts/validateORB2withCLIPseq.py
+    cmd: conda run -n clipseq_validation python scripts/validateORB2withCLIPseq.py
       --mast_results output/mast_out/train_mast_results.txt output/mast_out/dev_mast_results.txt
       output/mast_out/test_mast_results.txt --shap_neg5 output/motifEnrichment/train_neg5.parquet
       --shap_neg3 output/motifEnrichment/train_neg3.parquet --clip_targets data/CLIPseq/orb2b_targets.csv
@@ -6751,8 +6751,8 @@ stages:
           motif_file: 
             /opt/meme/share/meme-5.5.7/db/motif_databases/RNA/Ray2013_rbp_Drosophila_melanogaster.meme
           mast_pvalue_threshold: 0.05
-        setupRIPseqEnv:
-          name: ripseq_validation
+        setupCLIPseqEnv:
+          name: clipseq_validation
         validateORB2withCLIPseq:
           output_dir: output/ripseqValidation/orb2_clip
     outs:
@@ -6761,3 +6761,387 @@ stages:
       md5: f0af77bc2efe2d8dc52df48de86e9bbd.dir
       size: 1447828
       nfiles: 22
+  prepRandomizeSeqsAndExtraFeatures@test-extraFeatImpact:
+    cmd: conda run -n rayTune python scripts/prepRandomizeSeqsAndExtraFeatures.py
+      --params params.yaml --sequence_file output/data/decay/test.fasta --process
+      extraFeatImpact --output_file output/data/sanityCheck/test-extraFeatImpact.fasta
+      --importance output/importance/test_shap.pkl
+    deps:
+    - path: output/importance/test_shap.pkl
+      hash: md5
+      md5: 6e33df543879ed8920673ba31138bceb
+      size: 1700997
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 9a3d419a3375cccebdc4a75ab67205f4
+      size: 7347
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+          seq_file: dev
+    outs:
+    - path: output/data/sanityCheck/test-extraFeatImpact.fasta
+      hash: md5
+      md5: c874445d33ea45ef04824aa1638d9f97
+      size: 605372883
+  prepRandomizeSeqsAndExtraFeatures@dev-3UTRImpact:
+    cmd: conda run -n rayTune python scripts/prepRandomizeSeqsAndExtraFeatures.py
+      --params params.yaml --sequence_file output/data/decay/dev.fasta --process 3UTRImpact
+      --output_file output/data/sanityCheck/dev-3UTRImpact.fasta --importance output/importance/dev_shap.pkl
+    deps:
+    - path: output/importance/dev_shap.pkl
+      hash: md5
+      md5: 8ac30d335c702f88e04ed8025afbe727
+      size: 1681715
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 9a3d419a3375cccebdc4a75ab67205f4
+      size: 7347
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+          seq_file: dev
+    outs:
+    - path: output/data/sanityCheck/dev-3UTRImpact.fasta
+      hash: md5
+      md5: 3182142bded095c9fb2d61f81bd2e932
+      size: 613914653
+  prepRandomizeSeqsAndExtraFeatures@dev-5UTRImpact:
+    cmd: conda run -n rayTune python scripts/prepRandomizeSeqsAndExtraFeatures.py
+      --params params.yaml --sequence_file output/data/decay/dev.fasta --process 5UTRImpact
+      --output_file output/data/sanityCheck/dev-5UTRImpact.fasta --importance output/importance/dev_shap.pkl
+    deps:
+    - path: output/importance/dev_shap.pkl
+      hash: md5
+      md5: 8ac30d335c702f88e04ed8025afbe727
+      size: 1681715
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 9a3d419a3375cccebdc4a75ab67205f4
+      size: 7347
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+          seq_file: dev
+    outs:
+    - path: output/data/sanityCheck/dev-5UTRImpact.fasta
+      hash: md5
+      md5: e3f5025f5db20ef6224a9f37ec995227
+      size: 606559335
+  randomizeSeqsAndExtraFeatures@dev-5UTRImpact:
+    cmd: conda run -n rayTune python scripts/sanityCheck_predictions.py --params params.yaml
+      --sequence_file output/data/sanityCheck/dev-5UTRImpact.fasta --save_path output/data/sanityCheck/dev-5UTRImpact_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/dev-5UTRImpact.fasta
+      hash: md5
+      md5: e3f5025f5db20ef6224a9f37ec995227
+      size: 606559335
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 05f56b1cb5d5f95c4540a059cb4353d2
+      size: 23588
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/dev-5UTRImpact_predictions.csv
+      hash: md5
+      md5: e5543fd38eaba6f747c248f709e571b3
+      size: 38053622
+  prepRandomizeSeqsAndExtraFeatures@dev-extraFeatImpact:
+    cmd: conda run -n rayTune python scripts/prepRandomizeSeqsAndExtraFeatures.py
+      --params params.yaml --sequence_file output/data/decay/dev.fasta --process extraFeatImpact
+      --output_file output/data/sanityCheck/dev-extraFeatImpact.fasta --importance
+      output/importance/dev_shap.pkl
+    deps:
+    - path: output/importance/dev_shap.pkl
+      hash: md5
+      md5: 8ac30d335c702f88e04ed8025afbe727
+      size: 1681715
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 9a3d419a3375cccebdc4a75ab67205f4
+      size: 7347
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+          seq_file: dev
+    outs:
+    - path: output/data/sanityCheck/dev-extraFeatImpact.fasta
+      hash: md5
+      md5: 24bf7de1b45b07e5acbeaceca6fc7c19
+      size: 597537903
+  randomizeSeqsAndExtraFeatures@dev-extraFeatImpact:
+    cmd: conda run -n rayTune python scripts/sanityCheck_predictions.py --params params.yaml
+      --sequence_file output/data/sanityCheck/dev-extraFeatImpact.fasta --save_path
+      output/data/sanityCheck/dev-extraFeatImpact_predictions.csv --extraFeatures
+      output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/dev-extraFeatImpact.fasta
+      hash: md5
+      md5: 24bf7de1b45b07e5acbeaceca6fc7c19
+      size: 597537903
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 05f56b1cb5d5f95c4540a059cb4353d2
+      size: 23588
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/dev-extraFeatImpact_predictions.csv
+      hash: md5
+      md5: 250f133fc2de082c79b7745b0815f7ad
+      size: 38113374
+  prepRandomizeSeqsAndExtraFeatures@test-seqImpact:
+    cmd: conda run -n rayTune python scripts/prepRandomizeSeqsAndExtraFeatures.py
+      --params params.yaml --sequence_file output/data/decay/test.fasta --process
+      seqImpact --output_file output/data/sanityCheck/test-seqImpact.fasta --importance
+      output/importance/test_shap.pkl
+    deps:
+    - path: output/importance/test_shap.pkl
+      hash: md5
+      md5: 6e33df543879ed8920673ba31138bceb
+      size: 1700997
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 9a3d419a3375cccebdc4a75ab67205f4
+      size: 7347
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+          seq_file: dev
+    outs:
+    - path: output/data/sanityCheck/test-seqImpact.fasta
+      hash: md5
+      md5: 16a0c4ba06a0b465a35b6d68c9218e73
+      size: 601979928
+  prepRandomizeSeqsAndExtraFeatures@test-3UTRImpact:
+    cmd: conda run -n rayTune python scripts/prepRandomizeSeqsAndExtraFeatures.py
+      --params params.yaml --sequence_file output/data/decay/test.fasta --process
+      3UTRImpact --output_file output/data/sanityCheck/test-3UTRImpact.fasta --importance
+      output/importance/test_shap.pkl
+    deps:
+    - path: output/importance/test_shap.pkl
+      hash: md5
+      md5: 6e33df543879ed8920673ba31138bceb
+      size: 1700997
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 9a3d419a3375cccebdc4a75ab67205f4
+      size: 7347
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+          seq_file: dev
+    outs:
+    - path: output/data/sanityCheck/test-3UTRImpact.fasta
+      hash: md5
+      md5: b8b53229fe30e7431478d26200473db6
+      size: 618829888
+  prepRandomizeSeqsAndExtraFeatures@dev-seqImpact:
+    cmd: conda run -n rayTune python scripts/prepRandomizeSeqsAndExtraFeatures.py
+      --params params.yaml --sequence_file output/data/decay/dev.fasta --process seqImpact
+      --output_file output/data/sanityCheck/dev-seqImpact.fasta --importance output/importance/dev_shap.pkl
+    deps:
+    - path: output/importance/dev_shap.pkl
+      hash: md5
+      md5: 8ac30d335c702f88e04ed8025afbe727
+      size: 1681715
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 9a3d419a3375cccebdc4a75ab67205f4
+      size: 7347
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+          seq_file: dev
+    outs:
+    - path: output/data/sanityCheck/dev-seqImpact.fasta
+      hash: md5
+      md5: c6b77e7edf4b35fb3ce322fa452a6c0b
+      size: 592117200
+  randomizeSeqsAndExtraFeatures@test-seqImpact:
+    cmd: conda run -n rayTune python scripts/sanityCheck_predictions.py --params params.yaml
+      --sequence_file output/data/sanityCheck/test-seqImpact.fasta --save_path output/data/sanityCheck/test-seqImpact_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/test-seqImpact.fasta
+      hash: md5
+      md5: 16a0c4ba06a0b465a35b6d68c9218e73
+      size: 601979928
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 05f56b1cb5d5f95c4540a059cb4353d2
+      size: 23588
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/test-seqImpact_predictions.csv
+      hash: md5
+      md5: 02ba05b08d369516d88835ab458b9bf4
+      size: 38098510
+  randomizeSeqsAndExtraFeatures@test-3UTRImpact:
+    cmd: conda run -n rayTune python scripts/sanityCheck_predictions.py --params params.yaml
+      --sequence_file output/data/sanityCheck/test-3UTRImpact.fasta --save_path output/data/sanityCheck/test-3UTRImpact_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/test-3UTRImpact.fasta
+      hash: md5
+      md5: b8b53229fe30e7431478d26200473db6
+      size: 618829888
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 05f56b1cb5d5f95c4540a059cb4353d2
+      size: 23588
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/test-3UTRImpact_predictions.csv
+      hash: md5
+      md5: 845cbaec38b734b1a73602b8dec61cfe
+      size: 38096048
+  randomizeSeqsAndExtraFeatures@dev-seqImpact:
+    cmd: conda run -n rayTune python scripts/sanityCheck_predictions.py --params params.yaml
+      --sequence_file output/data/sanityCheck/dev-seqImpact.fasta --save_path output/data/sanityCheck/dev-seqImpact_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/dev-seqImpact.fasta
+      hash: md5
+      md5: c6b77e7edf4b35fb3ce322fa452a6c0b
+      size: 592117200
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 05f56b1cb5d5f95c4540a059cb4353d2
+      size: 23588
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/dev-seqImpact_predictions.csv
+      hash: md5
+      md5: 40b3ad0743fb627963eb52195259c559
+      size: 37776533
+  randomizeSeqsAndExtraFeatures@dev-3UTRImpact:
+    cmd: conda run -n rayTune python scripts/sanityCheck_predictions.py --params params.yaml
+      --sequence_file output/data/sanityCheck/dev-3UTRImpact.fasta --save_path output/data/sanityCheck/dev-3UTRImpact_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/dev-3UTRImpact.fasta
+      hash: md5
+      md5: 3182142bded095c9fb2d61f81bd2e932
+      size: 613914653
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 05f56b1cb5d5f95c4540a059cb4353d2
+      size: 23588
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/dev-3UTRImpact_predictions.csv
+      hash: md5
+      md5: d7cde2ccc8902f69629ab8051bda5b1e
+      size: 37995920
+  prepRandomizeSeqsAndExtraFeatures@test-5UTRImpact:
+    cmd: conda run -n rayTune python scripts/prepRandomizeSeqsAndExtraFeatures.py
+      --params params.yaml --sequence_file output/data/decay/test.fasta --process
+      5UTRImpact --output_file output/data/sanityCheck/test-5UTRImpact.fasta --importance
+      output/importance/test_shap.pkl
+    deps:
+    - path: output/importance/test_shap.pkl
+      hash: md5
+      md5: 6e33df543879ed8920673ba31138bceb
+      size: 1700997
+    - path: scripts/prepRandomizeSeqsAndExtraFeatures.py
+      hash: md5
+      md5: 9a3d419a3375cccebdc4a75ab67205f4
+      size: 7347
+    params:
+      params.yaml:
+        prepRandomizeSeqsAndExtraFeatures:
+          sequence_dir: output/data/sanityCheck
+          seq_file: dev
+    outs:
+    - path: output/data/sanityCheck/test-5UTRImpact.fasta
+      hash: md5
+      md5: 8d970159438eab9ce4b136b249b9c58e
+      size: 607818622
+  randomizeSeqsAndExtraFeatures@test-5UTRImpact:
+    cmd: conda run -n rayTune python scripts/sanityCheck_predictions.py --params params.yaml
+      --sequence_file output/data/sanityCheck/test-5UTRImpact.fasta --save_path output/data/sanityCheck/test-5UTRImpact_predictions.csv
+      --extraFeatures output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/test-5UTRImpact.fasta
+      hash: md5
+      md5: 8d970159438eab9ce4b136b249b9c58e
+      size: 607818622
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 05f56b1cb5d5f95c4540a059cb4353d2
+      size: 23588
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/test-5UTRImpact_predictions.csv
+      hash: md5
+      md5: a8ae26b47cfc3aa4ab736cfb1d68fee9
+      size: 38292637
+  randomizeSeqsAndExtraFeatures@test-extraFeatImpact:
+    cmd: conda run -n rayTune python scripts/sanityCheck_predictions.py --params params.yaml
+      --sequence_file output/data/sanityCheck/test-extraFeatImpact.fasta --save_path
+      output/data/sanityCheck/test-extraFeatImpact_predictions.csv --extraFeatures
+      output/data/codons/extraFeatures.csv --mfe output/data/codons/vienna_features.csv
+    deps:
+    - path: output/data/sanityCheck/test-extraFeatImpact.fasta
+      hash: md5
+      md5: c874445d33ea45ef04824aa1638d9f97
+      size: 605372883
+    - path: scripts/sanityCheck_predictions.py
+      hash: md5
+      md5: 05f56b1cb5d5f95c4540a059cb4353d2
+      size: 23588
+    params:
+      params.yaml:
+        randomizeSeqsAndExtraFeatures:
+          per_gpu_pred_batch_size: 128
+    outs:
+    - path: output/data/sanityCheck/test-extraFeatImpact_predictions.csv
+      hash: md5
+      md5: f190e61d60a35a8142b0ea8ace60b312
+      size: 38309840
+  setupCLIPseqEnv:
+    cmd: "conda env create --name clipseq_validation -f environment_clipseq.yaml\n
+      echo \"Conda environment 'clipseq_validation' created.\" >> setupCLIPseqEnv.log\n"
+    deps:
+    - path: environment_clipseq.yaml
+      hash: md5
+      md5: 0bfa3006db562483378a88a046163156
+      size: 308
+    params:
+      params.yaml:
+        setupCLIPseqEnv:
+          name: clipseq_validation
+    outs:
+    - path: setupCLIPseqEnv.log
+      hash: md5
+      md5: d41d8cd98f00b204e9800998ecf8427e
+      size: 0

@@ -324,7 +324,7 @@ df_pairs = [
 ]
 
 for d, name in df_pairs:
-    d.to_parquet(f"{args.output_dir}/{name}.parquet")
+    d.to_parquet(f"{args.output_dir}/{args.name}_{name}.parquet")
 # %%
 # Define the pairs for Mann-Whitney U tests
 test_pairs = [

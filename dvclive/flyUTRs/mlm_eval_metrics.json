@@ -1,0 +1,35 @@
+{
+  "n_sequences": 3702,
+  "n_masked_tokens": 65591,
+  "extended_pretrained": {
+    "top1_accuracy": 0.134332,
+    "top5_accuracy": 0.190971,
+    "top10_accuracy": 0.229849,
+    "top100_accuracy": 0.462106,
+    "top1000_accuracy": 0.772713,
+    "perplexity": 732.5534
+  },
+  "baselines": {
+    "random_top1": 0.0031,
+    "random_top5": 0.0156,
+    "random_top10": 0.0312,
+    "random_top100": 0.3125,
+    "random_top1000": 3.125,
+    "random_perplexity": 32000,
+    "majority_top1": 0.6267,
+    "majority_top5": 2.6995,
+    "majority_top10": 4.6268,
+    "majority_top100": 20.8185,
+    "majority_top1000": 62.3101,
+    "vocab_size": 32000,
+    "n_eligible_tokens": 435445
+  },
+  "base_gena_lm": {
+    "top1_accuracy": 0.130475,
+    "top5_accuracy": 0.182312,
+    "top10_accuracy": 0.218475,
+    "top100_accuracy": 0.44529,
+    "top1000_accuracy": 0.760958,
+    "perplexity": 815.5965
+  }
+}

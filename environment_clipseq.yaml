@@ -1,0 +1,23 @@
+name: clipseq_validation
+channels:
+  - conda-forge
+  - defaults
+  - bioconda
+  - nodefaults
+dependencies:
+  - python=3.11
+  - pip
+  - pandas
+  - numpy
+  - scipy
+  - matplotlib
+  - seaborn
+  - biopython
+  - tqdm
+  - pyyaml
+  - requests
+  - statsmodels
+  - upsetplot
+  - pip:
+    - pydeseq2      
+    - pyarrow

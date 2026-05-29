@@ -454,48 +454,46 @@ stages:
       - ${motifEnrichment.output_dir}/${item}_neg3_mannwhitneyu_results.csv:
           cache: false
           persist: true
+      - ${motifEnrichment.output_dir}/${item}_pos5.parquet
+      - ${motifEnrichment.output_dir}/${item}_pos3.parquet
+      - ${motifEnrichment.output_dir}/${item}_neg5.parquet
+      - ${motifEnrichment.output_dir}/${item}_neg3.parquet
       params:
       - motifEnrichment
 
 
   prepRandomizeSeqsAndExtraFeatures:
-    foreach:
-    - seqImpact
-    - extraFeatImpact
-    - 5UTRImpact
-    - 3UTRImpact
-    do:
-      cmd: conda run -n ${setupEnv.name} python scripts/prepRandomizeSeqsAndExtraFeatures.py
-        --params params.yaml --sequence_file ${preprocessData.output_dir}/${prepRandomizeSeqsAndExtraFeatures.seq_file}.fasta
-        --process ${item} --output_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
-        --importance 
-        ${importanceAnalysis.output_dir}/${prepRandomizeSeqsAndExtraFeatures.seq_file}_${importanceAnalysis.pickle_file}
-      deps:
-      - scripts/prepRandomizeSeqsAndExtraFeatures.py
-      - ${importanceAnalysis.output_dir}/${prepRandomizeSeqsAndExtraFeatures.seq_file}_${importanceAnalysis.pickle_file}
-      outs:
-      - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
-      params:
-      - prepRandomizeSeqsAndExtraFeatures
+    matrix:
+      set: [dev,test]
+      feature: [seqImpact, extraFeatImpact, 5UTRImpact, 3UTRImpact]
+    cmd: conda run -n ${setupEnv.name} python scripts/prepRandomizeSeqsAndExtraFeatures.py
+      --params params.yaml --sequence_file ${preprocessData.output_dir}/${item.set}.fasta
+      --process ${item.feature} --output_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${key}.fasta
+      --importance 
+      ${importanceAnalysis.output_dir}/${item.set}_${importanceAnalysis.pickle_file}
+    deps:
+    - scripts/prepRandomizeSeqsAndExtraFeatures.py
+    - ${importanceAnalysis.output_dir}/${item.set}_${importanceAnalysis.pickle_file}
+    outs:
+    - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${key}.fasta
+    params:
+    - prepRandomizeSeqsAndExtraFeatures
 
   randomizeSeqsAndExtraFeatures:
-    foreach:
-    - seqImpact
-    - extraFeatImpact
-    - 5UTRImpact
-    - 3UTRImpact
-    do:
-      cmd: conda run -n ${setupEnv.name} python scripts/sanityCheck_predictions.py
-        --params params.yaml --sequence_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
-        --save_path ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv
-        --extraFeatures ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv}                                                          #test.fasta
-      deps:
-      - scripts/sanityCheck_predictions.py
-      - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}.fasta
-      outs:
-      - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${item}_predictions.csv
-      params:
-      - randomizeSeqsAndExtraFeatures
+    matrix:
+      set: [dev,test]
+      feature: [seqImpact, extraFeatImpact, 5UTRImpact, 3UTRImpact]
+    cmd: conda run -n ${setupEnv.name} python scripts/sanityCheck_predictions.py
+      --params params.yaml --sequence_file ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${key}.fasta
+      --save_path ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${key}_predictions.csv
+      --extraFeatures ${getDecayResiduals.extraFeatures} --mfe ${runViennaRNA.output_csv}                                                          #test.fasta
+    deps:
+    - scripts/sanityCheck_predictions.py
+    - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${key}.fasta
+    outs:
+    - ${prepRandomizeSeqsAndExtraFeatures.sequence_dir}/${key}_predictions.csv
+    params:
+    - randomizeSeqsAndExtraFeatures
 
   splitHighLowDecay:
     foreach:
@@ -646,139 +644,19 @@ stages:
     params:
     - extraFeaturesAndMotifCountsClassificationMLP
 
-  setupRIPseqEnv:
+  setupCLIPseqEnv:
     cmd: |
-      conda env create --name ${setupRIPseqEnv.name} -f environment_ripseq.yaml
-      echo "Conda environment '${setupRIPseqEnv.name}' created." >> setupRIPseqEnv.log
+      conda env create --name ${setupCLIPseqEnv.name} -f environment_clipseq.yaml
+      echo "Conda environment '${setupCLIPseqEnv.name}' created." >> setupCLIPseqEnv.log
     deps:
-      - environment_ripseq.yaml
+      - environment_clipseq.yaml
     outs:
-      - setupRIPseqEnv.log
+      - setupCLIPseqEnv.log
     params:
-      - setupRIPseqEnv
-
-  downloadRIPseq:
-    cmd: conda run -n ${setupRIPseqEnv.name} python scripts/downloadRIPseq.py
-      --output_dir ${downloadRIPseq.output_dir}
-    deps:
-      - scripts/downloadRIPseq.py
-      - setupRIPseqEnv.log
-    outs:
-      - ${downloadRIPseq.output_dir}/rawcounts_genes.tsv.gz:
-          persist: true
-    params:
-      - setupRIPseqEnv
-      - downloadRIPseq
-
-  processRIPseq:
-    cmd: conda run -n ${setupRIPseqEnv.name} python scripts/processRIPseq.py
-      --counts ${downloadRIPseq.output_dir}/rawcounts_genes.tsv.gz
-      --output_dir ${processRIPseq.output_dir}
-    deps:
-      - scripts/processRIPseq.py
-      - ${downloadRIPseq.output_dir}/rawcounts_genes.tsv.gz
-    outs:
-      - ${processRIPseq.output_dir}/fmr1_deseq2_results.csv:
-          persist: true
-    params:
-      - setupRIPseqEnv
-      - downloadRIPseq
-      - processRIPseq
-
-  validateFMR1withRIPseq:
-    cmd: >-
-      conda run -n ${setupRIPseqEnv.name} python scripts/validateFMR1withRIPseq.py
-      --mast_results ${runMAST.output_dir}/train_${runMAST.output_file}
-      ${runMAST.output_dir}/dev_${runMAST.output_file}
-      ${runMAST.output_dir}/test_${runMAST.output_file}
-      --shap_pos5 ${validateFMR1withRIPseq.enrichment_dir}/pos5.parquet
-      --shap_pos3 ${validateFMR1withRIPseq.enrichment_dir}/pos3.parquet
-      --rip_targets ${processRIPseq.output_dir}/fmr1_deseq2_results.csv
-      --rip_hits data/RIPseq/FMR1_ripseq_hits_with_geneIDs.csv
-      --padj_threshold ${validateFMR1withRIPseq.padj_threshold}
-      --lfc_threshold ${validateFMR1withRIPseq.lfc_threshold}
-      --gene_map ${validateFMR1withRIPseq.gene_map}
-      --output_dir ${validateFMR1withRIPseq.output_dir}
-    deps:
-      - scripts/validateFMR1withRIPseq.py
-      - ${runMAST.output_dir}/train_${runMAST.output_file}
-      - ${runMAST.output_dir}/dev_${runMAST.output_file}
-      - ${runMAST.output_dir}/test_${runMAST.output_file}
-      - ${validateFMR1withRIPseq.enrichment_dir}/pos5.parquet
-      - ${validateFMR1withRIPseq.enrichment_dir}/pos3.parquet
-      - ${processRIPseq.output_dir}/fmr1_deseq2_results.csv
-      - data/RIPseq/FMR1_ripseq_hits_with_geneIDs.csv
-      - ${validateFMR1withRIPseq.gene_map}
-    outs:
-      - ${validateFMR1withRIPseq.output_dir}:
-          persist: true
-    params:
-      - setupRIPseqEnv
-      - runMAST
-      - validateFMR1withRIPseq
-
-  downloadORB2RIPseq:
-    cmd: conda run -n ${setupRIPseqEnv.name} python scripts/downloadORB2RIPseq.py
-      --output_dir ${downloadORB2RIPseq.output_dir}
-    deps:
-      - scripts/downloadORB2RIPseq.py
-      - setupRIPseqEnv.log
-    outs:
-      - ${downloadORB2RIPseq.output_dir}/orb2_RIP_normalized_count.txt.gz:
-          persist: true
-      - ${downloadORB2RIPseq.output_dir}/orb2_RIP_TPM.txt.gz:
-          persist: true
-    params:
-      - setupRIPseqEnv
-      - downloadORB2RIPseq
-
-  processORB2RIPseq:
-    cmd: conda run -n ${setupRIPseqEnv.name} python scripts/processORB2RIPseq.py
-      --norm_counts ${downloadORB2RIPseq.output_dir}/orb2_RIP_normalized_count.txt.gz
-      --tpm ${downloadORB2RIPseq.output_dir}/orb2_RIP_TPM.txt.gz
-      --output_dir ${processORB2RIPseq.output_dir}
-    deps:
-      - scripts/processORB2RIPseq.py
-      - ${downloadORB2RIPseq.output_dir}/orb2_RIP_normalized_count.txt.gz
-      - ${downloadORB2RIPseq.output_dir}/orb2_RIP_TPM.txt.gz
-    outs:
-      - ${processORB2RIPseq.output_dir}/orb2_targets.csv:
-          persist: true
-    params:
-      - setupRIPseqEnv
-      - downloadORB2RIPseq
-      - processORB2RIPseq
-
-  validateORB2withRIPseq:
-    cmd: >-
-      conda run -n ${setupRIPseqEnv.name} python scripts/validateORB2withRIPseq.py
-      --mast_results ${runMAST.output_dir}/train_${runMAST.output_file}
-      ${runMAST.output_dir}/dev_${runMAST.output_file}
-      ${runMAST.output_dir}/test_${runMAST.output_file}
-      --shap_neg5 ${validateORB2withRIPseq.enrichment_dir}/neg5.parquet
-      --shap_neg3 ${validateORB2withRIPseq.enrichment_dir}/neg3.parquet
-      --rip_targets data/RIPseq/orb2_ripseq_hits.csv
-      --gene_map ${validateORB2withRIPseq.gene_map}
-      --output_dir ${validateORB2withRIPseq.output_dir}
-    deps:
-      - scripts/validateORB2withRIPseq.py
-      - ${runMAST.output_dir}/train_${runMAST.output_file}
-      - ${runMAST.output_dir}/dev_${runMAST.output_file}
-      - ${runMAST.output_dir}/test_${runMAST.output_file}
-      - ${validateORB2withRIPseq.enrichment_dir}/neg5.parquet
-      - ${validateORB2withRIPseq.enrichment_dir}/neg3.parquet
-      - data/RIPseq/orb2_ripseq_hits.csv
-      - ${validateORB2withRIPseq.gene_map}
-    outs:
-      - ${validateORB2withRIPseq.output_dir}:
-          persist: true
-    params:
-      - setupRIPseqEnv
-      - runMAST
-      - validateORB2withRIPseq
+      - setupCLIPseqEnv
 
   downloadORB2CLIPseq:
-    cmd: conda run -n ${setupRIPseqEnv.name} python scripts/downloadORB2CLIPseq.py
+    cmd: conda run -n ${setupCLIPseqEnv.name} python scripts/downloadORB2CLIPseq.py
       --output_dir ${downloadORB2CLIPseq.output_dir}
     deps:
       - scripts/downloadORB2CLIPseq.py
@@ -786,12 +664,12 @@ stages:
       - ${downloadORB2CLIPseq.output_dir}/fly_clip.txt.gz:
           persist: true
     params:
-      - setupRIPseqEnv
+      - setupCLIPseqEnv
       - downloadORB2CLIPseq
 
   processORB2CLIPseq:
     cmd: >-
-      conda run -n ${setupRIPseqEnv.name} python scripts/processORB2CLIPseq.py
+      conda run -n ${setupCLIPseqEnv.name} python scripts/processORB2CLIPseq.py
       --clip_file ${downloadORB2CLIPseq.output_dir}/fly_clip.txt.gz
       --gtf_file ${downloadSpeciesData.output_dir}/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
       --output_dir ${processORB2CLIPseq.output_dir}
@@ -804,18 +682,18 @@ stages:
       - ${processORB2CLIPseq.output_dir}/orb2b_targets.csv:
           persist: true
     params:
-      - setupRIPseqEnv
+      - setupCLIPseqEnv
       - downloadORB2CLIPseq
       - processORB2CLIPseq
 
-  validateORB2withCLIPseq:
+  validateORB2withCLIPseq: # /mnt/mr01-home01/m65338lb/dvcCache/mRNA_LLM/files/md5/7a/7f80c5ff398837aacf237020b2a335 ${findMotifs.output_dir}/train/negative/${findMotifs.motif_positions}
     cmd: >-
-      conda run -n ${setupRIPseqEnv.name} python scripts/validateORB2withCLIPseq.py
+      conda run -n ${setupCLIPseqEnv.name} python scripts/validateORB2withCLIPseq.py
       --mast_results ${runMAST.output_dir}/train_${runMAST.output_file}
       ${runMAST.output_dir}/dev_${runMAST.output_file}
       ${runMAST.output_dir}/test_${runMAST.output_file}
-      --shap_neg5 ${validateORB2withCLIPseq.enrichment_dir}/neg5.parquet
-      --shap_neg3 ${validateORB2withCLIPseq.enrichment_dir}/neg3.parquet
+      --shap_neg5 ${motifEnrichment.output_dir}/train_neg5.parquet
+      --shap_neg3 ${motifEnrichment.output_dir}/train_neg3.parquet
       --clip_targets ${processORB2CLIPseq.output_dir}/orb2b_targets.csv
       --clip_file ${downloadORB2CLIPseq.output_dir}/fly_clip.txt.gz
       --gtf_file ${downloadSpeciesData.output_dir}/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
@@ -826,8 +704,8 @@ stages:
       - ${runMAST.output_dir}/train_${runMAST.output_file}
       - ${runMAST.output_dir}/dev_${runMAST.output_file}
       - ${runMAST.output_dir}/test_${runMAST.output_file}
-      - ${validateORB2withCLIPseq.enrichment_dir}/neg5.parquet
-      - ${validateORB2withCLIPseq.enrichment_dir}/neg3.parquet
+      - ${motifEnrichment.output_dir}/train_neg5.parquet
+      - ${motifEnrichment.output_dir}/train_neg3.parquet
       - ${processORB2CLIPseq.output_dir}/orb2b_targets.csv
       - ${downloadORB2CLIPseq.output_dir}/fly_clip.txt.gz
       - ${downloadSpeciesData.output_dir}/Drosophila_melanogaster-GCA_000001215.4-2022_07-genes.gtf.gz
@@ -836,7 +714,7 @@ stages:
       - ${validateORB2withCLIPseq.output_dir}:
           persist: true
     params:
-      - setupRIPseqEnv
+      - setupCLIPseqEnv
       - runMAST
       - validateORB2withCLIPseq
 

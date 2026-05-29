@@ -597,7 +597,7 @@ def main():
     trainSHAPmean, trainSHAPstd = getTrainSHAPStats(args.trainSHAP)
 
     importance = pickle.load(open(args.SHAP, 'rb'))
-    importance = filterWithLOWESS(importance, save_file_dir=args.save_file_dir)
+    #importance = filterWithLOWESS(importance, save_file_dir=args.save_file_dir)
     iWithLen = []
     for x in importance:
         x.tokens = [t.replace('T','U') for t in x.tokens] # Ensure U instead of T
